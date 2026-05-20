@@ -32,6 +32,8 @@ Accounting, Buying, Selling, CRM, Manufacturing, Projects, Support, Website, and
 4. Compare expected vs actual quantities against the notice.
 5. Move products into final locations with `3PL Put Away`.
 
+Demo data includes a draft receiving Stock Entry. Submit that receiving entry before creating the putaway transfer, because ERPNext needs posted incoming stock before it can validate an outgoing transfer.
+
 ## Picking and Shipping Flow
 
 1. Create a `Pick List`.
