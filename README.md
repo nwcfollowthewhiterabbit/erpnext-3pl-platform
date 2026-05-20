@@ -10,7 +10,7 @@ Docker Swarm stack for a warehouse-first ERPNext v15 instance.
 
 Default access:
 
-- Public URL: `http://erptest.exemstsc.world`
+- Public URL: `https://erptest.exemstsc.world`
 - Local URL: `http://SERVER_IP:8080`
 - User: `Administrator`
 - Password: see `ADMIN_PASSWORD` in local `.env`
@@ -23,4 +23,5 @@ The `.env` file is intentionally not committed.
 - ERPNext site: `erpnext-3pl.local`
 - Public port: `8080`
 - Nginx vhost: `/etc/nginx/sites-available/erptest.exemstsc.world`
+- TLS certificate: `/etc/letsencrypt/live/erptest.exemstsc.world/fullchain.pem`
 - Data lives in Docker volumes created by the stack.
