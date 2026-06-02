@@ -1,6 +1,6 @@
 # ERPNext 3PL Platform
 
-Docker Swarm stack for a warehouse-first ERPNext v15 instance.
+Docker Swarm stack for a warehouse-first ERPNext v16 instance.
 
 ## Deploy
 
@@ -16,8 +16,7 @@ sudo ./scripts/deploy_first_instance.sh erpnext.SERVER_IP.sslip.io
 Existing instance update:
 
 ```bash
-./deploy.sh
-./scripts/run_post_deploy.sh
+./deploy.sh https://erpnext.77.237.244.169.sslip.io
 ./scripts/validate_instance.sh https://erpnext.77.237.244.169.sslip.io
 ```
 
@@ -31,6 +30,8 @@ Default access:
 The `.env` file is intentionally not committed.
 
 On a first deploy, use `deploy_first_instance.sh`. It starts the stack in a safe bootstrap phase, waits for site creation, starts runtime services, applies warehouse-only configuration, creates demo users, loads demo warehouse data, and validates the result.
+
+On an existing instance, use `deploy.sh` or `scripts/deploy_existing_instance.sh`. The script creates a site backup before changing the ERPNext image, deploys the stack, runs `bench migrate`, reapplies project setup, and validates the public URL.
 
 For a quick HTTPS endpoint without managing DNS first, use an `sslip.io` hostname such as `erpnext.77.237.244.169.sslip.io`. For a real domain, point its A record to the server first, then pass that domain to `configure_https.sh`.
 

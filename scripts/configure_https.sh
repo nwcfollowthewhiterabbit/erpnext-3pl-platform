@@ -23,7 +23,19 @@ server {
 
     client_max_body_size 100m;
 
+    if (\$request_uri ~* "^/login\\?redirect-to=(%2F|/)app(%2F|/)setup-wizard/?$") {
+        return 302 /login?redirect-to=%2Fapp%2F3pl-warehouse;
+    }
+
     location = /app/setup-wizard {
+        return 302 /app/3pl-warehouse;
+    }
+
+    location = /app/setup-wizard/ {
+        return 302 /app/3pl-warehouse;
+    }
+
+    location = /app/home {
         return 302 /app/3pl-warehouse;
     }
 

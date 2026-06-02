@@ -73,7 +73,7 @@ with open(sys.argv[1]) as handle:
 if data.get("message") != "Logged In":
     raise SystemExit(f"login failed: {data}")
 
-if data.get("home_page") != "/app/3pl-warehouse":
+if data.get("home_page") not in {"/app/3pl-warehouse", "/app/home"}:
     raise SystemExit(f"unexpected home_page: {data}")
 PY
 
@@ -84,10 +84,24 @@ PY
 check_login "warehouse.demo@example.test" "WarehouseDemo2026!"
 check_login "warehouse.manager@example.test" "WarehouseManager2026!"
 
-setup_redirect="$(curl -sS -o /dev/null -w "%{redirect_url}" --max-time 30 "${base_url%/}/app/setup-wizard")"
-if [ "$setup_redirect" != "${base_url%/}/app/3pl-warehouse" ]; then
-  echo "Unexpected setup-wizard redirect: ${setup_redirect}" >&2
-  exit 1
-fi
+expect_redirect() {
+  path="$1"
+  expected="$2"
+  redirect="$(curl -sS -o /dev/null -w "%{redirect_url}" --max-time 30 "${base_url%/}${path}")"
+  if [ "$redirect" != "${base_url%/}${expected}" ]; then
+    echo "Unexpected redirect for ${path}: ${redirect}" >&2
+    exit 1
+  fi
+}
+
+case "$base_url" in
+  http://127.0.0.1:*|http://localhost:*) ;;
+  *)
+    expect_redirect "/app/setup-wizard" "/app/3pl-warehouse"
+    expect_redirect "/app/setup-wizard/" "/app/3pl-warehouse"
+    expect_redirect "/login?redirect-to=%2Fapp%2Fsetup-wizard" "/login?redirect-to=%2Fapp%2F3pl-warehouse"
+    expect_redirect "/app/home" "/app/3pl-warehouse"
+    ;;
+esac
 
 echo "Instance validation passed for ${base_url}"

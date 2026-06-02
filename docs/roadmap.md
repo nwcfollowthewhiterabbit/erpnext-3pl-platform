@@ -4,7 +4,7 @@
 
 Status: done.
 
-- ERPNext v15 is deployed in Docker Swarm.
+- ERPNext v16 is deployed in Docker Swarm.
 - Public domain is configured: `https://erptest.exemstsc.world`.
 - Let's Encrypt TLS is enabled.
 - Repository contains stack, setup scripts, nginx reference config, and process docs.
@@ -69,4 +69,3 @@ Status: pending.
 - Client shipment notification import.
 - Export of receiving/picking/dispatch statuses.
 - External reporting or BI needs.
-
