@@ -10,11 +10,12 @@ cp .env.example .env
 # edit .env secrets
 ./deploy.sh
 ./scripts/run_post_deploy.sh
+sudo scripts/configure_https.sh erpnext.SERVER_IP.sslip.io
 ```
 
 Default access:
 
-- Public URL: `https://erptest.exemstsc.world`
+- Public URL: `https://erpnext.77.237.244.169.sslip.io`
 - Local URL: `http://SERVER_IP:8080`
 - User: `Administrator`
 - Password: see `ADMIN_PASSWORD` in local `.env`
@@ -22,6 +23,8 @@ Default access:
 The `.env` file is intentionally not committed.
 
 On a first deploy, run `run_post_deploy.sh` after the stack creates the ERPNext site. It applies the warehouse-only configuration, creates demo users, and loads demo warehouse data.
+
+For a quick HTTPS endpoint without managing DNS first, use an `sslip.io` hostname such as `erpnext.77.237.244.169.sslip.io`. For a real domain, point its A record to the server first, then pass that domain to `configure_https.sh`.
 
 ## Demo Users
 
@@ -44,6 +47,6 @@ On a first deploy, run `run_post_deploy.sh` after the stack creates the ERPNext 
 - Stack name: `erpnext3pl`
 - ERPNext site: `erpnext-3pl.local`
 - Public port: `8080`
-- Nginx vhost: `/etc/nginx/sites-available/erptest.exemstsc.world`
-- TLS certificate: `/etc/letsencrypt/live/erptest.exemstsc.world/fullchain.pem`
+- Nginx vhost: `/etc/nginx/sites-available/DOMAIN`
+- TLS certificate: `/etc/letsencrypt/live/DOMAIN/fullchain.pem`
 - Data lives in Docker volumes created by the stack.
