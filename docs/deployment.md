@@ -59,6 +59,7 @@ Always run validation after deploy:
 Validation checks:
 
 - expected Swarm services are `1/1`
+- setup wizard is marked complete for the installed Frappe/ERPNext apps
 - custom DocTypes, report, warehouses, workspaces, demo users, and demo data exist
 - demo users have `Warehouse Only` module profile and default workspace `3PL Warehouse`
 - demo login redirects to `/app/3pl-warehouse`

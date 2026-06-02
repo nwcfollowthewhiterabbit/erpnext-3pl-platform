@@ -27,6 +27,8 @@ def require(condition, message):
 
 
 def main():
+    require(frappe.is_setup_complete(), "Setup wizard is not marked complete")
+
     for workspace in REQUIRED_WORKSPACES:
         require(frappe.db.exists("Workspace", workspace), f"Missing Workspace: {workspace}")
         doc = frappe.get_doc("Workspace", workspace)
@@ -49,6 +51,8 @@ def main():
         require(doc.enabled == 1, f"User is disabled: {user}")
         require(doc.module_profile == "Warehouse Only", f"Wrong module profile for {user}: {doc.module_profile}")
         require(doc.default_workspace == "3PL Warehouse", f"Wrong default workspace for {user}: {doc.default_workspace}")
+        if doc.meta.has_field("default_app"):
+            require(doc.default_app == "erpnext", f"Wrong default app for {user}: {doc.default_app}")
         for role in roles:
             require(role in user_roles, f"Missing role for {user}: {role}")
 

@@ -245,6 +245,16 @@ def configure_module_profile():
     frappe.db.set_default("desktop:home_page", "workspace")
 
 
+def mark_setup_complete():
+    if frappe.db.table_exists("Installed Application"):
+        for app_name in ("frappe", "erpnext"):
+            if frappe.db.exists("Installed Application", {"app_name": app_name}):
+                frappe.db.set_value("Installed Application", {"app_name": app_name}, "is_setup_complete", 1)
+
+    if frappe.db.exists("DocType", "System Settings"):
+        frappe.db.set_single_value("System Settings", "setup_complete", frappe.is_setup_complete())
+
+
 def configure_warehouses():
     root = f"All Warehouses - {COMPANY_ABBR}"
     ensure_warehouse("Receiving Area", root, is_group=1)
@@ -484,6 +494,7 @@ def main():
     configure_reports()
     configure_workspaces()
     configure_defaults()
+    mark_setup_complete()
     frappe.db.commit()
     frappe.clear_cache()
 

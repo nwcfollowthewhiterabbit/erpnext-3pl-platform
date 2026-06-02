@@ -40,6 +40,8 @@ def ensure_user(user_data):
     user.enabled = 1
     user.module_profile = "Warehouse Only" if frappe.db.exists("Module Profile", "Warehouse Only") else None
     user.default_workspace = "3PL Warehouse" if frappe.db.exists("Workspace", "3PL Warehouse") else None
+    if user.meta.has_field("default_app"):
+        user.default_app = "erpnext"
     user.set("roles", [])
     for role in user_data["roles"]:
         user.append("roles", {"role": role})
