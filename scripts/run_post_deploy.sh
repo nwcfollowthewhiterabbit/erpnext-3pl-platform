@@ -40,4 +40,6 @@ docker exec "$backend_cid" bash -lc \
 docker exec "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && bench --site ${site_name} clear-cache"
 
+./scripts/validate_instance.sh "http://127.0.0.1:${FRONTEND_PORT:-8080}"
+
 echo "Post-deploy warehouse setup complete for ${site_name}"

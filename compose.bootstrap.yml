@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  backend:
+    deploy:
+      replicas: 0
+
+  frontend:
+    deploy:
+      replicas: 0
+
+  queue-long:
+    deploy:
+      replicas: 0
+
+  queue-short:
+    deploy:
+      replicas: 0
+
+  scheduler:
+    deploy:
+      replicas: 0
+
+  websocket:
+    deploy:
+      replicas: 0

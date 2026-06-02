@@ -4,13 +4,21 @@ Docker Swarm stack for a warehouse-first ERPNext v15 instance.
 
 ## Deploy
 
+Fresh server:
+
 ```bash
 sudo scripts/bootstrap_docker_swarm.sh SERVER_IP
 cp .env.example .env
 # edit .env secrets
+sudo ./scripts/deploy_first_instance.sh erpnext.SERVER_IP.sslip.io
+```
+
+Existing instance update:
+
+```bash
 ./deploy.sh
 ./scripts/run_post_deploy.sh
-sudo scripts/configure_https.sh erpnext.SERVER_IP.sslip.io
+./scripts/validate_instance.sh https://erpnext.77.237.244.169.sslip.io
 ```
 
 Default access:
@@ -22,7 +30,7 @@ Default access:
 
 The `.env` file is intentionally not committed.
 
-On a first deploy, run `run_post_deploy.sh` after the stack creates the ERPNext site. It applies the warehouse-only configuration, creates demo users, and loads demo warehouse data.
+On a first deploy, use `deploy_first_instance.sh`. It starts the stack in a safe bootstrap phase, waits for site creation, starts runtime services, applies warehouse-only configuration, creates demo users, loads demo warehouse data, and validates the result.
 
 For a quick HTTPS endpoint without managing DNS first, use an `sslip.io` hostname such as `erpnext.77.237.244.169.sslip.io`. For a real domain, point its A record to the server first, then pass that domain to `configure_https.sh`.
 
@@ -33,6 +41,8 @@ For a quick HTTPS endpoint without managing DNS first, use an `sslip.io` hostnam
 
 ## Warehouse Docs
 
+- Deployment: `docs/deployment.md`
+- Repository policy: `docs/repository-policy.md`
 - Roadmap: `docs/roadmap.md`
 - Warehouse mode overview: `docs/warehouse-mode.md`
 - Demo access: `docs/manuals/00-demo-access.md`
