@@ -6,6 +6,10 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 COMPANY = "3pl"
 COMPANY_ABBR = "3"
+COUNTRY = "Lithuania"
+CURRENCY = "EUR"
+LANGUAGE = "en"
+TIME_ZONE = "Europe/Vilnius"
 
 
 def ensure_doc(doctype, name=None, **values):
@@ -162,12 +166,16 @@ def configure_company():
 
     if frappe.db.exists("Company", COMPANY):
         company = frappe.get_doc("Company", COMPANY)
+        if company.default_currency != CURRENCY:
+            for account in frappe.get_all("Account", filters={"company": COMPANY}, pluck="name"):
+                frappe.db.set_value("Account", account, "account_currency", CURRENCY, update_modified=False)
+
         changed = False
         expected = {
             "company_name": COMPANY,
             "abbr": COMPANY_ABBR,
-            "default_currency": "UAH",
-            "country": "Ukraine",
+            "default_currency": CURRENCY,
+            "country": COUNTRY,
         }
         for key, value in expected.items():
             if getattr(company, key, None) != value:
@@ -181,8 +189,8 @@ def configure_company():
                 "doctype": "Company",
                 "company_name": COMPANY,
                 "abbr": COMPANY_ABBR,
-                "default_currency": "UAH",
-                "country": "Ukraine",
+                "default_currency": CURRENCY,
+                "country": COUNTRY,
             }
         ).insert(ignore_permissions=True)
 
@@ -497,9 +505,16 @@ def configure_defaults():
     settings.item_naming_by = "Item Code"
     settings.save(ignore_permissions=True)
 
+    system_settings = frappe.get_single("System Settings")
+    system_settings.country = COUNTRY
+    system_settings.currency = CURRENCY
+    system_settings.language = LANGUAGE
+    system_settings.time_zone = TIME_ZONE
+    system_settings.save(ignore_permissions=True)
+
     frappe.db.set_default("company", COMPANY)
-    frappe.db.set_default("currency", "UAH")
-    frappe.db.set_default("country", "Ukraine")
+    frappe.db.set_default("currency", CURRENCY)
+    frappe.db.set_default("country", COUNTRY)
 
 
 def main():

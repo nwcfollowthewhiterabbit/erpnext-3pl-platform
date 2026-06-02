@@ -6,6 +6,7 @@ CLIENTS = [
     "Demo Client Alpha",
     "Demo Client Beta",
 ]
+COUNTRY = "Lithuania"
 
 ITEMS = [
     {
@@ -36,11 +37,11 @@ def ensure_master_data():
             }
         ).insert(ignore_permissions=True)
 
-    if not frappe.db.exists("Territory", "Ukraine"):
+    if not frappe.db.exists("Territory", COUNTRY):
         frappe.get_doc(
             {
                 "doctype": "Territory",
-                "territory_name": "Ukraine",
+                "territory_name": COUNTRY,
                 "is_group": 0,
             }
         ).insert(ignore_permissions=True)
@@ -60,7 +61,19 @@ def ensure_master_data():
 
 def ensure_customer(customer_name):
     if frappe.db.exists("Customer", customer_name):
-        return frappe.get_doc("Customer", customer_name)
+        customer = frappe.get_doc("Customer", customer_name)
+        changed = False
+        expected = {
+            "customer_group": "Commercial",
+            "territory": COUNTRY,
+        }
+        for key, value in expected.items():
+            if getattr(customer, key, None) != value:
+                setattr(customer, key, value)
+                changed = True
+        if changed:
+            customer.save(ignore_permissions=True)
+        return customer
 
     return frappe.get_doc(
         {
@@ -68,7 +81,7 @@ def ensure_customer(customer_name):
             "customer_name": customer_name,
             "customer_type": "Company",
             "customer_group": "Commercial",
-            "territory": "Ukraine",
+            "territory": COUNTRY,
         }
     ).insert(ignore_permissions=True)
 

@@ -28,6 +28,13 @@ Use the normal update path when the site already exists:
 
 `run_post_deploy.sh` is idempotent. It reapplies warehouse-only mode, custom workspaces, reports, roles, demo users, and demo data.
 
+## Regional Defaults
+
+- Country: `Lithuania`
+- Currency: `EUR`
+- Language: `English` (`en`)
+- Time zone: `Europe/Vilnius` (Vilnius local time, UTC+3 during summer time)
+
 ## HTTPS
 
 For a quick public HTTPS endpoint without DNS administration, use `sslip.io`:
@@ -60,6 +67,7 @@ Validation checks:
 
 - expected Swarm services are `1/1`
 - setup wizard is marked complete for the installed Frappe/ERPNext apps
+- regional defaults are Lithuania, EUR, English, and Europe/Vilnius
 - custom DocTypes, report, warehouses, workspaces, demo users, and demo data exist
 - demo users have `Warehouse Only` module profile and default workspace `3PL Warehouse`
 - demo login redirects to `/app/3pl-warehouse`

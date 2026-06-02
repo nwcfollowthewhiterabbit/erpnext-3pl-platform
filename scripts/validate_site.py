@@ -20,6 +20,10 @@ REQUIRED_WAREHOUSES = [
     "Packing - 3",
     "Shipping - 3",
 ]
+REQUIRED_COUNTRY = "Lithuania"
+REQUIRED_CURRENCY = "EUR"
+REQUIRED_LANGUAGE = "en"
+REQUIRED_TIME_ZONE = "Europe/Vilnius"
 
 
 def require(condition, message):
@@ -29,6 +33,22 @@ def require(condition, message):
 
 def main():
     require(frappe.is_setup_complete(), "Setup wizard is not marked complete")
+
+    system_settings = frappe.get_single("System Settings")
+    require(system_settings.country == REQUIRED_COUNTRY, f"Wrong system country: {system_settings.country}")
+    require(system_settings.currency == REQUIRED_CURRENCY, f"Wrong system currency: {system_settings.currency}")
+    require(system_settings.language == REQUIRED_LANGUAGE, f"Wrong system language: {system_settings.language}")
+    require(system_settings.time_zone == REQUIRED_TIME_ZONE, f"Wrong system time zone: {system_settings.time_zone}")
+
+    company = frappe.get_doc("Company", "3pl")
+    require(company.country == REQUIRED_COUNTRY, f"Wrong company country: {company.country}")
+    require(company.default_currency == REQUIRED_CURRENCY, f"Wrong company currency: {company.default_currency}")
+    require(frappe.db.get_default("country") == REQUIRED_COUNTRY, f"Wrong default country: {frappe.db.get_default('country')}")
+    require(frappe.db.get_default("currency") == REQUIRED_CURRENCY, f"Wrong default currency: {frappe.db.get_default('currency')}")
+    require(
+        frappe.db.count("Account", {"company": "3pl", "account_currency": ("!=", REQUIRED_CURRENCY)}) == 0,
+        "Company has accounts with non-EUR currency",
+    )
 
     for workspace in REQUIRED_WORKSPACES:
         require(frappe.db.exists("Workspace", workspace), f"Missing Workspace: {workspace}")
@@ -72,6 +92,8 @@ def main():
 
     require(frappe.db.exists("Inbound Shipment Notice", {"external_reference": "ASN-ALPHA-001"}), "Missing demo ASN")
     require(frappe.db.exists("Stock Entry", {"client": "Demo Client Alpha", "warehouse_flow": "Inbound Receipt"}), "Missing demo Stock Entry")
+    for customer in ("Demo Client Alpha", "Demo Client Beta"):
+        require(frappe.db.get_value("Customer", customer, "territory") == REQUIRED_COUNTRY, f"Wrong customer territory: {customer}")
 
     print("Site validation passed")
 
