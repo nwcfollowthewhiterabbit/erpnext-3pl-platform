@@ -5,7 +5,11 @@ Docker Swarm stack for a warehouse-first ERPNext v15 instance.
 ## Deploy
 
 ```bash
+sudo scripts/bootstrap_docker_swarm.sh SERVER_IP
+cp .env.example .env
+# edit .env secrets
 ./deploy.sh
+./scripts/run_post_deploy.sh
 ```
 
 Default access:
@@ -16,6 +20,8 @@ Default access:
 - Password: see `ADMIN_PASSWORD` in local `.env`
 
 The `.env` file is intentionally not committed.
+
+On a first deploy, run `run_post_deploy.sh` after the stack creates the ERPNext site. It applies the warehouse-only configuration, creates demo users, and loads demo warehouse data.
 
 ## Demo Users
 

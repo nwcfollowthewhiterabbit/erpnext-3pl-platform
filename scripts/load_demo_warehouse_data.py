@@ -26,6 +26,38 @@ ITEMS = [
 ]
 
 
+def ensure_master_data():
+    if not frappe.db.exists("Customer Group", "Commercial"):
+        frappe.get_doc(
+            {
+                "doctype": "Customer Group",
+                "customer_group_name": "Commercial",
+                "is_group": 0,
+            }
+        ).insert(ignore_permissions=True)
+
+    if not frappe.db.exists("Territory", "Ukraine"):
+        frappe.get_doc(
+            {
+                "doctype": "Territory",
+                "territory_name": "Ukraine",
+                "is_group": 0,
+            }
+        ).insert(ignore_permissions=True)
+
+    if not frappe.db.exists("Item Group", "Products"):
+        frappe.get_doc(
+            {
+                "doctype": "Item Group",
+                "item_group_name": "Products",
+                "is_group": 0,
+            }
+        ).insert(ignore_permissions=True)
+
+    if not frappe.db.exists("UOM", "Nos"):
+        frappe.get_doc({"doctype": "UOM", "uom_name": "Nos"}).insert(ignore_permissions=True)
+
+
 def ensure_customer(customer_name):
     if frappe.db.exists("Customer", customer_name):
         return frappe.get_doc("Customer", customer_name)
@@ -149,6 +181,8 @@ def ensure_stock_entry(notice_name):
 
 
 def main():
+    ensure_master_data()
+
     for customer_name in CLIENTS:
         ensure_customer(customer_name)
 

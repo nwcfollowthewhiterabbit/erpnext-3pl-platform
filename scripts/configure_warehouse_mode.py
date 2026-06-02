@@ -66,6 +66,49 @@ def configure_workspaces():
         frappe.db.set_value("Workspace", name, "is_hidden", is_hidden, update_modified=True)
 
 
+def configure_company():
+    if not frappe.db.exists("Warehouse Type", "Transit"):
+        frappe.get_doc({"doctype": "Warehouse Type", "name": "Transit"}).insert(ignore_permissions=True)
+
+    if frappe.db.exists("Company", COMPANY):
+        company = frappe.get_doc("Company", COMPANY)
+        changed = False
+        expected = {
+            "company_name": COMPANY,
+            "abbr": COMPANY_ABBR,
+            "default_currency": "UAH",
+            "country": "Ukraine",
+        }
+        for key, value in expected.items():
+            if getattr(company, key, None) != value:
+                setattr(company, key, value)
+                changed = True
+        if changed:
+            company.save(ignore_permissions=True)
+    else:
+        frappe.get_doc(
+            {
+                "doctype": "Company",
+                "company_name": COMPANY,
+                "abbr": COMPANY_ABBR,
+                "default_currency": "UAH",
+                "country": "Ukraine",
+            }
+        ).insert(ignore_permissions=True)
+
+    root = f"All Warehouses - {COMPANY_ABBR}"
+    if not frappe.db.exists("Warehouse", root):
+        frappe.get_doc(
+            {
+                "doctype": "Warehouse",
+                "warehouse_name": "All Warehouses",
+                "company": COMPANY,
+                "is_group": 1,
+                "parent_warehouse": None,
+            }
+        ).insert(ignore_permissions=True)
+
+
 def configure_module_profile():
     blocked_modules = [
         "Accounts",
@@ -307,6 +350,7 @@ def configure_defaults():
 
 def main():
     configure_workspaces()
+    configure_company()
     configure_module_profile()
     configure_warehouses()
     configure_stock_entry_types()
