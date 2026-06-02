@@ -78,6 +78,7 @@ if data.get("home_page") not in {"/app/3pl-warehouse", "/app/home"}:
 PY
 
   curl -fsS --max-time 30 -b "$cookie_file" "${base_url%/}/app/3pl-warehouse" >/dev/null
+  curl -fsS --max-time 30 -b "$cookie_file" "${base_url%/}/desk/3pl-warehouse" >/dev/null
   rm -f "$cookie_file" "$response_file"
 }
 

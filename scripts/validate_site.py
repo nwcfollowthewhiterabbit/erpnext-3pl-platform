@@ -59,6 +59,15 @@ def main():
     for role in ("Stock User", "Stock Manager", "3PL Warehouse User", "3PL Warehouse Manager"):
         require(frappe.db.get_value("Role", role, "home_page") == "app/3pl-warehouse", f"Wrong home_page for role: {role}")
 
+    for role in ("3PL Warehouse User", "3PL Warehouse Manager"):
+        require(
+            frappe.db.exists(
+                "Custom DocPerm",
+                {"parent": "Page", "role": role, "permlevel": 0, "if_owner": 0, "read": 1},
+            ),
+            f"Missing Page read permission for role: {role}",
+        )
+
     require(frappe.db.exists("Inbound Shipment Notice", {"external_reference": "ASN-ALPHA-001"}), "Missing demo ASN")
     require(frappe.db.exists("Stock Entry", {"client": "Demo Client Alpha", "warehouse_flow": "Inbound Receipt"}), "Missing demo Stock Entry")
 

@@ -245,6 +245,24 @@ def configure_module_profile():
     frappe.db.set_default("desktop:home_page", "workspace")
 
 
+def configure_desk_permissions():
+    from frappe.permissions import add_permission
+
+    for role_name in ("3PL Warehouse User", "3PL Warehouse Manager"):
+        existing = frappe.db.exists(
+            "Custom DocPerm",
+            {
+                "parent": "Page",
+                "role": role_name,
+                "permlevel": 0,
+                "if_owner": 0,
+                "read": 1,
+            },
+        )
+        if not existing:
+            add_permission("Page", role_name, 0, "read")
+
+
 def mark_setup_complete():
     if frappe.db.table_exists("Installed Application"):
         for app_name in ("frappe", "erpnext"):
@@ -487,6 +505,7 @@ def configure_defaults():
 def main():
     configure_company()
     configure_module_profile()
+    configure_desk_permissions()
     configure_warehouses()
     configure_stock_entry_types()
     configure_custom_doctypes()
