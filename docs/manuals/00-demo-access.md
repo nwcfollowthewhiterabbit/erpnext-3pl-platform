@@ -21,6 +21,12 @@
 - Password: `WarehouseManager2026!`
 - Intended use: manager-level Stock workflow testing.
 
+## Business Owner User
+
+- Login: `rupusm@gmail.com`
+- Password: `6elz4oeiuUGAHSGRccwngNmb`
+- Intended use: warehouse management landing page with System Manager access for system configuration.
+
 ## Starting Point
 
 After login, go to:
@@ -31,4 +37,3 @@ After login, go to:
 - `Pick List`
 - `Warehouse`
 - `Item`
-

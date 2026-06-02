@@ -16,6 +16,14 @@ USERS = [
         "password": "WarehouseManager2026!",
         "roles": ["Stock User", "Stock Manager", "3PL Warehouse Manager"],
     },
+    {
+        "email": "rupusm@gmail.com",
+        "first_name": "Nerijus",
+        "last_name": "",
+        "password": "6elz4oeiuUGAHSGRccwngNmb",
+        "roles": ["System Manager", "Stock User", "Stock Manager", "3PL Warehouse Manager"],
+        "module_profile": None,
+    },
 ]
 
 
@@ -38,7 +46,10 @@ def ensure_user(user_data):
         )
 
     user.enabled = 1
-    user.module_profile = "Warehouse Only" if frappe.db.exists("Module Profile", "Warehouse Only") else None
+    if "module_profile" in user_data:
+        user.module_profile = user_data["module_profile"]
+    else:
+        user.module_profile = "Warehouse Only" if frappe.db.exists("Module Profile", "Warehouse Only") else None
     user.default_workspace = "3PL Warehouse" if frappe.db.exists("Workspace", "3PL Warehouse") else None
     if user.meta.has_field("default_app"):
         user.default_app = "erpnext"

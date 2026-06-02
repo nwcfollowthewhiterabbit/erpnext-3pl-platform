@@ -5,6 +5,7 @@ REQUIRED_WORKSPACES = ["3PL Warehouse", "Stock Reference"]
 REQUIRED_USERS = {
     "warehouse.demo@example.test": ["Stock User", "3PL Warehouse User"],
     "warehouse.manager@example.test": ["Stock User", "Stock Manager", "3PL Warehouse Manager"],
+    "rupusm@gmail.com": ["System Manager", "Stock User", "Stock Manager", "3PL Warehouse Manager"],
 }
 REQUIRED_DOCTYPES = ["Inbound Shipment Notice", "Inbound Shipment Notice Item"]
 REQUIRED_REPORTS = ["3PL ASN vs Received"]
@@ -49,7 +50,8 @@ def main():
         doc = frappe.get_doc("User", user)
         user_roles = {row.role for row in doc.roles}
         require(doc.enabled == 1, f"User is disabled: {user}")
-        require(doc.module_profile == "Warehouse Only", f"Wrong module profile for {user}: {doc.module_profile}")
+        expected_module_profile = None if user == "rupusm@gmail.com" else "Warehouse Only"
+        require(doc.module_profile == expected_module_profile, f"Wrong module profile for {user}: {doc.module_profile}")
         require(doc.default_workspace == "3PL Warehouse", f"Wrong default workspace for {user}: {doc.default_workspace}")
         if doc.meta.has_field("default_app"):
             require(doc.default_app == "erpnext", f"Wrong default app for {user}: {doc.default_app}")
