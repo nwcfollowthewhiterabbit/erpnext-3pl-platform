@@ -27,6 +27,10 @@ server {
         return 302 /login?redirect-to=%2Fapp%2F3pl-warehouse;
     }
 
+    location = / {
+        return 302 /app/3pl-warehouse;
+    }
+
     location = /app/setup-wizard {
         return 302 /app/3pl-warehouse;
     }

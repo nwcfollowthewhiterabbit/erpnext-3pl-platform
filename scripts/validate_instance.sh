@@ -56,6 +56,7 @@ check_login() {
   password="$2"
   cookie_file="$(mktemp)"
   response_file="$(mktemp)"
+  page_file="$(mktemp)"
 
   curl -sS --max-time 30 \
     -X POST "${base_url%/}/api/method/login" \
@@ -77,9 +78,24 @@ if data.get("home_page") not in {"/app/3pl-warehouse", "/app/home"}:
     raise SystemExit(f"unexpected home_page: {data}")
 PY
 
-  curl -fsS --max-time 30 -b "$cookie_file" "${base_url%/}/app/3pl-warehouse" >/dev/null
-  curl -fsS --max-time 30 -b "$cookie_file" "${base_url%/}/desk/3pl-warehouse" >/dev/null
-  rm -f "$cookie_file" "$response_file"
+  check_page() {
+    path="$1"
+    curl -fsSL --max-time 30 -b "$cookie_file" "${base_url%/}${path}" -o "$page_file"
+    if grep -Eiq "Page not found|Not permitted|No permission" "$page_file"; then
+      echo "Unexpected error page for ${user} at ${path}" >&2
+      grep -Eio "Page not found|Not permitted|No permission" "$page_file" | head -5 >&2
+      exit 1
+    fi
+  }
+
+  check_page "/app/3pl-warehouse"
+  check_page "/desk/3pl-warehouse"
+  case "$base_url" in
+    http://127.0.0.1:*|http://localhost:*) ;;
+    *) check_page "/" ;;
+  esac
+
+  rm -f "$cookie_file" "$response_file" "$page_file"
 }
 
 check_login "warehouse.demo@example.test" "WarehouseDemo2026!"
@@ -98,6 +114,7 @@ expect_redirect() {
 case "$base_url" in
   http://127.0.0.1:*|http://localhost:*) ;;
   *)
+    expect_redirect "/" "/app/3pl-warehouse"
     expect_redirect "/app/setup-wizard" "/app/3pl-warehouse"
     expect_redirect "/app/setup-wizard/" "/app/3pl-warehouse"
     expect_redirect "/login?redirect-to=%2Fapp%2Fsetup-wizard" "/login?redirect-to=%2Fapp%2F3pl-warehouse"
