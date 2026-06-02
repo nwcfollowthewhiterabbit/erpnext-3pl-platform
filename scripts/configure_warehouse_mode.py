@@ -1,3 +1,5 @@
+import json
+
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
@@ -60,10 +62,98 @@ def ensure_warehouse(warehouse_name, parent=None, is_group=0):
 
 
 def configure_workspaces():
-    visible = {"Home", "Stock", "Users"}
     for name in frappe.get_all("Workspace", pluck="name"):
-        is_hidden = 0 if name in visible else 1
-        frappe.db.set_value("Workspace", name, "is_hidden", is_hidden, update_modified=True)
+        frappe.db.set_value("Workspace", name, "is_hidden", 1, update_modified=True)
+
+    workspaces = [
+        {
+            "name": "3PL Warehouse",
+            "label": "3PL Warehouse",
+            "title": "3PL Warehouse",
+            "module": "Stock",
+            "indicator_color": "green",
+            "content": [
+                {"id": "3pl_header", "type": "header", "data": {"text": '<span class="h4"><b>3PL Warehouse</b></span>', "col": 12}},
+                {"id": "3pl_receiving", "type": "shortcut", "data": {"shortcut_name": "Receiving Notices", "col": 3}},
+                {"id": "3pl_stock_entries", "type": "shortcut", "data": {"shortcut_name": "Stock Entries", "col": 3}},
+                {"id": "3pl_pick_lists", "type": "shortcut", "data": {"shortcut_name": "Pick Lists", "col": 3}},
+                {"id": "3pl_asn_report", "type": "shortcut", "data": {"shortcut_name": "ASN vs Received", "col": 3}},
+                {"id": "3pl_spacer", "type": "spacer", "data": {"col": 12}},
+                {"id": "3pl_reports_header", "type": "header", "data": {"text": '<span class="h4"><b>Reports and Masters</b></span>', "col": 12}},
+                {"id": "3pl_items", "type": "shortcut", "data": {"shortcut_name": "Items", "col": 3}},
+                {"id": "3pl_warehouses", "type": "shortcut", "data": {"shortcut_name": "Warehouses", "col": 3}},
+                {"id": "3pl_stock_balance", "type": "shortcut", "data": {"shortcut_name": "Stock Balance", "col": 3}},
+                {"id": "3pl_stock_ledger", "type": "shortcut", "data": {"shortcut_name": "Stock Ledger", "col": 3}},
+            ],
+            "shortcuts": [
+                {"type": "DocType", "link_to": "Inbound Shipment Notice", "doc_view": "List", "label": "Receiving Notices"},
+                {"type": "DocType", "link_to": "Stock Entry", "doc_view": "List", "label": "Stock Entries"},
+                {"type": "DocType", "link_to": "Pick List", "doc_view": "List", "label": "Pick Lists"},
+                {"type": "Report", "link_to": "3PL ASN vs Received", "label": "ASN vs Received", "report_ref_doctype": "Inbound Shipment Notice"},
+                {"type": "DocType", "link_to": "Item", "doc_view": "List", "label": "Items"},
+                {"type": "DocType", "link_to": "Warehouse", "doc_view": "Tree", "label": "Warehouses"},
+                {"type": "Report", "link_to": "Stock Balance", "label": "Stock Balance", "report_ref_doctype": "Stock Ledger Entry"},
+                {"type": "Report", "link_to": "Stock Ledger", "label": "Stock Ledger", "report_ref_doctype": "Stock Ledger Entry"},
+            ],
+            "links": [
+                {"type": "Link", "label": "Receiving Notices", "link_type": "DocType", "link_to": "Inbound Shipment Notice"},
+                {"type": "Link", "label": "Stock Entries", "link_type": "DocType", "link_to": "Stock Entry"},
+                {"type": "Link", "label": "Pick Lists", "link_type": "DocType", "link_to": "Pick List"},
+                {"type": "Link", "label": "Items", "link_type": "DocType", "link_to": "Item"},
+                {"type": "Link", "label": "Warehouses", "link_type": "DocType", "link_to": "Warehouse"},
+            ],
+        },
+        {
+            "name": "Stock Reference",
+            "label": "Stock Reference",
+            "title": "Stock Reference",
+            "module": "Stock",
+            "indicator_color": "green",
+            "content": [
+                {"id": "stock_ref_header", "type": "header", "data": {"text": '<span class="h4"><b>Stock Reference</b></span>', "col": 12}},
+                {"id": "stock_ref_items", "type": "shortcut", "data": {"shortcut_name": "Items", "col": 3}},
+                {"id": "stock_ref_warehouses", "type": "shortcut", "data": {"shortcut_name": "Warehouses", "col": 3}},
+                {"id": "stock_ref_spacer", "type": "spacer", "data": {"col": 12}},
+                {"id": "stock_ref_reports_header", "type": "header", "data": {"text": '<span class="h4"><b>Stock Reports</b></span>', "col": 12}},
+                {"id": "stock_ref_balance", "type": "shortcut", "data": {"shortcut_name": "Stock Balance", "col": 3}},
+                {"id": "stock_ref_ledger", "type": "shortcut", "data": {"shortcut_name": "Stock Ledger", "col": 3}},
+                {"id": "stock_ref_asn", "type": "shortcut", "data": {"shortcut_name": "ASN vs Received", "col": 3}},
+            ],
+            "shortcuts": [
+                {"type": "DocType", "link_to": "Item", "doc_view": "List", "label": "Items"},
+                {"type": "DocType", "link_to": "Warehouse", "doc_view": "Tree", "label": "Warehouses"},
+                {"type": "Report", "link_to": "Stock Balance", "label": "Stock Balance", "report_ref_doctype": "Stock Ledger Entry"},
+                {"type": "Report", "link_to": "Stock Ledger", "label": "Stock Ledger", "report_ref_doctype": "Stock Ledger Entry"},
+                {"type": "Report", "link_to": "3PL ASN vs Received", "label": "ASN vs Received", "report_ref_doctype": "Inbound Shipment Notice"},
+            ],
+            "links": [
+                {"type": "Link", "label": "Items", "link_type": "DocType", "link_to": "Item"},
+                {"type": "Link", "label": "Warehouses", "link_type": "DocType", "link_to": "Warehouse"},
+            ],
+        },
+    ]
+
+    for workspace_data in workspaces:
+        if frappe.db.exists("Workspace", workspace_data["name"]):
+            doc = frappe.get_doc("Workspace", workspace_data["name"])
+            doc.set("shortcuts", [])
+            doc.set("links", [])
+        else:
+            doc = frappe.new_doc("Workspace")
+            doc.name = workspace_data["name"]
+
+        for field in ("label", "title", "module", "indicator_color"):
+            setattr(doc, field, workspace_data[field])
+        doc.public = 1
+        doc.is_hidden = 0
+        doc.content = json.dumps(workspace_data["content"])
+
+        for shortcut in workspace_data["shortcuts"]:
+            doc.append("shortcuts", shortcut)
+        for link in workspace_data["links"]:
+            doc.append("links", link)
+
+        doc.save(ignore_permissions=True)
 
 
 def configure_company():
@@ -147,6 +237,12 @@ def configure_module_profile():
     for role_name in ("3PL Warehouse User", "3PL Warehouse Manager"):
         if not frappe.db.exists("Role", role_name):
             frappe.get_doc({"doctype": "Role", "role_name": role_name}).insert(ignore_permissions=True)
+
+    for role_name in ("Stock User", "Stock Manager", "3PL Warehouse User", "3PL Warehouse Manager"):
+        if frappe.db.exists("Role", role_name):
+            frappe.db.set_value("Role", role_name, "home_page", "app/3pl-warehouse")
+
+    frappe.db.set_default("desktop:home_page", "workspace")
 
 
 def configure_warehouses():
@@ -338,6 +434,36 @@ def configure_custom_fields():
     create_custom_fields(fields, update=True)
 
 
+def configure_reports():
+    query = """
+select
+    isn.name as "Notice:Link/Inbound Shipment Notice:150",
+    isn.external_reference as "Client Notice Ref:Data:150",
+    isn.customer as "Client:Link/Customer:170",
+    item.item_code as "Item:Link/Item:150",
+    item.expected_qty as "Expected Qty:Float:110",
+    item.received_qty as "Received Qty:Float:110",
+    item.variance_qty as "Variance Qty:Float:110",
+    isn.status as "Status:Data:120"
+from `tabInbound Shipment Notice` isn
+inner join `tabInbound Shipment Notice Item` item on item.parent = isn.name
+order by isn.creation desc, item.idx asc
+""".strip()
+
+    if frappe.db.exists("Report", "3PL ASN vs Received"):
+        report = frappe.get_doc("Report", "3PL ASN vs Received")
+    else:
+        report = frappe.new_doc("Report")
+        report.report_name = "3PL ASN vs Received"
+
+    report.ref_doctype = "Inbound Shipment Notice"
+    report.report_type = "Query Report"
+    report.is_standard = "No"
+    report.module = "Stock"
+    report.query = query
+    report.save(ignore_permissions=True)
+
+
 def configure_defaults():
     settings = frappe.get_single("Stock Settings")
     settings.item_naming_by = "Item Code"
@@ -349,13 +475,14 @@ def configure_defaults():
 
 
 def main():
-    configure_workspaces()
     configure_company()
     configure_module_profile()
     configure_warehouses()
     configure_stock_entry_types()
     configure_custom_doctypes()
     configure_custom_fields()
+    configure_reports()
+    configure_workspaces()
     configure_defaults()
     frappe.db.commit()
     frappe.clear_cache()
