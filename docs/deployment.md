@@ -43,6 +43,8 @@ sudo scripts/configure_https.sh erp.example.com
 
 The script installs nginx/certbot, proxies to the ERPNext frontend on port `8080`, enables HTTP to HTTPS redirects, and leaves certbot renewal enabled.
 
+It also redirects stale `/app/setup-wizard` links to `/app/3pl-warehouse`, because setup wizard is not available to demo warehouse users after the instance is configured.
+
 ## Validation
 
 Always run validation after deploy:
@@ -58,6 +60,7 @@ Validation checks:
 - demo users have `Warehouse Only` module profile and default workspace `3PL Warehouse`
 - demo login redirects to `/app/3pl-warehouse`
 - `/app/3pl-warehouse` is reachable for both demo users
+- stale `/app/setup-wizard` redirects to `/app/3pl-warehouse`
 
 ## Current Instance
 

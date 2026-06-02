@@ -84,4 +84,10 @@ PY
 check_login "warehouse.demo@example.test" "WarehouseDemo2026!"
 check_login "warehouse.manager@example.test" "WarehouseManager2026!"
 
+setup_redirect="$(curl -sS -o /dev/null -w "%{redirect_url}" --max-time 30 "${base_url%/}/app/setup-wizard")"
+if [ "$setup_redirect" != "${base_url%/}/app/3pl-warehouse" ]; then
+  echo "Unexpected setup-wizard redirect: ${setup_redirect}" >&2
+  exit 1
+fi
+
 echo "Instance validation passed for ${base_url}"
