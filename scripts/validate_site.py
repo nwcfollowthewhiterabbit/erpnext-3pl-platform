@@ -24,6 +24,7 @@ REQUIRED_COUNTRY = "Lithuania"
 REQUIRED_CURRENCY = "EUR"
 REQUIRED_LANGUAGE = "en"
 REQUIRED_TIME_ZONE = "Europe/Vilnius"
+REQUIRED_PLACEHOLDER_EMAIL = "noreply@example.invalid"
 
 
 def require(condition, message):
@@ -48,6 +49,17 @@ def main():
     require(
         frappe.db.count("Account", {"company": "3pl", "account_currency": ("!=", REQUIRED_CURRENCY)}) == 0,
         "Company has accounts with non-EUR currency",
+    )
+    require(
+        frappe.db.exists(
+            "Email Account",
+            {
+                "email_id": REQUIRED_PLACEHOLDER_EMAIL,
+                "enable_outgoing": 1,
+                "default_outgoing": 1,
+            },
+        ),
+        "Missing placeholder default outgoing Email Account",
     )
 
     for workspace in REQUIRED_WORKSPACES:

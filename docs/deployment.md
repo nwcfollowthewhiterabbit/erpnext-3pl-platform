@@ -35,6 +35,16 @@ Use the normal update path when the site already exists:
 - Language: `English` (`en`)
 - Time zone: `Europe/Vilnius` (Vilnius local time, UTC+3 during summer time)
 
+## Email Placeholder
+
+The deployment creates a placeholder default outgoing Email Account:
+
+- Name: `Placeholder Outgoing Email`
+- Email: `noreply@example.invalid`
+- SMTP: `smtp.placeholder.invalid:25`
+
+This is only a temporary default so ERPNext forms that require an outgoing account can proceed. Real outbound email delivery and newsletters are not configured yet.
+
 ## HTTPS
 
 For a quick public HTTPS endpoint without DNS administration, use `sslip.io`:
@@ -68,6 +78,7 @@ Validation checks:
 - expected Swarm services are `1/1`
 - setup wizard is marked complete for the installed Frappe/ERPNext apps
 - regional defaults are Lithuania, EUR, English, and Europe/Vilnius
+- placeholder default outgoing Email Account exists
 - custom DocTypes, report, warehouses, workspaces, demo users, and demo data exist
 - demo users have `Warehouse Only` module profile and default workspace `3PL Warehouse`
 - demo login redirects to `/app/3pl-warehouse`

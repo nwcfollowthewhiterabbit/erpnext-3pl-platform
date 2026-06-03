@@ -10,6 +10,7 @@ COUNTRY = "Lithuania"
 CURRENCY = "EUR"
 LANGUAGE = "en"
 TIME_ZONE = "Europe/Vilnius"
+PLACEHOLDER_EMAIL = "noreply@example.invalid"
 
 
 def ensure_doc(doctype, name=None, **values):
@@ -517,6 +518,34 @@ def configure_defaults():
     frappe.db.set_default("country", COUNTRY)
 
 
+def configure_email_placeholder():
+    account_name = "Placeholder Outgoing Email"
+
+    for name in frappe.get_all("Email Account", filters={"default_outgoing": 1}, pluck="name"):
+        if name != account_name:
+            frappe.db.set_value("Email Account", name, "default_outgoing", 0)
+
+    if frappe.db.exists("Email Account", account_name):
+        account = frappe.get_doc("Email Account", account_name)
+    else:
+        account = frappe.new_doc("Email Account")
+        account.email_account_name = account_name
+        account.email_id = PLACEHOLDER_EMAIL
+
+    account.enable_incoming = 0
+    account.enable_outgoing = 1
+    account.default_outgoing = 1
+    account.always_use_account_email_id_as_sender = 1
+    account.always_use_account_name_as_sender_name = 1
+    account.no_smtp_authentication = 1
+    account.smtp_server = "smtp.placeholder.invalid"
+    account.smtp_port = "25"
+    account.use_tls = 0
+    account.use_ssl_for_outgoing = 0
+    account.service = ""
+    account.save(ignore_permissions=True)
+
+
 def main():
     configure_company()
     configure_module_profile()
@@ -528,6 +557,7 @@ def main():
     configure_reports()
     configure_workspaces()
     configure_defaults()
+    configure_email_placeholder()
     mark_setup_complete()
     frappe.db.commit()
     frappe.clear_cache()
