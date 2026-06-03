@@ -25,7 +25,7 @@
 
 - Login: `rupusm@gmail.com`
 - Password: `6elz4oeiuUGAHSGRccwngNmb`
-- Intended use: warehouse management landing page with System Manager access for system configuration.
+- Intended use: owner-level access. Starts on the warehouse management landing page and receives all standard system roles, including `System Manager`, `Stock Manager`, and `Item Manager`.
 
 ## Starting Point
 

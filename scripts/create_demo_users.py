@@ -21,10 +21,12 @@ USERS = [
         "first_name": "Nerijus",
         "last_name": "",
         "password": "6elz4oeiuUGAHSGRccwngNmb",
-        "roles": ["System Manager", "Stock User", "Stock Manager", "3PL Warehouse Manager"],
+        "roles": "__all_standard_roles__",
         "module_profile": None,
     },
 ]
+
+AUTOMATIC_ROLES = {"All", "Guest", "Desk User"}
 
 
 def ensure_user(user_data):
@@ -54,7 +56,15 @@ def ensure_user(user_data):
     if user.meta.has_field("default_app"):
         user.default_app = "erpnext"
     user.set("roles", [])
-    for role in user_data["roles"]:
+    roles = user_data["roles"]
+    if roles == "__all_standard_roles__":
+        roles = sorted(
+            role.name
+            for role in frappe.get_all("Role", fields=["name", "disabled"])
+            if not role.disabled and role.name not in AUTOMATIC_ROLES
+        )
+
+    for role in roles:
         user.append("roles", {"role": role})
 
     user.save(ignore_permissions=True)

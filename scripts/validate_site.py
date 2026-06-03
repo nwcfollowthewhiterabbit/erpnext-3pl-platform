@@ -5,7 +5,7 @@ REQUIRED_WORKSPACES = ["3PL Warehouse", "Stock Reference"]
 REQUIRED_USERS = {
     "warehouse.demo@example.test": ["Stock User", "3PL Warehouse User"],
     "warehouse.manager@example.test": ["Stock User", "Stock Manager", "3PL Warehouse Manager"],
-    "rupusm@gmail.com": ["System Manager", "Stock User", "Stock Manager", "3PL Warehouse Manager"],
+    "rupusm@gmail.com": ["System Manager", "Stock User", "Stock Manager", "Item Manager", "3PL Warehouse Manager"],
 }
 REQUIRED_DOCTYPES = ["Inbound Shipment Notice", "Inbound Shipment Notice Item"]
 REQUIRED_REPORTS = ["3PL ASN vs Received"]
@@ -101,6 +101,19 @@ def main():
             ),
             f"Missing Page read permission for role: {role}",
         )
+
+    owner_roles = [row.role for row in frappe.get_doc("User", "rupusm@gmail.com").roles]
+    for doctype in ("Warehouse", "Item", "Item Group", "UOM"):
+        permissions = []
+        for table in ("DocPerm", "Custom DocPerm"):
+            permissions.extend(
+                frappe.get_all(
+                    table,
+                    filters={"parent": doctype, "role": ("in", owner_roles)},
+                    fields=["read", "write", "create", "delete"],
+                )
+            )
+        require(any(row.read and row.write and row.create for row in permissions), f"Owner cannot create/write {doctype}")
 
     require(frappe.db.exists("Inbound Shipment Notice", {"external_reference": "ASN-ALPHA-001"}), "Missing demo ASN")
     require(frappe.db.exists("Stock Entry", {"client": "Demo Client Alpha", "warehouse_flow": "Inbound Receipt"}), "Missing demo Stock Entry")
