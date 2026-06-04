@@ -21,6 +21,7 @@ USERS = [
         "last_name": "Demo",
         "password": WAREHOUSE_OPERATOR_PASSWORD,
         "roles": ["Stock User", "3PL Warehouse User"],
+        "default_app": None,
     },
     {
         "email": WAREHOUSE_MANAGER_USER,
@@ -28,6 +29,7 @@ USERS = [
         "last_name": "Manager",
         "password": WAREHOUSE_MANAGER_PASSWORD,
         "roles": ["Stock User", "Stock Manager", "3PL Warehouse Manager"],
+        "default_app": None,
     },
     {
         "email": BUSINESS_OWNER_USER,
@@ -36,6 +38,7 @@ USERS = [
         "password": BUSINESS_OWNER_PASSWORD,
         "roles": "__all_standard_roles__",
         "module_profile": None,
+        "default_app": None,
     },
     {
         "email": CLIENT_PORTAL_USER,
@@ -121,7 +124,7 @@ def ensure_user(user_data):
     else:
         user.default_workspace = "3PL Warehouse" if frappe.db.exists("Workspace", "3PL Warehouse") else None
     if user.meta.has_field("default_app"):
-        user.default_app = user_data.get("default_app", "erpnext")
+        user.default_app = user_data.get("default_app")
     user.set("roles", [])
     roles = user_data["roles"]
     if roles == "__all_standard_roles__":

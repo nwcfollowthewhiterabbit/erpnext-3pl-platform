@@ -40,7 +40,11 @@ server {
     }
 
     location = /app/home {
-        return 302 /app/3pl-warehouse;
+        return 302 /desk/3pl-warehouse;
+    }
+
+    location = /apps {
+        return 302 /desk/3pl-warehouse;
     }
 
     proxy_set_header Host \$host;

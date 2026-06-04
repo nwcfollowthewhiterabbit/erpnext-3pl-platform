@@ -140,8 +140,7 @@ def main():
         expected_workspace = None if user == CLIENT_PORTAL_USER else "3PL Warehouse"
         require(doc.default_workspace == expected_workspace, f"Wrong default workspace for {user}: {doc.default_workspace}")
         if doc.meta.has_field("default_app"):
-            expected_app = None if user == CLIENT_PORTAL_USER else "erpnext"
-            require(doc.default_app == expected_app, f"Wrong default app for {user}: {doc.default_app}")
+            require(doc.default_app is None, f"Wrong default app for {user}: {doc.default_app}")
         expected_user_type = "Website User" if user == CLIENT_PORTAL_USER else "System User"
         require(doc.user_type == expected_user_type, f"Wrong user_type for {user}: {doc.user_type}")
         for role in roles:

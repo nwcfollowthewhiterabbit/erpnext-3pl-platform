@@ -75,9 +75,23 @@ with open(sys.argv[1]) as handle:
 if data.get("message") != "Logged In":
     raise SystemExit(f"login failed: {data}")
 
-if data.get("home_page") not in {"/app/3pl-warehouse", "/app/home"}:
+if data.get("home_page") not in {"/app/3pl-warehouse", "/app/home", "/apps"}:
     raise SystemExit(f"unexpected home_page: {data}")
 PY
+
+  check_redirect_target() {
+    path="$1"
+    final_url="$(
+      curl -sS -L --max-time 30 -b "$cookie_file" -o /dev/null -w "%{url_effective}" "${base_url%/}${path}"
+    )"
+    case "$final_url" in
+      */desk/3pl-warehouse|*/app/3pl-warehouse) ;;
+      *)
+        echo "Unexpected final URL for ${user} at ${path}: ${final_url}" >&2
+        exit 1
+        ;;
+    esac
+  }
 
   check_page() {
     path="$1"
@@ -91,6 +105,13 @@ PY
 
   check_page "/app/3pl-warehouse"
   check_page "/desk/3pl-warehouse"
+  case "$base_url" in
+    http://127.0.0.1:*|http://localhost:*) ;;
+    *)
+      check_redirect_target "/apps"
+      check_redirect_target "/app/home"
+      ;;
+  esac
   if [ "$user" = "rupusm@gmail.com" ]; then
     check_page "/app/item"
     check_page "/app/warehouse"
@@ -172,7 +193,8 @@ case "$base_url" in
     expect_redirect "/app/setup-wizard" "/app/3pl-warehouse"
     expect_redirect "/app/setup-wizard/" "/app/3pl-warehouse"
     expect_redirect "/login?redirect-to=%2Fapp%2Fsetup-wizard" "/login?redirect-to=%2Fapp%2F3pl-warehouse"
-    expect_redirect "/app/home" "/app/3pl-warehouse"
+    expect_redirect "/app/home" "/desk/3pl-warehouse"
+    expect_redirect "/apps" "/desk/3pl-warehouse"
     ;;
 esac
 
