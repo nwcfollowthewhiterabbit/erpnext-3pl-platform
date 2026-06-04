@@ -155,10 +155,11 @@ def main():
             f"Missing Page read permission for role: {role}",
         )
 
-    client_role = frappe.get_doc("Role", "3PL Client")
-    if client_role.meta.has_field("desk_access"):
-        require(client_role.desk_access == 0, "3PL Client role must not have Desk access")
-    require(client_role.home_page == CLIENT_PORTAL_HOME, f"Wrong 3PL Client home_page: {client_role.home_page}")
+    for role_name in ("3PL Client", "Customer"):
+        client_role = frappe.get_doc("Role", role_name)
+        if client_role.meta.has_field("desk_access"):
+            require(client_role.desk_access == 0, f"{role_name} role must not have Desk access")
+        require(client_role.home_page == CLIENT_PORTAL_HOME, f"Wrong {role_name} home_page: {client_role.home_page}")
 
     for form in CLIENT_PORTAL_FORMS:
         require(

@@ -347,8 +347,11 @@ def configure_module_profile():
         if not frappe.db.exists("Role", role_name):
             frappe.get_doc({"doctype": "Role", "role_name": role_name}).insert(ignore_permissions=True)
 
-    if frappe.db.exists("Role", "3PL Client"):
-        role = frappe.get_doc("Role", "3PL Client")
+    for role_name in ("3PL Client", "Customer"):
+        if not frappe.db.exists("Role", role_name):
+            continue
+
+        role = frappe.get_doc("Role", role_name)
         changed = False
         if role.meta.has_field("desk_access") and role.desk_access:
             role.desk_access = 0
