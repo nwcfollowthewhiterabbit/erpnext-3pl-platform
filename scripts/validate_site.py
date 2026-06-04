@@ -75,6 +75,10 @@ def require_role_perm(doctype, role, **expected):
     )
 
 
+def portal_list_route(route):
+    return route if route.endswith("/list") else f"{route}/list"
+
+
 def main():
     require(frappe.is_setup_complete(), "Setup wizard is not marked complete")
 
@@ -163,7 +167,7 @@ def main():
 
     for form in CLIENT_PORTAL_FORMS:
         require(
-            frappe.db.exists("Portal Menu Item", {"title": form["menu_title"], "route": form["route"], "role": "3PL Client", "enabled": 1}),
+            frappe.db.exists("Portal Menu Item", {"title": form["menu_title"], "route": portal_list_route(form["route"]), "role": "3PL Client", "enabled": 1}),
             f"Missing client portal menu item: {form['menu_title']}",
         )
     portal_settings = frappe.get_single("Portal Settings")

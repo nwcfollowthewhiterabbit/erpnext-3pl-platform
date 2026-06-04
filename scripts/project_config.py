@@ -9,7 +9,8 @@ PLACEHOLDER_EMAIL = "noreply@example.invalid"
 CLIENT_PORTAL_USER = "alpha.client@example.test"
 CLIENT_PORTAL_PASSWORD = "AlphaClient2026!"
 CLIENT_PORTAL_CUSTOMER = "Demo Client Alpha"
-CLIENT_PORTAL_HOME = "client/receiving-notice"
+CLIENT_PORTAL_RECEIVING_ROUTE = "client/receiving-notice"
+CLIENT_PORTAL_HOME = f"{CLIENT_PORTAL_RECEIVING_ROUTE}/list"
 
 WAREHOUSE_OPERATOR_USER = "warehouse.demo@example.test"
 WAREHOUSE_OPERATOR_PASSWORD = "WarehouseDemo2026!"
@@ -51,7 +52,7 @@ CLIENT_PORTAL_FORMS = [
     {
         "form_name": "3PL Client Receiving Notice",
         "menu_title": "Receiving Notices",
-        "route": CLIENT_PORTAL_HOME,
+        "route": CLIENT_PORTAL_RECEIVING_ROUTE,
         "doc_type": "Inbound Shipment Notice",
         "list_title": "Receiving Notices",
         "button_label": "Submit Receiving Notice",

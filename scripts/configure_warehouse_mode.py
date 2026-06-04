@@ -888,8 +888,12 @@ def build_client_portal_nav():
     links = []
     for form in CLIENT_PORTAL_FORMS:
         label = frappe.utils.escape_html(form["menu_title"])
-        links.append(f'<a class="btn btn-sm btn-default" href="/{form["route"]}">{label}</a>')
+        links.append(f'<a class="btn btn-sm btn-default" href="/{portal_list_route(form["route"])}">{label}</a>')
     return f'<div class="mb-4 d-flex flex-wrap gap-2">{" ".join(links)}</div>'
+
+
+def portal_list_route(route):
+    return route if route.endswith("/list") else f"{route}/list"
 
 
 def configure_client_portal_website_script():
@@ -999,7 +1003,7 @@ def configure_portal_web_form(
     form.introduction_text = introduction_text
     form.success_title = success_title
     form.success_message = success_message
-    form.success_url = f"/{route}"
+    form.success_url = f"/{portal_list_route(route)}"
 
     for field in fields:
         form.append("web_form_fields", field)
@@ -1012,7 +1016,7 @@ def configure_portal_menu():
     for form in CLIENT_PORTAL_FORMS:
         item = None
         for row in portal_settings.menu:
-            if row.title == form["menu_title"] or row.route == form["route"]:
+            if row.title == form["menu_title"] or row.route in {form["route"], portal_list_route(form["route"])}:
                 item = row
                 break
         if item is None:
@@ -1020,7 +1024,7 @@ def configure_portal_menu():
 
         item.title = form["menu_title"]
         item.enabled = 1
-        item.route = form["route"]
+        item.route = portal_list_route(form["route"])
         item.reference_doctype = form["doc_type"]
         item.role = "3PL Client"
         item.target = ""

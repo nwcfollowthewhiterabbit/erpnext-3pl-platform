@@ -5,13 +5,19 @@ const clientUser = process.env.CLIENT_PORTAL_USER || "alpha.client@example.test"
 const clientPassword = process.env.CLIENT_PORTAL_PASSWORD || "AlphaClient2026!";
 
 const portalPages = [
-  "/client/receiving-notice",
-  "/client/inventory",
-  "/client/shipment-request",
-  "/client/discrepancy-instruction",
+  "/client/receiving-notice/list",
+  "/client/inventory/list",
+  "/client/shipment-request/list",
+  "/client/discrepancy-instruction/list",
 ];
 
 const navLabels = ["Receiving Notices", "Inventory", "Shipment Requests", "Discrepancy Instructions"];
+const navTargets = {
+  "Receiving Notices": "/client/receiving-notice/list",
+  Inventory: "/client/inventory/list",
+  "Shipment Requests": "/client/shipment-request/list",
+  "Discrepancy Instructions": "/client/discrepancy-instruction/list",
+};
 
 async function collectPortalProblems(page, problems) {
   page.on("console", (message) => {
@@ -48,8 +54,15 @@ async function assertPortalPage(page, path, problems) {
   }
 
   for (const label of navLabels) {
-    if (!(await page.getByRole("link", { name: label }).isVisible().catch(() => false))) {
+    const link = page.getByRole("link", { name: label }).first();
+    if (!(await link.isVisible().catch(() => false))) {
       problems.push(`body ${path}: missing nav label ${label}`);
+      continue;
+    }
+
+    const href = await link.getAttribute("href");
+    if (href !== navTargets[label]) {
+      problems.push(`body ${path}: nav label ${label} points to ${href}`);
     }
   }
 }
@@ -77,7 +90,7 @@ test("client portal browser login persists across portal pages", async ({ browse
   const problems = [];
   await collectPortalProblems(page, problems);
 
-  await page.goto(`${baseURL}/login?redirect-to=%2Fclient%2Freceiving-notice`);
+  await page.goto(`${baseURL}/login?redirect-to=%2Fclient%2Freceiving-notice%2Flist`);
   await page.waitForLoadState("networkidle");
 
   await page.locator("#login_email").fill(clientUser);
@@ -93,7 +106,7 @@ test("client portal browser login persists across portal pages", async ({ browse
     problems.push(`browser login redirected portal user to Desk: ${page.url()}`);
   }
 
-  await assertPortalPage(page, "/client/receiving-notice", problems);
+  await assertPortalPage(page, "/client/receiving-notice/list", problems);
 
   const sidCookie = (await context.cookies(baseURL)).find((cookie) => cookie.name === "sid");
   if (!sidCookie) {
@@ -104,7 +117,7 @@ test("client portal browser login persists across portal pages", async ({ browse
 
   const secondPage = await context.newPage();
   await collectPortalProblems(secondPage, problems);
-  await assertPortalPage(secondPage, "/client/inventory", problems);
+  await assertPortalPage(secondPage, "/client/inventory/list", problems);
 
   const secondBody = await secondPage.locator("body").innerText();
   if (/login|email.*password/i.test(secondBody)) {

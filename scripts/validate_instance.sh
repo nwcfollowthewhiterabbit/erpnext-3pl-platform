@@ -131,11 +131,11 @@ with open(sys.argv[1]) as handle:
 if data.get("message") not in {"Logged In", "No App"}:
     raise SystemExit(f"portal login failed: {data}")
 
-if data.get("home_page") not in {"/client/receiving-notice", "client/receiving-notice", "/me"}:
+if data.get("home_page") not in {"/client/receiving-notice/list", "client/receiving-notice/list", "/client/receiving-notice", "client/receiving-notice", "/me"}:
     raise SystemExit(f"unexpected portal home_page: {data}")
 PY
 
-  for path in /client/receiving-notice /client/inventory /client/shipment-request /client/discrepancy-instruction; do
+  for path in /client/receiving-notice/list /client/inventory/list /client/shipment-request/list /client/discrepancy-instruction/list; do
     curl -fsSL --max-time 30 -b "$cookie_file" "${base_url%/}${path}" -o "$page_file"
     if grep -Eiq "Page not found|Not permitted|No permission" "$page_file"; then
       echo "Unexpected portal error page for ${user} at ${path}" >&2
