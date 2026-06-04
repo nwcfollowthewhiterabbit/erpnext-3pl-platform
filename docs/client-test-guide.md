@@ -56,6 +56,8 @@ Use this sequence for the first customer review.
 
 This walkthrough covers the current MVP boundary: client portal input, customer data isolation, receiving notice review, discrepancy tracking, container/box visibility, and owner-level administration.
 
+The deploy validator now checks these same boundaries automatically: internal warehouse logins, business-owner master-data pages, client portal routes, demo records, and Alpha-vs-Beta data isolation.
+
 ### Client Portal
 
 Open `https://erpnext.77.237.244.169.sslip.io/client/receiving-notice`.
@@ -155,6 +157,7 @@ Test:
 
 - Confirm portal inventory contains Alpha products such as `SKU-ALPHA-001`.
 - Confirm Beta data such as `SKU-BETA-001` / `Demo Client Beta` is not available to the client.
+- Confirm Beta receiving notice `ASN-BETA-001` is not available to the Alpha client.
 - Try creating a Receiving Notice or Shipment Request for another customer only as a negative test.
 
 Expected result:

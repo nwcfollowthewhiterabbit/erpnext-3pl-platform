@@ -91,6 +91,11 @@ PY
 
   check_page "/app/3pl-warehouse"
   check_page "/desk/3pl-warehouse"
+  if [ "$user" = "rupusm@gmail.com" ]; then
+    check_page "/app/item"
+    check_page "/app/warehouse"
+    check_page "/app/uom"
+  fi
   case "$base_url" in
     http://127.0.0.1:*|http://localhost:*) ;;
     *) check_page "/" ;;
@@ -101,6 +106,7 @@ PY
 
 check_login "warehouse.demo@example.test" "WarehouseDemo2026!"
 check_login "warehouse.manager@example.test" "WarehouseManager2026!"
+check_login "rupusm@gmail.com" "6elz4oeiuUGAHSGRccwngNmb"
 
 check_portal_login() {
   user="$1"

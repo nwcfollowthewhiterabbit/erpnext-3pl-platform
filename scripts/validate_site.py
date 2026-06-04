@@ -234,6 +234,7 @@ def main():
     )
     require(frappe.db.exists("Three PL Inventory Snapshot", {"customer": "Demo Client Alpha", "item_code": "SKU-ALPHA-001"}), "Missing demo client inventory snapshot")
     require(frappe.db.exists("Three PL Inventory Snapshot", {"customer": "Demo Client Beta", "item_code": "SKU-BETA-001"}), "Missing demo beta inventory snapshot")
+    require(frappe.db.exists("Inbound Shipment Notice", {"customer": "Demo Client Beta", "external_reference": "ASN-BETA-001"}), "Missing demo beta ASN")
     require(frappe.db.exists("Three PL Shipment Request", {"customer": "Demo Client Alpha", "external_reference": "SHIP-ALPHA-001"}), "Missing demo shipment request")
     require(frappe.db.exists("Three PL Client Instruction", {"customer": "Demo Client Alpha", "receiving_notice": notice_name}), "Missing demo client discrepancy instruction")
 
@@ -372,6 +373,7 @@ def validate_client_portal_permissions():
 
     forbidden_docs = [
         ("Item", frappe.db.get_value("Item", {"item_code": "SKU-BETA-001"})),
+        ("Inbound Shipment Notice", frappe.db.get_value("Inbound Shipment Notice", {"customer": "Demo Client Beta", "external_reference": "ASN-BETA-001"})),
         ("Three PL Inventory Snapshot", frappe.db.get_value("Three PL Inventory Snapshot", {"customer": "Demo Client Beta", "item_code": "SKU-BETA-001"})),
     ]
     for doctype, name in forbidden_docs:

@@ -154,6 +154,43 @@ def ensure_inbound_notice():
     return notice
 
 
+def ensure_beta_inbound_notice():
+    external_reference = "ASN-BETA-001"
+    existing = frappe.db.get_value(
+        "Inbound Shipment Notice",
+        {"external_reference": external_reference, "customer": "Demo Client Beta"},
+        "name",
+    )
+    if existing:
+        notice = frappe.get_doc("Inbound Shipment Notice", existing)
+        notice.set("items", [])
+    else:
+        notice = frappe.new_doc("Inbound Shipment Notice")
+
+    notice.customer = "Demo Client Beta"
+    notice.external_reference = external_reference
+    notice.notice_date = nowdate()
+    notice.expected_arrival_date = nowdate()
+    notice.temporary_warehouse = "Temporary Receiving - 3"
+    notice.status = "Draft"
+    notice.notes = "Demo data used to validate that Alpha client cannot read Beta receiving notices."
+    notice.append(
+        "items",
+        {
+            "item_code": "SKU-BETA-001",
+            "client_sku": "BETA-001",
+            "item_name": "Demo Beta Accessory",
+            "expected_qty": 7,
+            "uom": "Nos",
+            "received_qty": 0,
+            "variance_qty": -7,
+            "condition_status": "OK",
+        },
+    )
+    notice.save(ignore_permissions=True)
+    return notice
+
+
 def sync_notice_details(notice):
     if meta_has_field("Inbound Shipment Notice", "client_instruction_status"):
         notice.client_instruction_status = "Waiting for Client"
@@ -418,6 +455,7 @@ def main():
         ensure_item(**item)
 
     notice = ensure_inbound_notice()
+    ensure_beta_inbound_notice()
     ensure_container(notice.name)
     notice = frappe.get_doc("Inbound Shipment Notice", notice.name)
     sync_notice_details(notice)

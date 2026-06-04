@@ -5,8 +5,8 @@
 Status: done.
 
 - ERPNext v16 is deployed in Docker Swarm.
-- Public domain is configured: `https://erptest.exemstsc.world`.
-- Let's Encrypt TLS is enabled.
+- Public domain is configured: `https://erpnext.77.237.244.169.sslip.io`.
+- HTTPS is enabled through the nginx reverse proxy.
 - Repository contains stack, setup scripts, nginx reference config, and process docs.
 
 ## Phase 1 - Warehouse-Only Baseline
@@ -26,10 +26,9 @@ Status: done.
 Status: in progress.
 
 - Run Receiving flow in UI with demo data.
-- Submit receiving Stock Entry.
-- Create and validate Putaway transfer.
-- Create Pick List from stocked SKU.
-- Validate Packing and Dispatch movements.
+- Validate client portal Receiving Notice, Inventory, Shipment Request, and Discrepancy Instruction routes.
+- Validate customer data isolation with Alpha/Beta demo data.
+- Validate Business Owner access to products, warehouses, and UOMs.
 - Capture client feedback on missing fields, screen friction, and scanner needs.
 
 ## Phase 3 - Scanner and Mobile Workflow
