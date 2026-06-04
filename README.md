@@ -47,6 +47,7 @@ For a quick HTTPS endpoint without managing DNS first, use an `sslip.io` hostnam
 - Roadmap: `docs/roadmap.md`
 - Warehouse mode overview: `docs/warehouse-mode.md`
 - Demo access: `docs/manuals/00-demo-access.md`
+- Client test guide: `docs/client-test-guide.md`
 - Receiving: `docs/manuals/01-receiving.md`
 - Putaway: `docs/manuals/02-putaway.md`
 - Picking: `docs/manuals/03-picking.md`
