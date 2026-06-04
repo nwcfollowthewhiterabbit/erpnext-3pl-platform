@@ -66,12 +66,33 @@ Open `Inbound Shipment Notice`.
 Test:
 
 - View existing demo notice `ASN-ALPHA-001`.
+- Confirm expected products have `Client SKU` values.
+- Confirm the notice has one demo discrepancy for `SKU-ALPHA-002`.
 - Create a new receiving notice with expected products and quantities.
 
 Expected result:
 
 - Notice can be created and saved.
 - It can reference a client and expected items.
+- Discrepancies can be stored on the receiving notice.
+
+### Containers / Boxes
+
+Open `Three PL Container` / `Containers`.
+
+Test:
+
+- Open demo container `BOX-ALPHA-001`.
+- Confirm it belongs to `Demo Client Alpha`.
+- Confirm it is linked to `ASN-ALPHA-001`.
+- Confirm it is currently in `Temporary Receiving - 3`.
+- Confirm it contains `SKU-ALPHA-001` and `SKU-ALPHA-002`.
+
+Expected result:
+
+- A cardboard box can be tracked as a separate warehouse container.
+- Products inside the box are visible before final putaway.
+- The box can stay in receiving, move to storage, then be used during picking/packing later.
 
 ### Receiving And Stock Entry
 
@@ -80,13 +101,14 @@ Open `Stock Entry`.
 Test:
 
 - Create a Material Receipt into `Temporary Receiving - 3`.
-- Use demo client/item fields where available.
-- Compare received quantity against the receiving notice manually.
+- Use demo client, receiving notice, scanned location, and container fields where available.
+- Compare received quantity against the receiving notice.
 
 Expected result:
 
 - Goods can be received into temporary receiving.
 - Stock is not placed directly into final storage.
+- The container/box reference can be recorded on the stock entry.
 
 ### Putaway
 
@@ -118,7 +140,7 @@ Expected result:
 - Clients cannot yet log in and create receiving notices themselves.
 - Client inventory visibility is not implemented yet.
 - Shipment requests and outbound client portal flow are not implemented yet.
-- Box/container handling is still an open design question.
+- Box/container handling exists as a first ERPNext custom DocType model, but scanner-first mobile screens are not implemented yet.
 - Real email delivery is not configured.
 - A placeholder outgoing email account exists only to prevent ERPNext forms from failing when an outgoing account is required.
 
@@ -134,5 +156,6 @@ Recommended architecture:
 - Store `client` and `client_sku` as separate product fields.
 - Use a generated visible code such as `CLIENTABBR-SKU` for readability.
 - Do not rely only on a text prefix as the long-term ownership model.
+- Treat `Owner Client + Client SKU` as the business identity of a product.
 
 This keeps the current setup simple while leaving room for multiple clients to store the same SKU later.

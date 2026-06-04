@@ -7,8 +7,23 @@ REQUIRED_USERS = {
     "warehouse.manager@example.test": ["Stock User", "Stock Manager", "3PL Warehouse Manager"],
     "rupusm@gmail.com": ["System Manager", "Stock User", "Stock Manager", "Item Manager", "3PL Warehouse Manager"],
 }
-REQUIRED_DOCTYPES = ["Inbound Shipment Notice", "Inbound Shipment Notice Item"]
-REQUIRED_REPORTS = ["3PL ASN vs Received"]
+REQUIRED_DOCTYPES = [
+    "Inbound Shipment Notice",
+    "Inbound Shipment Notice Item",
+    "Inbound Shipment Discrepancy",
+    "Three PL Container",
+    "Three PL Container Item",
+]
+REQUIRED_REPORTS = ["3PL ASN vs Received", "3PL Receiving Discrepancies", "3PL Containers"]
+REQUIRED_CUSTOM_FIELDS = [
+    "Item-owner_client",
+    "Item-client_sku",
+    "Item-client_product_name",
+    "Stock Entry-container_code",
+    "Stock Entry Detail-container_code",
+    "Pick List-container_code",
+    "Pick List Item-container_code",
+]
 REQUIRED_WAREHOUSES = [
     "Receiving Area - 3",
     "Temporary Receiving - 3",
@@ -30,6 +45,17 @@ REQUIRED_PLACEHOLDER_EMAIL = "noreply@example.invalid"
 def require(condition, message):
     if not condition:
         raise RuntimeError(message)
+
+
+def require_role_perm(doctype, role, **expected):
+    permissions = []
+    for table in ("DocPerm", "Custom DocPerm"):
+        permissions.extend(frappe.get_all(table, filters={"parent": doctype, "role": role}, fields=list(expected)))
+
+    require(
+        any(all(row.get(permission) == value for permission, value in expected.items()) for row in permissions),
+        f"Missing permission for {role} on {doctype}: {expected}",
+    )
 
 
 def main():
@@ -73,6 +99,12 @@ def main():
 
     for report in REQUIRED_REPORTS:
         require(frappe.db.exists("Report", report), f"Missing Report: {report}")
+        report_doc = frappe.get_doc("Report", report)
+        if report_doc.report_type == "Query Report":
+            frappe.db.sql(report_doc.query)
+
+    for custom_field in REQUIRED_CUSTOM_FIELDS:
+        require(frappe.db.exists("Custom Field", custom_field), f"Missing Custom Field: {custom_field}")
 
     for warehouse in REQUIRED_WAREHOUSES:
         require(frappe.db.exists("Warehouse", warehouse), f"Missing Warehouse: {warehouse}")
@@ -102,6 +134,11 @@ def main():
             f"Missing Page read permission for role: {role}",
         )
 
+    for doctype in ("Inbound Shipment Notice", "Three PL Container"):
+        require_role_perm(doctype, "3PL Warehouse User", read=1, write=1, create=1)
+        require_role_perm(doctype, "3PL Warehouse Manager", read=1, write=1, create=1, delete=1)
+        require_role_perm(doctype, "System Manager", read=1, write=1, create=1, delete=1)
+
     owner_roles = [row.role for row in frappe.get_doc("User", "rupusm@gmail.com").roles]
     for doctype in ("Warehouse", "Item", "Item Group", "UOM"):
         permissions = []
@@ -115,10 +152,33 @@ def main():
             )
         require(any(row.read and row.write and row.create for row in permissions), f"Owner cannot create/write {doctype}")
 
-    require(frappe.db.exists("Inbound Shipment Notice", {"external_reference": "ASN-ALPHA-001"}), "Missing demo ASN")
+    notice_name = frappe.db.get_value("Inbound Shipment Notice", {"external_reference": "ASN-ALPHA-001"})
+    require(notice_name, "Missing demo ASN")
     require(frappe.db.exists("Stock Entry", {"client": "Demo Client Alpha", "warehouse_flow": "Inbound Receipt"}), "Missing demo Stock Entry")
     for customer in ("Demo Client Alpha", "Demo Client Beta"):
         require(frappe.db.get_value("Customer", customer, "territory") == REQUIRED_COUNTRY, f"Wrong customer territory: {customer}")
+
+    expected_items = {
+        "SKU-ALPHA-001": ("Demo Client Alpha", "ALPHA-001"),
+        "SKU-ALPHA-002": ("Demo Client Alpha", "ALPHA-002"),
+        "SKU-BETA-001": ("Demo Client Beta", "BETA-001"),
+    }
+    for item_code, (client, client_sku) in expected_items.items():
+        require(frappe.db.exists("Item", item_code), f"Missing demo Item: {item_code}")
+        require(frappe.db.get_value("Item", item_code, "owner_client") == client, f"Wrong owner_client for {item_code}")
+        require(frappe.db.get_value("Item", item_code, "client_sku") == client_sku, f"Wrong client_sku for {item_code}")
+
+    container = frappe.get_doc("Three PL Container", "BOX-ALPHA-001")
+    require(container.client == "Demo Client Alpha", "Demo container has wrong client")
+    require(container.current_warehouse == "Temporary Receiving - 3", "Demo container has wrong location")
+    require(container.inbound_shipment_notice == notice_name, "Demo container is not linked to demo ASN")
+    require(any(row.item_code == "SKU-ALPHA-002" and row.qty == 24 for row in container.items), "Demo container misses expected item row")
+
+    notice = frappe.get_doc("Inbound Shipment Notice", notice_name)
+    require(
+        any(row.discrepancy_type == "Quantity Difference" and row.item_code == "SKU-ALPHA-002" and row.variance_qty == -1 for row in notice.discrepancies),
+        "Demo ASN misses quantity discrepancy",
+    )
 
     print("Site validation passed")
 

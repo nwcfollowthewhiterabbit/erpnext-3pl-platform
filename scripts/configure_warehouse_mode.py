@@ -13,6 +13,22 @@ TIME_ZONE = "Europe/Vilnius"
 PLACEHOLDER_EMAIL = "noreply@example.invalid"
 
 
+def ensure_child_field(doc, field):
+    if not any(row.fieldname == field["fieldname"] for row in doc.fields):
+        doc.append("fields", field)
+        return True
+    return False
+
+
+def ensure_doctype_fields(doctype, fields):
+    doc = frappe.get_doc("DocType", doctype)
+    changed = False
+    for field in fields:
+        changed = ensure_child_field(doc, field) or changed
+    if changed:
+        doc.save(ignore_permissions=True)
+
+
 def ensure_doc(doctype, name=None, **values):
     if name and frappe.db.exists(doctype, name):
         doc = frappe.get_doc(doctype, name)
@@ -80,9 +96,11 @@ def configure_workspaces():
             "content": [
                 {"id": "3pl_header", "type": "header", "data": {"text": '<span class="h4"><b>3PL Warehouse</b></span>', "col": 12}},
                 {"id": "3pl_receiving", "type": "shortcut", "data": {"shortcut_name": "Receiving Notices", "col": 3}},
+                {"id": "3pl_containers", "type": "shortcut", "data": {"shortcut_name": "Containers", "col": 3}},
                 {"id": "3pl_stock_entries", "type": "shortcut", "data": {"shortcut_name": "Stock Entries", "col": 3}},
                 {"id": "3pl_pick_lists", "type": "shortcut", "data": {"shortcut_name": "Pick Lists", "col": 3}},
                 {"id": "3pl_asn_report", "type": "shortcut", "data": {"shortcut_name": "ASN vs Received", "col": 3}},
+                {"id": "3pl_discrepancies", "type": "shortcut", "data": {"shortcut_name": "Receiving Discrepancies", "col": 3}},
                 {"id": "3pl_spacer", "type": "spacer", "data": {"col": 12}},
                 {"id": "3pl_reports_header", "type": "header", "data": {"text": '<span class="h4"><b>Reports and Masters</b></span>', "col": 12}},
                 {"id": "3pl_items", "type": "shortcut", "data": {"shortcut_name": "Items", "col": 3}},
@@ -92,9 +110,12 @@ def configure_workspaces():
             ],
             "shortcuts": [
                 {"type": "DocType", "link_to": "Inbound Shipment Notice", "doc_view": "List", "label": "Receiving Notices"},
+                {"type": "DocType", "link_to": "Three PL Container", "doc_view": "List", "label": "Containers"},
                 {"type": "DocType", "link_to": "Stock Entry", "doc_view": "List", "label": "Stock Entries"},
                 {"type": "DocType", "link_to": "Pick List", "doc_view": "List", "label": "Pick Lists"},
                 {"type": "Report", "link_to": "3PL ASN vs Received", "label": "ASN vs Received", "report_ref_doctype": "Inbound Shipment Notice"},
+                {"type": "Report", "link_to": "3PL Receiving Discrepancies", "label": "Receiving Discrepancies", "report_ref_doctype": "Inbound Shipment Notice"},
+                {"type": "Report", "link_to": "3PL Containers", "label": "Containers Report", "report_ref_doctype": "Three PL Container"},
                 {"type": "DocType", "link_to": "Item", "doc_view": "List", "label": "Items"},
                 {"type": "DocType", "link_to": "Warehouse", "doc_view": "Tree", "label": "Warehouses"},
                 {"type": "Report", "link_to": "Stock Balance", "label": "Stock Balance", "report_ref_doctype": "Stock Ledger Entry"},
@@ -102,6 +123,7 @@ def configure_workspaces():
             ],
             "links": [
                 {"type": "Link", "label": "Receiving Notices", "link_type": "DocType", "link_to": "Inbound Shipment Notice"},
+                {"type": "Link", "label": "Containers", "link_type": "DocType", "link_to": "Three PL Container"},
                 {"type": "Link", "label": "Stock Entries", "link_type": "DocType", "link_to": "Stock Entry"},
                 {"type": "Link", "label": "Pick Lists", "link_type": "DocType", "link_to": "Pick List"},
                 {"type": "Link", "label": "Items", "link_type": "DocType", "link_to": "Item"},
@@ -334,17 +356,113 @@ def configure_custom_doctypes():
                 "editable_grid": 1,
                 "fields": [
                     {"fieldname": "item_code", "label": "Item", "fieldtype": "Link", "options": "Item", "reqd": 1, "in_list_view": 1},
+                    {"fieldname": "client_sku", "label": "Client SKU", "fieldtype": "Data", "in_list_view": 1},
                     {"fieldname": "item_name", "label": "Item Name", "fieldtype": "Data", "in_list_view": 1},
                     {"fieldname": "expected_qty", "label": "Expected Qty", "fieldtype": "Float", "reqd": 1, "in_list_view": 1},
                     {"fieldname": "uom", "label": "UOM", "fieldtype": "Link", "options": "UOM", "in_list_view": 1},
                     {"fieldname": "received_qty", "label": "Received Qty", "fieldtype": "Float", "in_list_view": 1},
                     {"fieldname": "variance_qty", "label": "Variance Qty", "fieldtype": "Float", "read_only": 1},
+                    {"fieldname": "condition_status", "label": "Condition", "fieldtype": "Select", "options": "\nOK\nDamaged\nQuality Issue\nHold", "in_list_view": 1},
                     {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
                 ],
             }
         )
         child.name = "Inbound Shipment Notice Item"
         child.insert(ignore_permissions=True)
+    else:
+        ensure_doctype_fields(
+            "Inbound Shipment Notice Item",
+            [
+                {"fieldname": "client_sku", "label": "Client SKU", "fieldtype": "Data", "insert_after": "item_code", "in_list_view": 1},
+                {"fieldname": "condition_status", "label": "Condition", "fieldtype": "Select", "options": "\nOK\nDamaged\nQuality Issue\nHold", "insert_after": "variance_qty", "in_list_view": 1},
+            ],
+        )
+
+    if not frappe.db.exists("DocType", "Inbound Shipment Discrepancy"):
+        discrepancy = frappe.get_doc(
+            {
+                "doctype": "DocType",
+                "name": "Inbound Shipment Discrepancy",
+                "module": "Stock",
+                "custom": 1,
+                "istable": 1,
+                "editable_grid": 1,
+                "fields": [
+                    {"fieldname": "discrepancy_type", "label": "Type", "fieldtype": "Select", "options": "Missing Product\nUnexpected Product\nQuantity Difference\nDamaged Product\nQuality Issue", "reqd": 1, "in_list_view": 1},
+                    {"fieldname": "item_code", "label": "Item", "fieldtype": "Link", "options": "Item", "in_list_view": 1},
+                    {"fieldname": "client_sku", "label": "Client SKU", "fieldtype": "Data", "in_list_view": 1},
+                    {"fieldname": "expected_qty", "label": "Expected Qty", "fieldtype": "Float", "in_list_view": 1},
+                    {"fieldname": "actual_qty", "label": "Actual Qty", "fieldtype": "Float", "in_list_view": 1},
+                    {"fieldname": "variance_qty", "label": "Variance Qty", "fieldtype": "Float", "in_list_view": 1},
+                    {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Open\nClient Notified\nInstruction Received\nResolved", "default": "Open", "in_list_view": 1},
+                    {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
+                ],
+            }
+        )
+        discrepancy.name = "Inbound Shipment Discrepancy"
+        discrepancy.insert(ignore_permissions=True)
+
+    if not frappe.db.exists("DocType", "Three PL Container Item"):
+        container_item = frappe.get_doc(
+            {
+                "doctype": "DocType",
+                "name": "Three PL Container Item",
+                "module": "Stock",
+                "custom": 1,
+                "istable": 1,
+                "editable_grid": 1,
+                "fields": [
+                    {"fieldname": "item_code", "label": "Item", "fieldtype": "Link", "options": "Item", "reqd": 1, "in_list_view": 1},
+                    {"fieldname": "client_sku", "label": "Client SKU", "fieldtype": "Data", "in_list_view": 1},
+                    {"fieldname": "qty", "label": "Qty", "fieldtype": "Float", "reqd": 1, "in_list_view": 1},
+                    {"fieldname": "uom", "label": "UOM", "fieldtype": "Link", "options": "UOM", "in_list_view": 1},
+                    {"fieldname": "condition_status", "label": "Condition", "fieldtype": "Select", "options": "\nOK\nDamaged\nQuality Issue\nHold", "default": "OK", "in_list_view": 1},
+                    {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
+                ],
+            }
+        )
+        container_item.name = "Three PL Container Item"
+        container_item.insert(ignore_permissions=True)
+    else:
+        ensure_doctype_fields(
+            "Three PL Container Item",
+            [
+                {"fieldname": "client_sku", "label": "Client SKU", "fieldtype": "Data", "insert_after": "item_code", "in_list_view": 1},
+                {"fieldname": "condition_status", "label": "Condition", "fieldtype": "Select", "options": "\nOK\nDamaged\nQuality Issue\nHold", "default": "OK", "insert_after": "uom", "in_list_view": 1},
+            ],
+        )
+
+    if not frappe.db.exists("DocType", "Three PL Container"):
+        container = frappe.get_doc(
+            {
+                "doctype": "DocType",
+                "name": "Three PL Container",
+                "module": "Stock",
+                "custom": 1,
+                "track_changes": 1,
+                "title_field": "container_code",
+                "autoname": "field:container_code",
+                "fields": [
+                    {"fieldname": "container_code", "label": "Container / Box Code", "fieldtype": "Data", "reqd": 1, "unique": 1, "in_list_view": 1},
+                    {"fieldname": "barcode", "label": "Barcode / Label", "fieldtype": "Data", "in_list_view": 1},
+                    {"fieldname": "client", "label": "Client", "fieldtype": "Link", "options": "Customer", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
+                    {"fieldname": "current_warehouse", "label": "Current Location", "fieldtype": "Link", "options": "Warehouse", "in_standard_filter": 1, "in_list_view": 1},
+                    {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Expected\nReceived\nIn Verification\nReady for Putaway\nStored\nPicked\nShipped\nClosed", "default": "Expected", "in_list_view": 1},
+                    {"fieldname": "items_section", "label": "Contents", "fieldtype": "Section Break"},
+                    {"fieldname": "items", "label": "Items", "fieldtype": "Table", "options": "Three PL Container Item"},
+                    {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
+                ],
+                "permissions": [
+                    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+                    {"role": "Stock Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+                    {"role": "Stock User", "read": 1, "write": 1, "create": 1, "report": 1},
+                    {"role": "3PL Warehouse Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+                    {"role": "3PL Warehouse User", "read": 1, "write": 1, "create": 1, "report": 1},
+                ],
+            }
+        )
+        container.name = "Three PL Container"
+        container.insert(ignore_permissions=True)
 
     if not frappe.db.exists("DocType", "Inbound Shipment Notice"):
         parent = frappe.get_doc(
@@ -365,6 +483,8 @@ def configure_custom_doctypes():
                     {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Draft\nPartially Received\nReceived\nClosed", "default": "Draft", "in_list_view": 1},
                     {"fieldname": "items_section", "label": "Expected Products", "fieldtype": "Section Break"},
                     {"fieldname": "items", "label": "Items", "fieldtype": "Table", "options": "Inbound Shipment Notice Item"},
+                    {"fieldname": "discrepancy_section", "label": "Discrepancies", "fieldtype": "Section Break"},
+                    {"fieldname": "discrepancies", "label": "Discrepancies", "fieldtype": "Table", "options": "Inbound Shipment Discrepancy"},
                     {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
                 ],
                 "permissions": [
@@ -378,10 +498,70 @@ def configure_custom_doctypes():
         )
         parent.name = "Inbound Shipment Notice"
         parent.insert(ignore_permissions=True)
+    else:
+        ensure_doctype_fields(
+            "Inbound Shipment Notice",
+            [
+                {"fieldname": "portal_source", "label": "Portal Source", "fieldtype": "Check", "insert_after": "external_reference"},
+                {"fieldname": "client_instruction_status", "label": "Client Instruction Status", "fieldtype": "Select", "options": "\nNot Required\nWaiting for Client\nInstruction Received", "default": "Not Required", "insert_after": "status", "in_standard_filter": 1},
+                {"fieldname": "discrepancy_section", "label": "Discrepancies", "fieldtype": "Section Break", "insert_after": "items"},
+                {"fieldname": "discrepancies", "label": "Discrepancies", "fieldtype": "Table", "options": "Inbound Shipment Discrepancy", "insert_after": "discrepancy_section"},
+            ],
+        )
+
+    ensure_doctype_fields(
+        "Inbound Shipment Notice Item",
+        [
+            {"fieldname": "container_code", "label": "Container / Box", "fieldtype": "Link", "options": "Three PL Container", "insert_after": "variance_qty", "in_list_view": 1},
+        ],
+    )
+    ensure_doctype_fields(
+        "Inbound Shipment Discrepancy",
+        [
+            {"fieldname": "container_code", "label": "Container / Box", "fieldtype": "Link", "options": "Three PL Container", "insert_after": "variance_qty", "in_list_view": 1},
+        ],
+    )
+    ensure_doctype_fields(
+        "Three PL Container",
+        [
+            {"fieldname": "inbound_shipment_notice", "label": "Receiving Notice", "fieldtype": "Link", "options": "Inbound Shipment Notice", "insert_after": "current_warehouse", "in_standard_filter": 1},
+        ],
+    )
 
 
 def configure_custom_fields():
     fields = {
+        "Item": [
+            {
+                "fieldname": "three_pl_ownership_section",
+                "label": "3PL Ownership",
+                "fieldtype": "Section Break",
+                "insert_after": "item_group",
+                "collapsible": 1,
+            },
+            {
+                "fieldname": "owner_client",
+                "label": "Owner Client",
+                "fieldtype": "Link",
+                "options": "Customer",
+                "insert_after": "three_pl_ownership_section",
+                "in_standard_filter": 1,
+            },
+            {
+                "fieldname": "client_sku",
+                "label": "Client SKU",
+                "fieldtype": "Data",
+                "insert_after": "owner_client",
+                "in_standard_filter": 1,
+                "description": "Client-facing SKU. Business uniqueness is Owner Client + Client SKU.",
+            },
+            {
+                "fieldname": "client_product_name",
+                "label": "Client Product Name",
+                "fieldtype": "Data",
+                "insert_after": "client_sku",
+            },
+        ],
         "Stock Entry": [
             {
                 "fieldname": "client_section",
@@ -422,6 +602,14 @@ def configure_custom_fields():
                 "insert_after": "warehouse_flow",
                 "description": "Use this to record the warehouse/location barcode scanned before scanning products.",
             },
+            {
+                "fieldname": "container_code",
+                "label": "Container / Box",
+                "fieldtype": "Link",
+                "options": "Three PL Container",
+                "insert_after": "scanned_location",
+                "description": "Container or box scanned during receiving, putaway, picking, packing, or shipping.",
+            },
         ],
         "Stock Entry Detail": [
             {
@@ -432,7 +620,15 @@ def configure_custom_fields():
                 "insert_after": "barcode",
                 "in_list_view": 1,
                 "description": "Location scanned for this product row.",
-            }
+            },
+            {
+                "fieldname": "container_code",
+                "label": "Container / Box",
+                "fieldtype": "Link",
+                "options": "Three PL Container",
+                "insert_after": "scanned_location",
+                "in_list_view": 1,
+            },
         ],
         "Pick List": [
             {
@@ -456,6 +652,13 @@ def configure_custom_fields():
                 "fieldtype": "Data",
                 "insert_after": "client",
             },
+            {
+                "fieldname": "container_code",
+                "label": "Container / Box",
+                "fieldtype": "Link",
+                "options": "Three PL Container",
+                "insert_after": "shipment_reference",
+            },
         ],
         "Pick List Item": [
             {
@@ -465,40 +668,96 @@ def configure_custom_fields():
                 "options": "Warehouse",
                 "insert_after": "warehouse",
                 "in_list_view": 1,
-            }
+            },
+            {
+                "fieldname": "container_code",
+                "label": "Container / Box",
+                "fieldtype": "Link",
+                "options": "Three PL Container",
+                "insert_after": "scanned_location",
+                "in_list_view": 1,
+            },
         ],
     }
     create_custom_fields(fields, update=True)
 
 
 def configure_reports():
-    query = """
+    reports = {
+        "3PL ASN vs Received": {
+            "ref_doctype": "Inbound Shipment Notice",
+            "query": """
 select
     isn.name as "Notice:Link/Inbound Shipment Notice:150",
     isn.external_reference as "Client Notice Ref:Data:150",
     isn.customer as "Client:Link/Customer:170",
     item.item_code as "Item:Link/Item:150",
+    item.client_sku as "Client SKU:Data:120",
     item.expected_qty as "Expected Qty:Float:110",
     item.received_qty as "Received Qty:Float:110",
     item.variance_qty as "Variance Qty:Float:110",
+    item.container_code as "Container / Box:Link/Three PL Container:150",
     isn.status as "Status:Data:120"
 from `tabInbound Shipment Notice` isn
 inner join `tabInbound Shipment Notice Item` item on item.parent = isn.name
 order by isn.creation desc, item.idx asc
-""".strip()
+""".strip(),
+        },
+        "3PL Receiving Discrepancies": {
+            "ref_doctype": "Inbound Shipment Notice",
+            "query": """
+select
+    isn.name as "Notice:Link/Inbound Shipment Notice:150",
+    isn.external_reference as "Client Notice Ref:Data:150",
+    isn.customer as "Client:Link/Customer:170",
+    d.discrepancy_type as "Type:Data:140",
+    d.status as "Status:Data:150",
+    d.item_code as "Item:Link/Item:150",
+    d.client_sku as "Client SKU:Data:120",
+    d.expected_qty as "Expected Qty:Float:110",
+    d.actual_qty as "Actual Qty:Float:110",
+    d.variance_qty as "Variance Qty:Float:110",
+    d.container_code as "Container / Box:Link/Three PL Container:150",
+    d.notes as "Notes:Small Text:220"
+from `tabInbound Shipment Notice` isn
+inner join `tabInbound Shipment Discrepancy` d on d.parent = isn.name
+order by isn.creation desc, d.idx asc
+""".strip(),
+        },
+        "3PL Containers": {
+            "ref_doctype": "Three PL Container",
+            "query": """
+select
+    c.name as "Container / Box:Link/Three PL Container:150",
+    c.client as "Client:Link/Customer:170",
+    c.status as "Status:Data:140",
+    c.current_warehouse as "Current Location:Link/Warehouse:180",
+    c.inbound_shipment_notice as "Receiving Notice:Link/Inbound Shipment Notice:170",
+    ci.item_code as "Item:Link/Item:150",
+    ci.client_sku as "Client SKU:Data:120",
+    ci.qty as "Qty:Float:90",
+    ci.uom as "UOM:Link/UOM:80",
+    ci.condition_status as "Condition:Data:120"
+from `tabThree PL Container` c
+left join `tabThree PL Container Item` ci on ci.parent = c.name
+order by c.creation desc, ci.idx asc
+""".strip(),
+        },
+    }
 
-    if frappe.db.exists("Report", "3PL ASN vs Received"):
-        report = frappe.get_doc("Report", "3PL ASN vs Received")
-    else:
-        report = frappe.new_doc("Report")
-        report.report_name = "3PL ASN vs Received"
+    for report_name, report_data in reports.items():
+        if frappe.db.exists("Report", report_name):
+            report = frappe.get_doc("Report", report_name)
+        else:
+            report = frappe.new_doc("Report")
+            report.report_name = report_name
 
-    report.ref_doctype = "Inbound Shipment Notice"
-    report.report_type = "Query Report"
-    report.is_standard = "No"
-    report.module = "Stock"
-    report.query = query
-    report.save(ignore_permissions=True)
+        report.ref_doctype = report_data["ref_doctype"]
+        report.report_type = "Query Report"
+        report.is_standard = "No"
+        report.module = "Stock"
+        report.query = report_data["query"]
+        report.save(ignore_permissions=True)
 
 
 def configure_defaults():
