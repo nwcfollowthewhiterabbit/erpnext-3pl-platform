@@ -1,37 +1,50 @@
 import frappe
 
+from project_config import (
+    BUSINESS_OWNER_PASSWORD,
+    BUSINESS_OWNER_USER,
+    CLIENT_PORTAL_CUSTOMER,
+    CLIENT_PORTAL_PASSWORD,
+    CLIENT_PORTAL_USER,
+    COUNTRY,
+    WAREHOUSE_MANAGER_PASSWORD,
+    WAREHOUSE_MANAGER_USER,
+    WAREHOUSE_OPERATOR_PASSWORD,
+    WAREHOUSE_OPERATOR_USER,
+)
+
 
 USERS = [
     {
-        "email": "warehouse.demo@example.test",
+        "email": WAREHOUSE_OPERATOR_USER,
         "first_name": "Warehouse",
         "last_name": "Demo",
-        "password": "WarehouseDemo2026!",
+        "password": WAREHOUSE_OPERATOR_PASSWORD,
         "roles": ["Stock User", "3PL Warehouse User"],
     },
     {
-        "email": "warehouse.manager@example.test",
+        "email": WAREHOUSE_MANAGER_USER,
         "first_name": "Warehouse",
         "last_name": "Manager",
-        "password": "WarehouseManager2026!",
+        "password": WAREHOUSE_MANAGER_PASSWORD,
         "roles": ["Stock User", "Stock Manager", "3PL Warehouse Manager"],
     },
     {
-        "email": "rupusm@gmail.com",
+        "email": BUSINESS_OWNER_USER,
         "first_name": "Nerijus",
         "last_name": "",
-        "password": "6elz4oeiuUGAHSGRccwngNmb",
+        "password": BUSINESS_OWNER_PASSWORD,
         "roles": "__all_standard_roles__",
         "module_profile": None,
     },
     {
-        "email": "alpha.client@example.test",
+        "email": CLIENT_PORTAL_USER,
         "first_name": "Alpha",
         "last_name": "Client",
-        "password": "AlphaClient2026!",
+        "password": CLIENT_PORTAL_PASSWORD,
         "roles": ["3PL Client"],
         "user_type": "Website User",
-        "customer": "Demo Client Alpha",
+        "customer": CLIENT_PORTAL_CUSTOMER,
         "module_profile": None,
         "default_workspace": None,
         "default_app": None,
@@ -39,7 +52,6 @@ USERS = [
 ]
 
 AUTOMATIC_ROLES = {"All", "Guest", "Desk User"}
-COUNTRY = "Lithuania"
 
 
 def ensure_customer_master_data():

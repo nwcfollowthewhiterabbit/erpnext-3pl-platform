@@ -1,12 +1,29 @@
 import frappe
 
+from project_config import (
+    BUSINESS_OWNER_USER,
+    CLIENT_PORTAL_CUSTOMER,
+    CLIENT_PORTAL_FORMS,
+    CLIENT_PORTAL_HOME,
+    CLIENT_PORTAL_ROUTES,
+    CLIENT_PORTAL_USER,
+    COUNTRY as REQUIRED_COUNTRY,
+    CURRENCY as REQUIRED_CURRENCY,
+    DEMO_ITEMS,
+    LANGUAGE as REQUIRED_LANGUAGE,
+    PLACEHOLDER_EMAIL as REQUIRED_PLACEHOLDER_EMAIL,
+    TIME_ZONE as REQUIRED_TIME_ZONE,
+    WAREHOUSE_MANAGER_USER,
+    WAREHOUSE_OPERATOR_USER,
+)
+
 
 REQUIRED_WORKSPACES = ["3PL Warehouse", "Stock Reference"]
 REQUIRED_USERS = {
-    "warehouse.demo@example.test": ["Stock User", "3PL Warehouse User"],
-    "warehouse.manager@example.test": ["Stock User", "Stock Manager", "3PL Warehouse Manager"],
-    "rupusm@gmail.com": ["System Manager", "Stock User", "Stock Manager", "Item Manager", "3PL Warehouse Manager"],
-    "alpha.client@example.test": ["3PL Client"],
+    WAREHOUSE_OPERATOR_USER: ["Stock User", "3PL Warehouse User"],
+    WAREHOUSE_MANAGER_USER: ["Stock User", "Stock Manager", "3PL Warehouse Manager"],
+    BUSINESS_OWNER_USER: ["System Manager", "Stock User", "Stock Manager", "Item Manager", "3PL Warehouse Manager"],
+    CLIENT_PORTAL_USER: ["3PL Client"],
 }
 REQUIRED_DOCTYPES = [
     "Inbound Shipment Notice",
@@ -40,20 +57,6 @@ REQUIRED_WAREHOUSES = [
     "Packing - 3",
     "Shipping - 3",
 ]
-REQUIRED_COUNTRY = "Lithuania"
-REQUIRED_CURRENCY = "EUR"
-REQUIRED_LANGUAGE = "en"
-REQUIRED_TIME_ZONE = "Europe/Vilnius"
-REQUIRED_PLACEHOLDER_EMAIL = "noreply@example.invalid"
-CLIENT_PORTAL_USER = "alpha.client@example.test"
-CLIENT_PORTAL_CUSTOMER = "Demo Client Alpha"
-CLIENT_PORTAL_ROUTE = "client/receiving-notice"
-CLIENT_PORTAL_ROUTES = {
-    "3PL Client Receiving Notice": ("client/receiving-notice", {"customer", "external_reference", "expected_arrival_date", "items"}),
-    "3PL Client Inventory": ("client/inventory", {"customer", "item_code", "client_sku", "qty", "warehouse", "container_code"}),
-    "3PL Client Shipment Request": ("client/shipment-request", {"customer", "external_reference", "requested_ship_date", "destination_name", "destination_address", "items"}),
-    "3PL Client Discrepancy Instruction": ("client/discrepancy-instruction", {"customer", "receiving_notice", "instruction_type", "instruction_text"}),
-}
 
 
 def require(condition, message):
@@ -128,7 +131,7 @@ def main():
         doc = frappe.get_doc("User", user)
         user_roles = {row.role for row in doc.roles}
         require(doc.enabled == 1, f"User is disabled: {user}")
-        expected_module_profile = None if user in {"rupusm@gmail.com", CLIENT_PORTAL_USER} else "Warehouse Only"
+        expected_module_profile = None if user in {BUSINESS_OWNER_USER, CLIENT_PORTAL_USER} else "Warehouse Only"
         require(doc.module_profile == expected_module_profile, f"Wrong module profile for {user}: {doc.module_profile}")
         expected_workspace = None if user == CLIENT_PORTAL_USER else "3PL Warehouse"
         require(doc.default_workspace == expected_workspace, f"Wrong default workspace for {user}: {doc.default_workspace}")
@@ -155,22 +158,15 @@ def main():
     client_role = frappe.get_doc("Role", "3PL Client")
     if client_role.meta.has_field("desk_access"):
         require(client_role.desk_access == 0, "3PL Client role must not have Desk access")
-    require(client_role.home_page == CLIENT_PORTAL_ROUTE, f"Wrong 3PL Client home_page: {client_role.home_page}")
+    require(client_role.home_page == CLIENT_PORTAL_HOME, f"Wrong 3PL Client home_page: {client_role.home_page}")
 
-    for title, (route, _fields) in CLIENT_PORTAL_ROUTES.items():
-        menu_title = title.replace("3PL Client ", "")
-        if menu_title == "Receiving Notice":
-            menu_title = "Receiving Notices"
-        elif menu_title == "Shipment Request":
-            menu_title = "Shipment Requests"
-        elif menu_title == "Discrepancy Instruction":
-            menu_title = "Discrepancy Instructions"
+    for form in CLIENT_PORTAL_FORMS:
         require(
-            frappe.db.exists("Portal Menu Item", {"title": menu_title, "route": route, "role": "3PL Client", "enabled": 1}),
-            f"Missing client portal menu item: {menu_title}",
+            frappe.db.exists("Portal Menu Item", {"title": form["menu_title"], "route": form["route"], "role": "3PL Client", "enabled": 1}),
+            f"Missing client portal menu item: {form['menu_title']}",
         )
     portal_settings = frappe.get_single("Portal Settings")
-    require(portal_settings.default_portal_home == CLIENT_PORTAL_ROUTE, f"Wrong default portal home: {portal_settings.default_portal_home}")
+    require(portal_settings.default_portal_home == CLIENT_PORTAL_HOME, f"Wrong default portal home: {portal_settings.default_portal_home}")
     for title, (route, expected_fields) in CLIENT_PORTAL_ROUTES.items():
         web_form_name = frappe.db.get_value("Web Form", {"route": route}, "name")
         require(web_form_name, f"Missing client Web Form: {title}")
@@ -200,7 +196,7 @@ def main():
     require_role_perm("Three PL Shipment Request", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Three PL Client Instruction", "3PL Client", read=1, write=1, create=1)
 
-    owner_roles = [row.role for row in frappe.get_doc("User", "rupusm@gmail.com").roles]
+    owner_roles = [row.role for row in frappe.get_doc("User", BUSINESS_OWNER_USER).roles]
     for doctype in ("Warehouse", "Item", "Item Group", "UOM"):
         permissions = []
         for table in ("DocPerm", "Custom DocPerm"):
@@ -219,11 +215,7 @@ def main():
     for customer in ("Demo Client Alpha", "Demo Client Beta"):
         require(frappe.db.get_value("Customer", customer, "territory") == REQUIRED_COUNTRY, f"Wrong customer territory: {customer}")
 
-    expected_items = {
-        "SKU-ALPHA-001": ("Demo Client Alpha", "ALPHA-001"),
-        "SKU-ALPHA-002": ("Demo Client Alpha", "ALPHA-002"),
-        "SKU-BETA-001": ("Demo Client Beta", "BETA-001"),
-    }
+    expected_items = {item["item_code"]: (item["client"], item["client_sku"]) for item in DEMO_ITEMS}
     for item_code, (client, client_sku) in expected_items.items():
         require(frappe.db.exists("Item", item_code), f"Missing demo Item: {item_code}")
         require(frappe.db.get_value("Item", item_code, "owner_client") == client, f"Wrong owner_client for {item_code}")

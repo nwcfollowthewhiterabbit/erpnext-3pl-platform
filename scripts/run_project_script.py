@@ -14,6 +14,9 @@ def main():
     frappe.init(site=site, sites_path=".")
     frappe.connect()
     try:
+        script_dir = os.path.dirname(os.path.abspath(path))
+        if script_dir not in sys.path:
+            sys.path.insert(0, script_dir)
         spec = importlib.util.spec_from_file_location("project_script", path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)

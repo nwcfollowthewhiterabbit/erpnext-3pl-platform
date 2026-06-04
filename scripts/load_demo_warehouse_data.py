@@ -1,39 +1,7 @@
 import frappe
 from frappe.utils import now, nowdate
 
-
-CLIENTS = [
-    "Demo Client Alpha",
-    "Demo Client Beta",
-]
-COUNTRY = "Lithuania"
-
-ITEMS = [
-    {
-        "item_code": "SKU-ALPHA-001",
-        "item_name": "Demo Alpha Widget",
-        "client": "Demo Client Alpha",
-        "client_sku": "ALPHA-001",
-        "client_product_name": "Alpha Widget",
-        "barcode": "300000000001",
-    },
-    {
-        "item_code": "SKU-ALPHA-002",
-        "item_name": "Demo Alpha Cable",
-        "client": "Demo Client Alpha",
-        "client_sku": "ALPHA-002",
-        "client_product_name": "Alpha Cable",
-        "barcode": "300000000002",
-    },
-    {
-        "item_code": "SKU-BETA-001",
-        "item_name": "Demo Beta Accessory",
-        "client": "Demo Client Beta",
-        "client_sku": "BETA-001",
-        "client_product_name": "Beta Accessory",
-        "barcode": "300000000003",
-    },
-]
+from project_config import COUNTRY, DEMO_CLIENTS, DEMO_ITEMS
 
 
 def ensure_master_data():
@@ -351,9 +319,17 @@ def ensure_inventory_snapshots():
     ]
 
     for snapshot in snapshots:
-        name = f"{snapshot['customer']}-{snapshot['item_code']}-{snapshot['container_code']}"
-        if frappe.db.exists("Three PL Inventory Snapshot", name):
-            doc = frappe.get_doc("Three PL Inventory Snapshot", name)
+        existing = frappe.db.get_value(
+            "Three PL Inventory Snapshot",
+            {
+                "customer": snapshot["customer"],
+                "item_code": snapshot["item_code"],
+                "container_code": snapshot["container_code"],
+            },
+            "name",
+        )
+        if existing:
+            doc = frappe.get_doc("Three PL Inventory Snapshot", existing)
         else:
             doc = frappe.new_doc("Three PL Inventory Snapshot")
 
@@ -423,10 +399,10 @@ def ensure_client_instruction(notice_name):
 def main():
     ensure_master_data()
 
-    for customer_name in CLIENTS:
+    for customer_name in DEMO_CLIENTS:
         ensure_customer(customer_name)
 
-    for item in ITEMS:
+    for item in DEMO_ITEMS:
         ensure_item(**item)
 
     notice = ensure_inbound_notice()

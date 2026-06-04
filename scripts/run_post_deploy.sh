@@ -24,6 +24,7 @@ if [ -z "$backend_cid" ]; then
 fi
 
 docker cp scripts/run_project_script.py "$backend_cid":/tmp/run_project_script.py
+docker cp scripts/project_config.py "$backend_cid":/tmp/project_config.py
 docker cp scripts/configure_warehouse_mode.py "$backend_cid":/tmp/configure_warehouse_mode.py
 docker cp scripts/create_demo_users.py "$backend_cid":/tmp/create_demo_users.py
 docker cp scripts/load_demo_warehouse_data.py "$backend_cid":/tmp/load_demo_warehouse_data.py

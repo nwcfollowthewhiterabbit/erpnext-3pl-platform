@@ -47,6 +47,7 @@ if [ -z "$backend_cid" ]; then
 fi
 
 docker cp scripts/run_project_script.py "$backend_cid":/tmp/run_project_script.py
+docker cp scripts/project_config.py "$backend_cid":/tmp/project_config.py
 docker cp scripts/validate_site.py "$backend_cid":/tmp/validate_site.py
 docker exec "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/validate_site.py 0"

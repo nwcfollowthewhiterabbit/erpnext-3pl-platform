@@ -3,21 +3,33 @@ import json
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
-
-COMPANY = "3pl"
-COMPANY_ABBR = "3"
-COUNTRY = "Lithuania"
-CURRENCY = "EUR"
-LANGUAGE = "en"
-TIME_ZONE = "Europe/Vilnius"
-PLACEHOLDER_EMAIL = "noreply@example.invalid"
+from project_config import CLIENT_PORTAL_FORMS, CLIENT_PORTAL_HOME, COMPANY, COMPANY_ABBR, COUNTRY, CURRENCY, LANGUAGE, PLACEHOLDER_EMAIL, TIME_ZONE
 
 
 def ensure_child_field(doc, field):
-    if not any(row.fieldname == field["fieldname"] for row in doc.fields):
-        doc.append("fields", field)
-        return True
-    return False
+    sync_keys = {
+        "label",
+        "fieldtype",
+        "options",
+        "reqd",
+        "read_only",
+        "default",
+        "insert_after",
+        "in_list_view",
+        "in_standard_filter",
+        "description",
+    }
+    existing = next((row for row in doc.fields if row.fieldname == field["fieldname"]), None)
+    if existing:
+        changed = False
+        for key in sync_keys & field.keys():
+            if getattr(existing, key, None) != field[key]:
+                setattr(existing, key, field[key])
+                changed = True
+        return changed
+
+    doc.append("fields", field)
+    return True
 
 
 def ensure_doctype_fields(doctype, fields):
@@ -283,8 +295,8 @@ def configure_module_profile():
         if role.meta.has_field("desk_access") and role.desk_access:
             role.desk_access = 0
             changed = True
-        if role.home_page != "client/receiving-notice":
-            role.home_page = "client/receiving-notice"
+        if role.home_page != CLIENT_PORTAL_HOME:
+            role.home_page = CLIENT_PORTAL_HOME
             changed = True
         if changed:
             role.save(ignore_permissions=True)
@@ -862,83 +874,20 @@ def configure_custom_fields():
 
 
 def configure_client_portal():
-    configure_portal_web_form(
-        form_name="3PL Client Receiving Notice",
-        route="client/receiving-notice",
-        doc_type="Inbound Shipment Notice",
-        list_title="Receiving Notices",
-        button_label="Submit Receiving Notice",
-        introduction_text="Create and review receiving notices for inbound warehouse shipments.",
-        success_title="Receiving Notice Submitted",
-        success_message="The warehouse team can now review the expected inbound shipment.",
-        fields=[
-            {"fieldname": "customer", "fieldtype": "Link", "label": "Client", "options": "Customer", "reqd": 1, "show_in_filter": 1},
-            {"fieldname": "external_reference", "fieldtype": "Data", "label": "Client Notice Ref", "reqd": 1, "show_in_filter": 1},
-            {"fieldname": "expected_arrival_date", "fieldtype": "Date", "label": "Expected Arrival Date", "reqd": 1},
-            {"fieldname": "items", "fieldtype": "Table", "label": "Expected Products", "options": "Inbound Shipment Notice Item", "reqd": 1},
-            {"fieldname": "notes", "fieldtype": "Small Text", "label": "Notes"},
-        ],
-    )
-    configure_portal_web_form(
-        form_name="3PL Client Inventory",
-        route="client/inventory",
-        doc_type="Three PL Inventory Snapshot",
-        list_title="Inventory",
-        button_label="View Inventory",
-        introduction_text="Review current inventory snapshots for your products.",
-        success_title="Inventory",
-        success_message="",
-        allow_edit=0,
-        allow_multiple=0,
-        fields=[
-            {"fieldname": "customer", "fieldtype": "Link", "label": "Client", "options": "Customer", "read_only": 1, "show_in_filter": 1},
-            {"fieldname": "item_code", "fieldtype": "Link", "label": "Item", "options": "Item", "read_only": 1, "show_in_filter": 1},
-            {"fieldname": "client_sku", "fieldtype": "Data", "label": "Client SKU", "read_only": 1},
-            {"fieldname": "item_name", "fieldtype": "Data", "label": "Item Name", "read_only": 1},
-            {"fieldname": "qty", "fieldtype": "Float", "label": "Qty", "read_only": 1},
-            {"fieldname": "uom", "fieldtype": "Link", "label": "UOM", "options": "UOM", "read_only": 1},
-            {"fieldname": "warehouse", "fieldtype": "Link", "label": "Location", "options": "Warehouse", "read_only": 1},
-            {"fieldname": "container_code", "fieldtype": "Link", "label": "Container / Box", "options": "Three PL Container", "read_only": 1},
-            {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "Available\nReceiving\nHold\nAllocated\nShipped", "read_only": 1},
-        ],
-    )
-    configure_portal_web_form(
-        form_name="3PL Client Shipment Request",
-        route="client/shipment-request",
-        doc_type="Three PL Shipment Request",
-        list_title="Shipment Requests",
-        button_label="Submit Shipment Request",
-        introduction_text="Create outbound shipment requests for products stored in the warehouse.",
-        success_title="Shipment Request Submitted",
-        success_message="The warehouse team can now review and start picking.",
-        fields=[
-            {"fieldname": "customer", "fieldtype": "Link", "label": "Client", "options": "Customer", "reqd": 1, "show_in_filter": 1},
-            {"fieldname": "external_reference", "fieldtype": "Data", "label": "Client Shipment Ref", "reqd": 1, "show_in_filter": 1},
-            {"fieldname": "requested_ship_date", "fieldtype": "Date", "label": "Requested Ship Date", "reqd": 1},
-            {"fieldname": "destination_name", "fieldtype": "Data", "label": "Destination Name", "reqd": 1},
-            {"fieldname": "destination_address", "fieldtype": "Small Text", "label": "Destination Address", "reqd": 1},
-            {"fieldname": "items", "fieldtype": "Table", "label": "Products To Ship", "options": "Three PL Shipment Request Item", "reqd": 1},
-            {"fieldname": "notes", "fieldtype": "Small Text", "label": "Notes"},
-        ],
-    )
-    configure_portal_web_form(
-        form_name="3PL Client Discrepancy Instruction",
-        route="client/discrepancy-instruction",
-        doc_type="Three PL Client Instruction",
-        list_title="Discrepancy Instructions",
-        button_label="Submit Instruction",
-        introduction_text="Send warehouse instructions for receiving discrepancies.",
-        success_title="Instruction Submitted",
-        success_message="The warehouse team can now review your instruction.",
-        fields=[
-            {"fieldname": "customer", "fieldtype": "Link", "label": "Client", "options": "Customer", "reqd": 1, "show_in_filter": 1},
-            {"fieldname": "receiving_notice", "fieldtype": "Link", "label": "Receiving Notice", "options": "Inbound Shipment Notice", "reqd": 1, "show_in_filter": 1},
-            {"fieldname": "item_code", "fieldtype": "Link", "label": "Item", "options": "Item"},
-            {"fieldname": "client_sku", "fieldtype": "Data", "label": "Client SKU"},
-            {"fieldname": "instruction_type", "fieldtype": "Select", "label": "Instruction Type", "options": "Accept Difference\nReturn Goods\nHold For Review\nDispose Damaged Goods\nOther", "reqd": 1},
-            {"fieldname": "instruction_text", "fieldtype": "Small Text", "label": "Instruction", "reqd": 1},
-        ],
-    )
+    for form in CLIENT_PORTAL_FORMS:
+        configure_portal_web_form(
+            form_name=form["form_name"],
+            route=form["route"],
+            doc_type=form["doc_type"],
+            list_title=form["list_title"],
+            button_label=form["button_label"],
+            introduction_text=form["introduction_text"],
+            success_title=form["success_title"],
+            success_message=form["success_message"],
+            fields=form["fields"],
+            allow_edit=form.get("allow_edit", 1),
+            allow_multiple=form.get("allow_multiple", 1),
+        )
 
     configure_portal_menu()
 
@@ -990,32 +939,25 @@ def configure_portal_web_form(
 
 
 def configure_portal_menu():
-    menu_title = "Receiving Notices"
     portal_settings = frappe.get_single("Portal Settings")
-    menu_items = [
-        ("Receiving Notices", "client/receiving-notice", "Inbound Shipment Notice"),
-        ("Inventory", "client/inventory", "Three PL Inventory Snapshot"),
-        ("Shipment Requests", "client/shipment-request", "Three PL Shipment Request"),
-        ("Discrepancy Instructions", "client/discrepancy-instruction", "Three PL Client Instruction"),
-    ]
-    for title, route, reference_doctype in menu_items:
+    for form in CLIENT_PORTAL_FORMS:
         item = None
         for row in portal_settings.menu:
-            if row.title == title or row.route == route:
+            if row.title == form["menu_title"] or row.route == form["route"]:
                 item = row
                 break
         if item is None:
             item = portal_settings.append("menu", {})
 
-        item.title = title
+        item.title = form["menu_title"]
         item.enabled = 1
-        item.route = route
-        item.reference_doctype = reference_doctype
+        item.route = form["route"]
+        item.reference_doctype = form["doc_type"]
         item.role = "3PL Client"
         item.target = ""
 
     portal_settings.default_role = "3PL Client"
-    portal_settings.default_portal_home = "client/receiving-notice"
+    portal_settings.default_portal_home = CLIENT_PORTAL_HOME
     portal_settings.save(ignore_permissions=True)
 
 
