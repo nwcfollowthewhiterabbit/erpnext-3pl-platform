@@ -661,10 +661,14 @@ def configure_custom_doctypes():
 
     client_permissions = {
         "Inbound Shipment Notice": {"read": 1, "write": 1, "create": 1},
+        "Inbound Shipment Notice Item": {"read": 1, "write": 1, "create": 1},
+        "Inbound Shipment Discrepancy": {"read": 1},
         "Item": {"read": 1},
         "Three PL Container": {"read": 1},
+        "Three PL Container Item": {"read": 1},
         "Three PL Inventory Snapshot": {"read": 1},
         "Three PL Shipment Request": {"read": 1, "write": 1, "create": 1},
+        "Three PL Shipment Request Item": {"read": 1, "write": 1, "create": 1},
         "Three PL Client Instruction": {"read": 1, "write": 1, "create": 1},
     }
     for doctype, permissions in client_permissions.items():
@@ -852,6 +856,7 @@ def configure_custom_fields():
 
 
 def configure_client_portal():
+    portal_nav = build_client_portal_nav()
     for form in CLIENT_PORTAL_FORMS:
         configure_portal_web_form(
             form_name=form["form_name"],
@@ -859,7 +864,7 @@ def configure_client_portal():
             doc_type=form["doc_type"],
             list_title=form["list_title"],
             button_label=form["button_label"],
-            introduction_text=form["introduction_text"],
+            introduction_text=f"{portal_nav}{form['introduction_text']}",
             success_title=form["success_title"],
             success_message=form["success_message"],
             fields=form["fields"],
@@ -868,6 +873,14 @@ def configure_client_portal():
         )
 
     configure_portal_menu()
+
+
+def build_client_portal_nav():
+    links = []
+    for form in CLIENT_PORTAL_FORMS:
+        label = frappe.utils.escape_html(form["menu_title"])
+        links.append(f'<a class="btn btn-sm btn-default" href="/{form["route"]}">{label}</a>')
+    return f'<div class="mb-4 d-flex flex-wrap gap-2">{" ".join(links)}</div>'
 
 
 def configure_portal_web_form(

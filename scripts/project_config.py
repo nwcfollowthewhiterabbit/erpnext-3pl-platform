@@ -59,7 +59,7 @@ CLIENT_PORTAL_FORMS = [
         "success_title": "Receiving Notice Submitted",
         "success_message": "The warehouse team can now review the expected inbound shipment.",
         "fields": [
-            {"fieldname": "customer", "fieldtype": "Link", "label": "Client", "options": "Customer", "reqd": 1, "show_in_filter": 1},
+            {"fieldname": "customer", "fieldtype": "Link", "label": "Client", "options": "Customer", "reqd": 1, "hidden": 1, "default": CLIENT_PORTAL_CUSTOMER},
             {"fieldname": "external_reference", "fieldtype": "Data", "label": "Client Notice Ref", "reqd": 1, "show_in_filter": 1},
             {"fieldname": "expected_arrival_date", "fieldtype": "Date", "label": "Expected Arrival Date", "reqd": 1},
             {"fieldname": "items", "fieldtype": "Table", "label": "Expected Products", "options": "Inbound Shipment Notice Item", "reqd": 1},
@@ -79,7 +79,7 @@ CLIENT_PORTAL_FORMS = [
         "allow_edit": 0,
         "allow_multiple": 0,
         "fields": [
-            {"fieldname": "customer", "fieldtype": "Link", "label": "Client", "options": "Customer", "read_only": 1, "show_in_filter": 1},
+            {"fieldname": "customer", "fieldtype": "Link", "label": "Client", "options": "Customer", "read_only": 1, "hidden": 1, "default": CLIENT_PORTAL_CUSTOMER},
             {"fieldname": "item_code", "fieldtype": "Link", "label": "Item", "options": "Item", "read_only": 1, "show_in_filter": 1},
             {"fieldname": "client_sku", "fieldtype": "Data", "label": "Client SKU", "read_only": 1},
             {"fieldname": "item_name", "fieldtype": "Data", "label": "Item Name", "read_only": 1},
@@ -101,7 +101,7 @@ CLIENT_PORTAL_FORMS = [
         "success_title": "Shipment Request Submitted",
         "success_message": "The warehouse team can now review and start picking.",
         "fields": [
-            {"fieldname": "customer", "fieldtype": "Link", "label": "Client", "options": "Customer", "reqd": 1, "show_in_filter": 1},
+            {"fieldname": "customer", "fieldtype": "Link", "label": "Client", "options": "Customer", "reqd": 1, "hidden": 1, "default": CLIENT_PORTAL_CUSTOMER},
             {"fieldname": "external_reference", "fieldtype": "Data", "label": "Client Shipment Ref", "reqd": 1, "show_in_filter": 1},
             {"fieldname": "requested_ship_date", "fieldtype": "Date", "label": "Requested Ship Date", "reqd": 1},
             {"fieldname": "destination_name", "fieldtype": "Data", "label": "Destination Name", "reqd": 1},
@@ -121,7 +121,7 @@ CLIENT_PORTAL_FORMS = [
         "success_title": "Instruction Submitted",
         "success_message": "The warehouse team can now review your instruction.",
         "fields": [
-            {"fieldname": "customer", "fieldtype": "Link", "label": "Client", "options": "Customer", "reqd": 1, "show_in_filter": 1},
+            {"fieldname": "customer", "fieldtype": "Link", "label": "Client", "options": "Customer", "reqd": 1, "hidden": 1, "default": CLIENT_PORTAL_CUSTOMER},
             {"fieldname": "receiving_notice", "fieldtype": "Link", "label": "Receiving Notice", "options": "Inbound Shipment Notice", "reqd": 1, "show_in_filter": 1},
             {"fieldname": "item_code", "fieldtype": "Link", "label": "Item", "options": "Item"},
             {"fieldname": "client_sku", "fieldtype": "Data", "label": "Client SKU"},

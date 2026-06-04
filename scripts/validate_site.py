@@ -175,6 +175,11 @@ def main():
         require(web_form.login_required == 1, f"Client Web Form must require login: {title}")
         require(web_form.apply_document_permissions == 1, f"Client Web Form must apply document permissions: {title}")
         require({row.fieldname for row in web_form.web_form_fields} >= expected_fields, f"Client Web Form misses required fields: {title}")
+        require("Receiving Notices" in web_form.introduction_text, f"Client Web Form misses portal nav: {title}")
+        customer_field = next((row for row in web_form.web_form_fields if row.fieldname == "customer"), None)
+        require(customer_field, f"Client Web Form misses customer field: {title}")
+        require(customer_field.hidden == 1, f"Client Web Form customer field must be hidden: {title}")
+        require(customer_field.default == CLIENT_PORTAL_CUSTOMER, f"Client Web Form customer field has wrong default: {title}")
 
     require(
         frappe.db.exists("User Permission", {"user": CLIENT_PORTAL_USER, "allow": "Customer", "for_value": CLIENT_PORTAL_CUSTOMER}),
@@ -190,10 +195,14 @@ def main():
         require_role_perm(doctype, "3PL Warehouse Manager", read=1, write=1, create=1, delete=1)
         require_role_perm(doctype, "System Manager", read=1, write=1, create=1, delete=1)
     require_role_perm("Inbound Shipment Notice", "3PL Client", read=1, write=1, create=1)
+    require_role_perm("Inbound Shipment Notice Item", "3PL Client", read=1, write=1, create=1)
+    require_role_perm("Inbound Shipment Discrepancy", "3PL Client", read=1)
     require_role_perm("Item", "3PL Client", read=1)
     require_role_perm("Three PL Container", "3PL Client", read=1)
+    require_role_perm("Three PL Container Item", "3PL Client", read=1)
     require_role_perm("Three PL Inventory Snapshot", "3PL Client", read=1)
     require_role_perm("Three PL Shipment Request", "3PL Client", read=1, write=1, create=1)
+    require_role_perm("Three PL Shipment Request Item", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Three PL Client Instruction", "3PL Client", read=1, write=1, create=1)
 
     owner_roles = [row.role for row in frappe.get_doc("User", BUSINESS_OWNER_USER).roles]
