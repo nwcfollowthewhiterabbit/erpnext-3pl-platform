@@ -179,6 +179,8 @@ def main():
         require(web_form.title == title, f"Wrong client Web Form title: {web_form.title}")
         require(web_form.login_required == 1, f"Client Web Form must require login: {title}")
         require(web_form.apply_document_permissions == 0, f"Client Web Form must use owner-based portal permissions: {title}")
+        require(web_form.hide_navbar == 1, f"Client Web Form must hide standard navbar: {title}")
+        require(web_form.hide_footer == 1, f"Client Web Form must hide standard footer: {title}")
         require({row.fieldname for row in web_form.web_form_fields} >= expected_fields, f"Client Web Form misses required fields: {title}")
         require("Receiving Notices" in web_form.introduction_text, f"Client Web Form misses portal nav: {title}")
         customer_field = next((row for row in web_form.web_form_fields if row.fieldname == "customer"), None)

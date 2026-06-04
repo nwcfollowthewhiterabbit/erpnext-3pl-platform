@@ -50,6 +50,16 @@ server {
     proxy_set_header X-Forwarded-Host \$host;
     proxy_set_header X-Forwarded-Port \$server_port;
 
+    location ~ ^/(app|desk)(/|$) {
+        if (\$http_cookie ~* "system_user=no") {
+            return 204;
+        }
+
+        proxy_read_timeout 120;
+        proxy_redirect off;
+        proxy_pass http://127.0.0.1:${upstream_port};
+    }
+
     location /socket.io {
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;

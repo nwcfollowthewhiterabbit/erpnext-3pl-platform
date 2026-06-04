@@ -31,7 +31,6 @@ async function collectPortalProblems(page, problems) {
   page.on("response", async (response) => {
     const url = response.url();
     if (response.status() >= 400) {
-      if (url.includes("/desk/3pl-warehouse")) return;
       let body = "";
       try {
         body = (await response.text()).slice(0, 600);

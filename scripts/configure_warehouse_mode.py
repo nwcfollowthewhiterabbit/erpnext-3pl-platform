@@ -904,6 +904,66 @@ def configure_client_portal_website_script():
     return window.location.pathname.indexOf('/client/') === 0;
   }}
 
+  function isDeskRequest(url) {{
+    if (!url) return false;
+    try {{
+      var path = new URL(url, window.location.origin).pathname;
+      return path.indexOf('/desk') === 0 || path.indexOf('/app') === 0;
+    }} catch (e) {{
+      return false;
+    }}
+  }}
+
+  function suppressDeskRequests() {{
+    if (!isClientPortal()) return;
+
+    if (window.frappe && frappe.boot && frappe.boot.apps_data) {{
+      frappe.boot.apps_data.is_desk_apps = 0;
+      frappe.boot.apps_data.default_path = '/{CLIENT_PORTAL_HOME}';
+    }}
+
+    if (window.jQuery && jQuery.ajax && !jQuery.ajax.__client_portal_patched) {{
+      var originalAjax = jQuery.ajax;
+      jQuery.ajax = function (options) {{
+        var url = typeof options === 'string' ? options : options && options.url;
+        if (isDeskRequest(url)) {{
+          var deferred = jQuery.Deferred();
+          setTimeout(function () {{ deferred.resolve({{}}); }}, 0);
+          var promise = deferred.promise();
+          promise.abort = function () {{}};
+          return promise;
+        }}
+        return originalAjax.apply(this, arguments);
+      }};
+      jQuery.ajax.__client_portal_patched = true;
+    }}
+
+    if (window.fetch && !window.fetch.__client_portal_patched) {{
+      var originalFetch = window.fetch;
+      window.fetch = function (resource, init) {{
+        var url = resource && resource.url ? resource.url : resource;
+        if (isDeskRequest(String(url))) {{
+          return Promise.resolve(new Response('', {{status: 204}}));
+        }}
+        return originalFetch.apply(this, arguments);
+      }};
+      window.fetch.__client_portal_patched = true;
+    }}
+
+    if (window.XMLHttpRequest && !XMLHttpRequest.prototype.__client_portal_patched) {{
+      var originalOpen = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function (method, url) {{
+        if (isDeskRequest(String(url))) {{
+          var args = Array.prototype.slice.call(arguments);
+          args[1] = '/';
+          return originalOpen.apply(this, args);
+        }}
+        return originalOpen.apply(this, arguments);
+      }};
+      XMLHttpRequest.prototype.__client_portal_patched = true;
+    }}
+  }}
+
   function installClientPortalNav() {{
     if (!isClientPortal()) return;
 
@@ -944,7 +1004,9 @@ def configure_client_portal_website_script():
   }}
 
   if (window.frappe && frappe.ready) {{
+    suppressDeskRequests();
     frappe.ready(function () {{
+      suppressDeskRequests();
       installClientPortalNav();
       removeDeskPermissionNoise();
       setTimeout(removeDeskPermissionNoise, 250);
@@ -952,6 +1014,7 @@ def configure_client_portal_website_script():
     }});
   }} else {{
     document.addEventListener('DOMContentLoaded', function () {{
+      suppressDeskRequests();
       installClientPortalNav();
       removeDeskPermissionNoise();
     }});
@@ -1004,6 +1067,8 @@ def configure_portal_web_form(
     form.success_title = success_title
     form.success_message = success_message
     form.success_url = f"/{portal_list_route(route)}"
+    form.hide_navbar = 1
+    form.hide_footer = 1
 
     for field in fields:
         form.append("web_form_fields", field)
