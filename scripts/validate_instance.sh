@@ -109,7 +109,10 @@ PY
     http://127.0.0.1:*|http://localhost:*) ;;
     *)
       check_redirect_target "/apps"
+      check_redirect_target "/app"
+      check_redirect_target "/app/"
       check_redirect_target "/app/home"
+      check_redirect_target "/desk"
       ;;
   esac
   if [ "$user" = "rupusm@gmail.com" ]; then
@@ -190,6 +193,9 @@ case "$base_url" in
   http://127.0.0.1:*|http://localhost:*) ;;
   *)
     expect_redirect "/" "/app/3pl-warehouse"
+    expect_redirect "/app" "/desk/3pl-warehouse"
+    expect_redirect "/app/" "/desk/3pl-warehouse"
+    expect_redirect "/desk" "/desk/3pl-warehouse"
     expect_redirect "/app/setup-wizard" "/app/3pl-warehouse"
     expect_redirect "/app/setup-wizard/" "/app/3pl-warehouse"
     expect_redirect "/login?redirect-to=%2Fapp%2Fsetup-wizard" "/login?redirect-to=%2Fapp%2F3pl-warehouse"

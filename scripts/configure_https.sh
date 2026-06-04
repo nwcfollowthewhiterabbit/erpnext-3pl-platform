@@ -31,6 +31,18 @@ server {
         return 302 /app/3pl-warehouse;
     }
 
+    location = /app {
+        return 302 /desk/3pl-warehouse;
+    }
+
+    location = /app/ {
+        return 302 /desk/3pl-warehouse;
+    }
+
+    location = /desk {
+        return 302 /desk/3pl-warehouse;
+    }
+
     location = /app/setup-wizard {
         return 302 /app/3pl-warehouse;
     }
