@@ -163,23 +163,12 @@ def configure_workspaces():
             "title": "3PL Warehouse",
             "module": "Stock",
             "indicator_color": "green",
+            "hide_custom": 1,
             "content": [
                 {"id": "3pl_header", "type": "header", "data": {"text": '<span class="h4"><b>3PL Warehouse</b></span>', "col": 12}},
-                {"id": "3pl_receiving", "type": "shortcut", "data": {"shortcut_name": "Receiving Notices", "col": 3}},
-                {"id": "3pl_containers", "type": "shortcut", "data": {"shortcut_name": "Containers", "col": 3}},
-                {"id": "3pl_stock_entries", "type": "shortcut", "data": {"shortcut_name": "Stock Entries", "col": 3}},
-                {"id": "3pl_pick_lists", "type": "shortcut", "data": {"shortcut_name": "Pick Lists", "col": 3}},
-                {"id": "3pl_shipment_requests", "type": "shortcut", "data": {"shortcut_name": "Shipment Requests", "col": 3}},
-                {"id": "3pl_asn_report", "type": "shortcut", "data": {"shortcut_name": "ASN vs Received", "col": 3}},
-                {"id": "3pl_discrepancies", "type": "shortcut", "data": {"shortcut_name": "Receiving Discrepancies", "col": 3}},
-                {"id": "3pl_client_inventory", "type": "shortcut", "data": {"shortcut_name": "Client Inventory", "col": 3}},
-                {"id": "3pl_client_instructions", "type": "shortcut", "data": {"shortcut_name": "Client Instructions", "col": 3}},
-                {"id": "3pl_spacer", "type": "spacer", "data": {"col": 12}},
-                {"id": "3pl_reports_header", "type": "header", "data": {"text": '<span class="h4"><b>Reports and Masters</b></span>', "col": 12}},
-                {"id": "3pl_items", "type": "shortcut", "data": {"shortcut_name": "Items", "col": 3}},
-                {"id": "3pl_warehouses", "type": "shortcut", "data": {"shortcut_name": "Warehouses", "col": 3}},
-                {"id": "3pl_stock_balance", "type": "shortcut", "data": {"shortcut_name": "Stock Balance", "col": 3}},
-                {"id": "3pl_stock_ledger", "type": "shortcut", "data": {"shortcut_name": "Stock Ledger", "col": 3}},
+                {"id": "3pl_inbound_card", "type": "card", "data": {"card_name": "Inbound Work", "col": 4}},
+                {"id": "3pl_outbound_card", "type": "card", "data": {"card_name": "Outbound Work", "col": 4}},
+                {"id": "3pl_reports_card", "type": "card", "data": {"card_name": "Reports", "col": 4}},
             ],
             "shortcuts": [
                 {"type": "DocType", "link_to": "Inbound Shipment Notice", "doc_view": "List", "label": "Receiving Notices"},
@@ -198,14 +187,20 @@ def configure_workspaces():
                 {"type": "Report", "link_to": "Stock Ledger", "label": "Stock Ledger", "report_ref_doctype": "Stock Ledger Entry"},
             ],
             "links": [
+                {"type": "Card Break", "label": "Inbound Work"},
                 {"type": "Link", "label": "Receiving Notices", "link_type": "DocType", "link_to": "Inbound Shipment Notice"},
-                {"type": "Link", "label": "Containers", "link_type": "DocType", "link_to": "Three PL Container"},
                 {"type": "Link", "label": "Stock Entries", "link_type": "DocType", "link_to": "Stock Entry"},
-                {"type": "Link", "label": "Pick Lists", "link_type": "DocType", "link_to": "Pick List"},
+                {"type": "Link", "label": "ASN vs Received", "link_type": "Report", "link_to": "3PL ASN vs Received", "is_query_report": 1},
+                {"type": "Link", "label": "Receiving Discrepancies", "link_type": "Report", "link_to": "3PL Receiving Discrepancies", "is_query_report": 1},
+                {"type": "Card Break", "label": "Outbound Work"},
                 {"type": "Link", "label": "Shipment Requests", "link_type": "DocType", "link_to": "Three PL Shipment Request"},
-                {"type": "Link", "label": "Client Instructions", "link_type": "DocType", "link_to": "Three PL Client Instruction"},
-                {"type": "Link", "label": "Items", "link_type": "DocType", "link_to": "Item"},
-                {"type": "Link", "label": "Warehouses", "link_type": "DocType", "link_to": "Warehouse"},
+                {"type": "Link", "label": "Pick Lists", "link_type": "DocType", "link_to": "Pick List"},
+                {"type": "Card Break", "label": "Reports"},
+                {"type": "Link", "label": "ASN vs Received", "link_type": "Report", "link_to": "3PL ASN vs Received", "is_query_report": 1},
+                {"type": "Link", "label": "Receiving Discrepancies", "link_type": "Report", "link_to": "3PL Receiving Discrepancies", "is_query_report": 1},
+                {"type": "Link", "label": "Containers Report", "link_type": "Report", "link_to": "3PL Containers", "is_query_report": 1},
+                {"type": "Link", "label": "Stock Balance", "link_type": "Report", "link_to": "Stock Balance", "is_query_report": 1},
+                {"type": "Link", "label": "Stock Ledger", "link_type": "Report", "link_to": "Stock Ledger", "is_query_report": 1},
             ],
         },
         {
@@ -249,6 +244,7 @@ def configure_workspaces():
 
         for field in ("label", "title", "module", "indicator_color"):
             setattr(doc, field, workspace_data[field])
+        doc.hide_custom = workspace_data.get("hide_custom", 0)
         doc.public = 1
         doc.is_hidden = 0
         doc.content = json.dumps(workspace_data["content"])
