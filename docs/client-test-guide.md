@@ -31,7 +31,32 @@ Use this guide for the current ERPNext 3PL test instance.
 - Can create/edit warehouses, products, item groups, UOMs, users, roles, and stock documents.
 - Starts in the warehouse interface but has broad system permissions.
 
+### Client Portal User
+
+- Login: `alpha.client@example.test`
+- Password: `AlphaClient2026!`
+- Purpose: client-side Receiving Notice testing.
+- Linked customer: `Demo Client Alpha`.
+- Uses the client portal, not ERPNext Desk.
+
 ## What Is Ready To Test
+
+### Client Portal
+
+Open `https://erpnext.77.237.244.169.sslip.io/client/receiving-notice`.
+
+Test:
+
+- Log in as `alpha.client@example.test`.
+- Create a Receiving Notice for `Demo Client Alpha`.
+- Add expected products and quantities in the `Expected Products` table.
+- Try to use another customer only as a negative test.
+
+Expected result:
+
+- Client can create Receiving Notices through the portal.
+- Client user is a `Website User`, not a Desk/System user.
+- User permission restricts the client to `Demo Client Alpha`.
 
 ### Warehouse Landing
 
@@ -136,8 +161,7 @@ Expected result:
 
 ## Current Scope Limits
 
-- Client portal is not implemented yet.
-- Clients cannot yet log in and create receiving notices themselves.
+- Client portal MVP is implemented for creating Receiving Notices.
 - Client inventory visibility is not implemented yet.
 - Shipment requests and outbound client portal flow are not implemented yet.
 - Box/container handling exists as a first ERPNext custom DocType model, but scanner-first mobile screens are not implemented yet.

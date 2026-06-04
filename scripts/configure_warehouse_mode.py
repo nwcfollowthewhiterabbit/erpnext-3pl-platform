@@ -265,9 +265,21 @@ def configure_module_profile():
     finally:
         frappe.flags.in_install = old_in_install
 
-    for role_name in ("3PL Warehouse User", "3PL Warehouse Manager"):
+    for role_name in ("3PL Warehouse User", "3PL Warehouse Manager", "3PL Client"):
         if not frappe.db.exists("Role", role_name):
             frappe.get_doc({"doctype": "Role", "role_name": role_name}).insert(ignore_permissions=True)
+
+    if frappe.db.exists("Role", "3PL Client"):
+        role = frappe.get_doc("Role", "3PL Client")
+        changed = False
+        if role.meta.has_field("desk_access") and role.desk_access:
+            role.desk_access = 0
+            changed = True
+        if role.home_page != "client/receiving-notice":
+            role.home_page = "client/receiving-notice"
+            changed = True
+        if changed:
+            role.save(ignore_permissions=True)
 
     for role_name in ("Stock User", "Stock Manager", "3PL Warehouse User", "3PL Warehouse Manager"):
         if frappe.db.exists("Role", role_name):
@@ -493,6 +505,7 @@ def configure_custom_doctypes():
                     {"role": "Stock User", "read": 1, "write": 1, "create": 1, "submit": 1, "report": 1, "export": 1},
                     {"role": "3PL Warehouse Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "submit": 1, "cancel": 1, "amend": 1, "report": 1, "export": 1},
                     {"role": "3PL Warehouse User", "read": 1, "write": 1, "create": 1, "submit": 1, "report": 1},
+                    {"role": "3PL Client", "read": 1, "write": 1, "create": 1},
                 ],
             }
         )
@@ -527,6 +540,36 @@ def configure_custom_doctypes():
             {"fieldname": "inbound_shipment_notice", "label": "Receiving Notice", "fieldtype": "Link", "options": "Inbound Shipment Notice", "insert_after": "current_warehouse", "in_standard_filter": 1},
         ],
     )
+
+    for doctype in ("Inbound Shipment Notice", "Item", "Three PL Container"):
+        ensure_docperm(doctype, "3PL Client", read=1, write=1 if doctype == "Inbound Shipment Notice" else 0, create=1 if doctype == "Inbound Shipment Notice" else 0)
+
+
+def ensure_docperm(doctype, role, **permissions):
+    filters = {"parent": doctype, "role": role, "permlevel": 0}
+    if frappe.db.exists("Custom DocPerm", filters):
+        row = frappe.get_doc("Custom DocPerm", filters)
+    else:
+        row = frappe.get_doc(
+            {
+                "doctype": "Custom DocPerm",
+                "parent": doctype,
+                "parenttype": "DocType",
+                "parentfield": "permissions",
+                "role": role,
+                "permlevel": 0,
+            }
+        )
+    changed = False
+    for field, value in permissions.items():
+        if getattr(row, field, 0) != value:
+            setattr(row, field, value)
+            changed = True
+    if changed:
+        if row.is_new():
+            row.insert(ignore_permissions=True)
+        else:
+            row.save(ignore_permissions=True)
 
 
 def configure_custom_fields():
@@ -682,6 +725,67 @@ def configure_custom_fields():
     create_custom_fields(fields, update=True)
 
 
+def configure_client_portal():
+    form_name = "3PL Client Receiving Notice"
+    existing_form = frappe.db.get_value("Web Form", {"route": "client/receiving-notice"}, "name") or frappe.db.get_value("Web Form", {"title": form_name}, "name")
+    if existing_form:
+        form = frappe.get_doc("Web Form", existing_form)
+        form.set("web_form_fields", [])
+    else:
+        form = frappe.new_doc("Web Form")
+        form.title = form_name
+
+    form.route = "client/receiving-notice"
+    form.doc_type = "Inbound Shipment Notice"
+    form.module = "Stock"
+    form.published = 1
+    form.login_required = 1
+    form.anonymous = 0
+    form.apply_document_permissions = 1
+    form.allow_edit = 1
+    form.allow_multiple = 1
+    form.allow_delete = 0
+    form.allow_print = 1
+    form.show_list = 1
+    form.list_title = "Receiving Notices"
+    form.button_label = "Submit Receiving Notice"
+    form.introduction_text = "Create and review receiving notices for inbound warehouse shipments."
+    form.success_title = "Receiving Notice Submitted"
+    form.success_message = "The warehouse team can now review the expected inbound shipment."
+    form.success_url = "/client/receiving-notice"
+
+    for field in [
+        {"fieldname": "customer", "fieldtype": "Link", "label": "Client", "options": "Customer", "reqd": 1, "show_in_filter": 1},
+        {"fieldname": "external_reference", "fieldtype": "Data", "label": "Client Notice Ref", "reqd": 1, "show_in_filter": 1},
+        {"fieldname": "expected_arrival_date", "fieldtype": "Date", "label": "Expected Arrival Date", "reqd": 1},
+        {"fieldname": "items", "fieldtype": "Table", "label": "Expected Products", "options": "Inbound Shipment Notice Item", "reqd": 1},
+        {"fieldname": "notes", "fieldtype": "Small Text", "label": "Notes"},
+    ]:
+        form.append("web_form_fields", field)
+
+    form.save(ignore_permissions=True)
+
+    menu_title = "Receiving Notices"
+    portal_settings = frappe.get_single("Portal Settings")
+    item = None
+    for row in portal_settings.menu:
+        if row.title == menu_title or row.route == "client/receiving-notice":
+            item = row
+            break
+    if item is None:
+        item = portal_settings.append("menu", {})
+
+    item.title = menu_title
+    item.enabled = 1
+    item.route = "client/receiving-notice"
+    item.reference_doctype = "Inbound Shipment Notice"
+    item.role = "3PL Client"
+    item.target = ""
+    portal_settings.default_role = "3PL Client"
+    portal_settings.default_portal_home = "client/receiving-notice"
+    portal_settings.save(ignore_permissions=True)
+
+
 def configure_reports():
     reports = {
         "3PL ASN vs Received": {
@@ -813,6 +917,7 @@ def main():
     configure_stock_entry_types()
     configure_custom_doctypes()
     configure_custom_fields()
+    configure_client_portal()
     configure_reports()
     configure_workspaces()
     configure_defaults()

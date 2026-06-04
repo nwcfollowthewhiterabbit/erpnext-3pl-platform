@@ -101,6 +101,45 @@ PY
 check_login "warehouse.demo@example.test" "WarehouseDemo2026!"
 check_login "warehouse.manager@example.test" "WarehouseManager2026!"
 
+check_portal_login() {
+  user="$1"
+  password="$2"
+  cookie_file="$(mktemp)"
+  response_file="$(mktemp)"
+  page_file="$(mktemp)"
+
+  curl -sS --max-time 30 \
+    -X POST "${base_url%/}/api/method/login" \
+    --data-urlencode "usr=${user}" \
+    --data-urlencode "pwd=${password}" \
+    -c "$cookie_file" > "$response_file"
+
+  python3 - "$response_file" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1]) as handle:
+    data = json.load(handle)
+
+if data.get("message") not in {"Logged In", "No App"}:
+    raise SystemExit(f"portal login failed: {data}")
+
+if data.get("home_page") not in {"/client/receiving-notice", "client/receiving-notice", "/me"}:
+    raise SystemExit(f"unexpected portal home_page: {data}")
+PY
+
+  curl -fsSL --max-time 30 -b "$cookie_file" "${base_url%/}/client/receiving-notice" -o "$page_file"
+  if grep -Eiq "Page not found|Not permitted|No permission" "$page_file"; then
+    echo "Unexpected portal error page for ${user}" >&2
+    grep -Eio "Page not found|Not permitted|No permission" "$page_file" | head -5 >&2
+    exit 1
+  fi
+
+  rm -f "$cookie_file" "$response_file" "$page_file"
+}
+
+check_portal_login "alpha.client@example.test" "AlphaClient2026!"
+
 expect_redirect() {
   path="$1"
   expected="$2"

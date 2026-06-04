@@ -2,7 +2,7 @@
 
 ## URL
 
-`https://erptest.exemstsc.world`
+`https://erpnext.77.237.244.169.sslip.io`
 
 ## Administrator
 
@@ -27,9 +27,17 @@
 - Password: `6elz4oeiuUGAHSGRccwngNmb`
 - Intended use: owner-level access. Starts on the warehouse management landing page and receives all standard system roles, including `System Manager`, `Stock Manager`, and `Item Manager`.
 
+## Client Portal User
+
+- Login: `alpha.client@example.test`
+- Password: `AlphaClient2026!`
+- Intended use: client-side portal testing for `Demo Client Alpha`.
+- Portal URL: `https://erpnext.77.237.244.169.sslip.io/client/receiving-notice`
+- This is a `Website User`, not an ERPNext Desk user.
+
 ## Starting Point
 
-After login, go to:
+For warehouse/admin users, after login go to:
 
 - `Stock`
 - `Inbound Shipment Notice`
@@ -37,3 +45,7 @@ After login, go to:
 - `Pick List`
 - `Warehouse`
 - `Item`
+
+For client portal testing, open:
+
+- `client/receiving-notice`

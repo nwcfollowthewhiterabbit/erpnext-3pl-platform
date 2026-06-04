@@ -39,6 +39,7 @@ For a quick HTTPS endpoint without managing DNS first, use an `sslip.io` hostnam
 
 - Warehouse operator: `warehouse.demo@example.test` / `WarehouseDemo2026!`
 - Warehouse manager: `warehouse.manager@example.test` / `WarehouseManager2026!`
+- Client portal: `alpha.client@example.test` / `AlphaClient2026!`
 
 ## Warehouse Docs
 
