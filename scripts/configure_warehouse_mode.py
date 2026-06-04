@@ -672,6 +672,7 @@ def configure_custom_doctypes():
         "Item": {"read": 1},
         "UOM": {"read": 1},
         "Warehouse": {"read": 1},
+        "Web Form": {"read": 1},
         "Three PL Container": {"read": 1},
         "Three PL Container Item": {"read": 1},
         "Three PL Inventory Snapshot": {"read": 1},
@@ -904,17 +905,7 @@ def configure_client_portal_website_script():
     return window.location.pathname.indexOf('/client/') === 0;
   }}
 
-  function isDeskRequest(url) {{
-    if (!url) return false;
-    try {{
-      var path = new URL(url, window.location.origin).pathname;
-      return path.indexOf('/desk') === 0 || path.indexOf('/app') === 0;
-    }} catch (e) {{
-      return false;
-    }}
-  }}
-
-  function suppressDeskRequests() {{
+  function tuneClientPortalBoot() {{
     if (!isClientPortal()) return;
 
     if (window.frappe && frappe.boot && frappe.boot.apps_data) {{
@@ -922,45 +913,11 @@ def configure_client_portal_website_script():
       frappe.boot.apps_data.default_path = '/{CLIENT_PORTAL_HOME}';
     }}
 
-    if (window.jQuery && jQuery.ajax && !jQuery.ajax.__client_portal_patched) {{
-      var originalAjax = jQuery.ajax;
-      jQuery.ajax = function (options) {{
-        var url = typeof options === 'string' ? options : options && options.url;
-        if (isDeskRequest(url)) {{
-          var deferred = jQuery.Deferred();
-          setTimeout(function () {{ deferred.resolve({{}}); }}, 0);
-          var promise = deferred.promise();
-          promise.abort = function () {{}};
-          return promise;
-        }}
-        return originalAjax.apply(this, arguments);
+    if (window.frappe && frappe.has_permission && !frappe.has_permission.__client_portal_patched) {{
+      frappe.has_permission = function (doctype, docname, perm_type, callback) {{
+        if (callback) callback({{message: {{has_permission: false}}}});
       }};
-      jQuery.ajax.__client_portal_patched = true;
-    }}
-
-    if (window.fetch && !window.fetch.__client_portal_patched) {{
-      var originalFetch = window.fetch;
-      window.fetch = function (resource, init) {{
-        var url = resource && resource.url ? resource.url : resource;
-        if (isDeskRequest(String(url))) {{
-          return Promise.resolve(new Response('', {{status: 204}}));
-        }}
-        return originalFetch.apply(this, arguments);
-      }};
-      window.fetch.__client_portal_patched = true;
-    }}
-
-    if (window.XMLHttpRequest && !XMLHttpRequest.prototype.__client_portal_patched) {{
-      var originalOpen = XMLHttpRequest.prototype.open;
-      XMLHttpRequest.prototype.open = function (method, url) {{
-        if (isDeskRequest(String(url))) {{
-          var args = Array.prototype.slice.call(arguments);
-          args[1] = '/';
-          return originalOpen.apply(this, args);
-        }}
-        return originalOpen.apply(this, arguments);
-      }};
-      XMLHttpRequest.prototype.__client_portal_patched = true;
+      frappe.has_permission.__client_portal_patched = true;
     }}
   }}
 
@@ -1003,19 +960,77 @@ def configure_client_portal_website_script():
     document.body.style.removeProperty('padding-right');
   }}
 
+  function escapeHtml(value) {{
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }}
+
+  function renderClientPortalList() {{
+    if (!isClientPortal() || window.location.pathname.indexOf('/list') === -1) return;
+    if (!window.frappe || !frappe.web_form_doc || !frappe.web_form_doc.is_list) return;
+
+    var target = document.querySelector('.web-list-table');
+    if (!target || target.getAttribute('data-client-list-rendered') === '1') return;
+
+    var columns = (frappe.web_form_doc.list_columns || []).slice(0, 6);
+    if (!columns.length) return;
+
+    var payload = new URLSearchParams();
+    payload.set('doctype', frappe.web_form_doc.doc_type);
+    payload.set('limit_start', '0');
+    payload.set('limit', '20');
+    payload.set('web_form_name', frappe.web_form_doc.name);
+
+    fetch('/api/method/frappe.www.list.get_list_data', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/x-www-form-urlencoded'}},
+      body: payload.toString()
+    }})
+      .then(function (response) {{ return response.json(); }})
+      .then(function (response) {{
+        var rows = response && response.message ? response.message : [];
+        target.setAttribute('data-client-list-rendered', '1');
+
+        if (!rows.length) {{
+          target.innerHTML = '<div class="text-muted small py-3">No records yet.</div>';
+          return;
+        }}
+
+        var head = columns.map(function (column) {{
+          return '<th>' + escapeHtml(column.label || column.fieldname) + '</th>';
+        }}).join('');
+        var body = rows.map(function (row) {{
+          var cells = columns.map(function (column) {{
+            return '<td>' + escapeHtml(row[column.fieldname]) + '</td>';
+          }}).join('');
+          return '<tr>' + cells + '</tr>';
+        }}).join('');
+
+        target.innerHTML = '<table class="table table-sm table-bordered mb-0"><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table>';
+      }});
+  }}
+
   if (window.frappe && frappe.ready) {{
-    suppressDeskRequests();
+    tuneClientPortalBoot();
     frappe.ready(function () {{
-      suppressDeskRequests();
+      tuneClientPortalBoot();
       installClientPortalNav();
+      renderClientPortalList();
       removeDeskPermissionNoise();
+      setTimeout(renderClientPortalList, 250);
       setTimeout(removeDeskPermissionNoise, 250);
+      setTimeout(renderClientPortalList, 1000);
       setTimeout(removeDeskPermissionNoise, 1000);
     }});
   }} else {{
     document.addEventListener('DOMContentLoaded', function () {{
-      suppressDeskRequests();
+      tuneClientPortalBoot();
       installClientPortalNav();
+      renderClientPortalList();
       removeDeskPermissionNoise();
     }});
   }}

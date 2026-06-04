@@ -18,6 +18,12 @@ const navTargets = {
   "Shipment Requests": "/client/shipment-request/list",
   "Discrepancy Instructions": "/client/discrepancy-instruction/list",
 };
+const expectedPageText = {
+  "/client/receiving-notice/list": ["ASN-ALPHA-001", "ASN-ALPHA-002", "ASN-ALPHA-003"],
+  "/client/inventory/list": ["ALPHA-001", "ALPHA-002", "ALPHA-003"],
+  "/client/shipment-request/list": ["SHIP-ALPHA-001", "SHIP-ALPHA-002"],
+  "/client/discrepancy-instruction/list": ["ALPHA-002"],
+};
 
 async function collectPortalProblems(page, problems) {
   page.on("console", (message) => {
@@ -50,6 +56,12 @@ async function assertPortalPage(page, path, problems) {
   const bodyText = await page.locator("body").innerText();
   if (/not permitted|no permission|page not found/i.test(bodyText)) {
     problems.push(`body ${path}: ${bodyText.slice(0, 800)}`);
+  }
+
+  for (const text of expectedPageText[path] || []) {
+    if (!bodyText.includes(text)) {
+      problems.push(`body ${path}: missing demo record text ${text}`);
+    }
   }
 
   for (const label of navLabels) {

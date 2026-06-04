@@ -39,6 +39,14 @@ DEMO_ITEMS = [
         "barcode": "300000000002",
     },
     {
+        "item_code": "SKU-ALPHA-003",
+        "item_name": "Demo Alpha Adapter",
+        "client": "Demo Client Alpha",
+        "client_sku": "ALPHA-003",
+        "client_product_name": "Alpha Adapter",
+        "barcode": "300000000004",
+    },
+    {
         "item_code": "SKU-BETA-001",
         "item_name": "Demo Beta Accessory",
         "client": "Demo Client Beta",

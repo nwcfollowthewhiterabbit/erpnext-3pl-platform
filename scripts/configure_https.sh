@@ -52,7 +52,7 @@ server {
 
     location ~ ^/(app|desk)(/|$) {
         if (\$http_cookie ~* "system_user=no") {
-            return 204;
+            return 200 "";
         }
 
         proxy_read_timeout 120;

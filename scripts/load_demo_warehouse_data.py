@@ -198,6 +198,35 @@ def ensure_beta_inbound_notice():
     return notice
 
 
+def ensure_alpha_portal_notice(external_reference, expected_arrival_date, status, items, notes, instruction_status=None):
+    existing = frappe.db.get_value(
+        "Inbound Shipment Notice",
+        {"external_reference": external_reference, "customer": "Demo Client Alpha"},
+        "name",
+    )
+    notice = frappe.get_doc("Inbound Shipment Notice", existing) if existing else frappe.new_doc("Inbound Shipment Notice")
+
+    notice.customer = "Demo Client Alpha"
+    notice.external_reference = external_reference
+    notice.notice_date = nowdate()
+    notice.expected_arrival_date = expected_arrival_date
+    notice.temporary_warehouse = "Temporary Receiving - 3"
+    notice.status = status
+    notice.notes = notes
+    if instruction_status and meta_has_field("Inbound Shipment Notice", "client_instruction_status"):
+        notice.client_instruction_status = instruction_status
+
+    notice.set("items", [])
+    for item in items:
+        notice.append("items", item)
+
+    if notice.is_new():
+        notice.owner = CLIENT_PORTAL_USER
+    notice.save(ignore_permissions=True)
+    set_owner_after_save(notice, CLIENT_PORTAL_USER)
+    return notice
+
+
 def sync_notice_details(notice):
     if meta_has_field("Inbound Shipment Notice", "client_instruction_status"):
         notice.client_instruction_status = "Waiting for Client"
@@ -275,6 +304,34 @@ def ensure_container(notice_name):
             "uom": "Nos",
             "condition_status": "OK",
             "notes": "Expected quantity is 25 on the Receiving Notice.",
+        },
+    )
+    container.save(ignore_permissions=True)
+    return container
+
+
+def ensure_alpha_storage_container():
+    name = "BOX-ALPHA-002"
+    if frappe.db.exists("Three PL Container", name):
+        container = frappe.get_doc("Three PL Container", name)
+        container.set("items", [])
+    else:
+        container = frappe.new_doc("Three PL Container")
+        container.container_code = name
+
+    container.barcode = "BOX300000000002"
+    container.client = "Demo Client Alpha"
+    container.current_warehouse = "Aisle A - 3"
+    container.status = "Stored"
+    container.notes = "Demo storage box used by Alpha client inventory snapshots."
+    container.append(
+        "items",
+        {
+            "item_code": "SKU-ALPHA-003",
+            "client_sku": "ALPHA-003",
+            "qty": 18,
+            "uom": "Nos",
+            "condition_status": "OK",
         },
     )
     container.save(ignore_permissions=True)
@@ -362,6 +419,18 @@ def ensure_inventory_snapshots():
             "notes": "Demo inventory snapshot with one missing unit versus ASN.",
         },
         {
+            "customer": "Demo Client Alpha",
+            "item_code": "SKU-ALPHA-003",
+            "client_sku": "ALPHA-003",
+            "item_name": "Demo Alpha Adapter",
+            "qty": 18,
+            "uom": "Nos",
+            "warehouse": "Aisle A - 3",
+            "container_code": "BOX-ALPHA-002",
+            "status": "Available",
+            "notes": "Demo stock already put away into storage.",
+        },
+        {
             "customer": "Demo Client Beta",
             "item_code": "SKU-BETA-001",
             "client_sku": "BETA-001",
@@ -438,10 +507,37 @@ def ensure_shipment_request():
     return request
 
 
-def ensure_client_instruction(notice_name):
+def ensure_alpha_shipment_request(external_reference, requested_ship_date, status, destination_name, destination_address, items, notes):
+    existing = frappe.db.get_value(
+        "Three PL Shipment Request",
+        {"customer": "Demo Client Alpha", "external_reference": external_reference},
+        "name",
+    )
+    request = frappe.get_doc("Three PL Shipment Request", existing) if existing else frappe.new_doc("Three PL Shipment Request")
+
+    request.customer = "Demo Client Alpha"
+    request.external_reference = external_reference
+    request.requested_ship_date = requested_ship_date
+    request.status = status
+    request.destination_name = destination_name
+    request.destination_address = destination_address
+    request.portal_source = 1
+    request.notes = notes
+    request.set("items", [])
+    for item in items:
+        request.append("items", item)
+
+    if request.is_new():
+        request.owner = CLIENT_PORTAL_USER
+    request.save(ignore_permissions=True)
+    set_owner_after_save(request, CLIENT_PORTAL_USER)
+    return request
+
+
+def ensure_client_instruction(notice_name, item_code="SKU-ALPHA-002", client_sku="ALPHA-002", instruction_type="Accept Difference", instruction_text=None):
     existing = frappe.db.get_value(
         "Three PL Client Instruction",
-        {"customer": "Demo Client Alpha", "receiving_notice": notice_name, "item_code": "SKU-ALPHA-002"},
+        {"customer": "Demo Client Alpha", "receiving_notice": notice_name, "item_code": item_code},
         "name",
     )
     if existing:
@@ -451,17 +547,93 @@ def ensure_client_instruction(notice_name):
 
     instruction.customer = "Demo Client Alpha"
     instruction.receiving_notice = notice_name
-    instruction.item_code = "SKU-ALPHA-002"
-    instruction.client_sku = "ALPHA-002"
-    instruction.instruction_type = "Accept Difference"
+    instruction.item_code = item_code
+    instruction.client_sku = client_sku
+    instruction.instruction_type = instruction_type
     instruction.status = "Submitted"
     instruction.portal_source = 1
     if instruction.is_new():
         instruction.owner = CLIENT_PORTAL_USER
-    instruction.instruction_text = "Demo instruction: accept the one-unit shortage and continue putaway for received goods."
+    instruction.instruction_text = instruction_text or "Demo instruction: accept the one-unit shortage and continue putaway for received goods."
     instruction.save(ignore_permissions=True)
     set_owner_after_save(instruction, CLIENT_PORTAL_USER)
     return instruction
+
+
+def ensure_additional_alpha_portal_data():
+    second_notice = ensure_alpha_portal_notice(
+        external_reference="ASN-ALPHA-002",
+        expected_arrival_date=nowdate(),
+        status="Partially Received",
+        instruction_status="Not Required",
+        notes="Demo receiving notice with products expected later today.",
+        items=[
+            {
+                "item_code": "SKU-ALPHA-001",
+                "client_sku": "ALPHA-001",
+                "item_name": "Demo Alpha Widget",
+                "expected_qty": 6,
+                "uom": "Nos",
+                "received_qty": 0,
+                "variance_qty": -6,
+                "condition_status": "OK",
+            },
+            {
+                "item_code": "SKU-ALPHA-003",
+                "client_sku": "ALPHA-003",
+                "item_name": "Demo Alpha Adapter",
+                "expected_qty": 18,
+                "uom": "Nos",
+                "received_qty": 18,
+                "variance_qty": 0,
+                "condition_status": "OK",
+            },
+        ],
+    )
+    third_notice = ensure_alpha_portal_notice(
+        external_reference="ASN-ALPHA-003",
+        expected_arrival_date=nowdate(),
+        status="Draft",
+        instruction_status="Waiting for Client",
+        notes="Demo receiving notice with a damaged product case.",
+        items=[
+            {
+                "item_code": "SKU-ALPHA-002",
+                "client_sku": "ALPHA-002",
+                "item_name": "Demo Alpha Cable",
+                "expected_qty": 12,
+                "uom": "Nos",
+                "received_qty": 11,
+                "variance_qty": -1,
+                "condition_status": "Damaged",
+            },
+        ],
+    )
+
+    ensure_alpha_shipment_request(
+        external_reference="SHIP-ALPHA-002",
+        requested_ship_date=nowdate(),
+        status="Draft",
+        destination_name="Demo Retail Store",
+        destination_address="Gedimino pr. 10, Vilnius, Lithuania",
+        notes="Demo draft outbound request for client portal review.",
+        items=[
+            {
+                "item_code": "SKU-ALPHA-003",
+                "client_sku": "ALPHA-003",
+                "qty": 3,
+                "uom": "Nos",
+            },
+        ],
+    )
+    ensure_client_instruction(
+        third_notice.name,
+        item_code="SKU-ALPHA-002",
+        client_sku="ALPHA-002",
+        instruction_type="Hold For Review",
+        instruction_text="Demo instruction: keep the damaged cable case on hold until client confirms replacement or disposal.",
+    )
+    return second_notice, third_notice
 
 
 def main():
@@ -476,12 +648,14 @@ def main():
     notice = ensure_inbound_notice()
     ensure_beta_inbound_notice()
     ensure_container(notice.name)
+    ensure_alpha_storage_container()
     notice = frappe.get_doc("Inbound Shipment Notice", notice.name)
     sync_notice_details(notice)
     ensure_stock_entry(notice.name)
     ensure_inventory_snapshots()
     ensure_shipment_request()
     ensure_client_instruction(notice.name)
+    ensure_additional_alpha_portal_data()
 
     frappe.db.commit()
     frappe.clear_cache()

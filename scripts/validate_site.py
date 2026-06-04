@@ -211,6 +211,7 @@ def main():
     require_role_perm("Item", "3PL Client", read=1)
     require_role_perm("UOM", "3PL Client", read=1)
     require_role_perm("Warehouse", "3PL Client", read=1)
+    require_role_perm("Web Form", "3PL Client", read=1)
     require_role_perm("Three PL Container", "3PL Client", read=1)
     require_role_perm("Three PL Container Item", "3PL Client", read=1)
     require_role_perm("Three PL Inventory Snapshot", "3PL Client", read=1)
