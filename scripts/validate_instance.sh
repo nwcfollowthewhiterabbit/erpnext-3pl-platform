@@ -128,12 +128,14 @@ if data.get("home_page") not in {"/client/receiving-notice", "client/receiving-n
     raise SystemExit(f"unexpected portal home_page: {data}")
 PY
 
-  curl -fsSL --max-time 30 -b "$cookie_file" "${base_url%/}/client/receiving-notice" -o "$page_file"
-  if grep -Eiq "Page not found|Not permitted|No permission" "$page_file"; then
-    echo "Unexpected portal error page for ${user}" >&2
-    grep -Eio "Page not found|Not permitted|No permission" "$page_file" | head -5 >&2
-    exit 1
-  fi
+  for path in /client/receiving-notice /client/inventory /client/shipment-request /client/discrepancy-instruction; do
+    curl -fsSL --max-time 30 -b "$cookie_file" "${base_url%/}${path}" -o "$page_file"
+    if grep -Eiq "Page not found|Not permitted|No permission" "$page_file"; then
+      echo "Unexpected portal error page for ${user} at ${path}" >&2
+      grep -Eio "Page not found|Not permitted|No permission" "$page_file" | head -5 >&2
+      exit 1
+    fi
+  done
 
   rm -f "$cookie_file" "$response_file" "$page_file"
 }

@@ -49,3 +49,6 @@ For warehouse/admin users, after login go to:
 For client portal testing, open:
 
 - `client/receiving-notice`
+- `client/inventory`
+- `client/shipment-request`
+- `client/discrepancy-instruction`

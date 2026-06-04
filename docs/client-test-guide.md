@@ -58,6 +58,18 @@ Expected result:
 - Client user is a `Website User`, not a Desk/System user.
 - User permission restricts the client to `Demo Client Alpha`.
 
+Additional client portal routes:
+
+- Inventory: `https://erpnext.77.237.244.169.sslip.io/client/inventory`
+- Shipment Requests: `https://erpnext.77.237.244.169.sslip.io/client/shipment-request`
+- Discrepancy Instructions: `https://erpnext.77.237.244.169.sslip.io/client/discrepancy-instruction`
+
+Expected result:
+
+- Client can view customer-restricted inventory snapshots.
+- Client can create shipment requests.
+- Client can send instructions for receiving discrepancies.
+
 ### Warehouse Landing
 
 After login, the user should land in `3PL Warehouse`.
@@ -162,8 +174,10 @@ Expected result:
 ## Current Scope Limits
 
 - Client portal MVP is implemented for creating Receiving Notices.
-- Client inventory visibility is not implemented yet.
-- Shipment requests and outbound client portal flow are not implemented yet.
+- Client inventory visibility is implemented as an MVP snapshot.
+- Shipment requests are implemented as portal MVP records.
+- Automatic conversion from shipment request to Pick List is not implemented yet.
+- Automatic outbound status updates are not implemented yet.
 - Box/container handling exists as a first ERPNext custom DocType model, but scanner-first mobile screens are not implemented yet.
 - Real email delivery is not configured.
 - A placeholder outgoing email account exists only to prevent ERPNext forms from failing when an outgoing account is required.

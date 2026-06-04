@@ -78,7 +78,11 @@ Expected result:
 
 Implementation status: partially implemented.
 
-Discrepancies are modeled on the Receiving Notice and visible internally. A dedicated client discrepancy portal screen and client instruction workflow are not implemented yet.
+Discrepancies are modeled on the Receiving Notice and visible internally. Client instructions can be submitted through the portal as a separate instruction record linked to the Receiving Notice.
+
+Current route:
+
+`/client/discrepancy-instruction`
 
 ### Client Reviews Inventory
 
@@ -95,9 +99,13 @@ Expected result:
 - Client does not see another client's products or stock.
 - Inventory is based on ERPNext stock data.
 
-Implementation status: not implemented.
+Implementation status: implemented as portal MVP.
 
-Product ownership fields exist, but client-facing inventory portal pages and stock-ledger filtering are not implemented yet.
+Client-facing inventory uses `Three PL Inventory Snapshot` records. The current snapshot is generated from the demo receiving/container data and is permission-restricted by customer.
+
+Current route:
+
+`/client/inventory`
 
 ### Client Creates Shipment Request
 
@@ -115,7 +123,11 @@ Expected result:
 - Shipment request is stored.
 - Warehouse can convert it into picking/packing/shipping work.
 
-Implementation status: not implemented.
+Implementation status: implemented as portal MVP.
+
+Current route:
+
+`/client/shipment-request`
 
 ## Warehouse Use Cases
 
@@ -222,7 +234,7 @@ Expected result:
 
 Implementation status: partially implemented.
 
-Pick List and custom fields exist. Client portal shipment requests and end-to-end outbound orchestration are not implemented yet.
+Pick List, custom fields, and client portal shipment requests exist. Automatic conversion from shipment request to Pick List is not implemented yet.
 
 ### Warehouse Packs And Ships Goods
 
@@ -290,18 +302,21 @@ The business owner has broad system rights. The warehouse manager is operational
 | Picking from locations | Partially implemented | Pick List exists; shipment request source flow not implemented. |
 | Containers/boxes | Implemented as first model | `Three PL Container`; scanner-first UX not implemented. |
 | Barcode/location scan fields | Partially implemented | Fields exist; no dedicated scanner/mobile UI. |
-| Client inventory visibility | Not implemented | Needs portal report/page with customer filtering. |
-| Receiving history | Partially implemented | Portal Web Form list exists; dedicated history UX not implemented. |
-| Shipment requests | Not implemented | Next major portal feature. |
-| Shipment status tracking | Not implemented | Depends on shipment request/outbound workflow. |
+| Client inventory visibility | Implemented as MVP | Portal inventory snapshot exists and is customer-filtered by permissions. |
+| Receiving history | Partially implemented | Portal Web Form list exists; dedicated polished history UX is not implemented. |
+| Shipment requests | Implemented as MVP | Client portal Web Form creates shipment requests. |
+| Shipment status tracking | Implemented as MVP | Shipment request has status; automatic outbound status updates are not implemented. |
 | Stay close to standard ERPNext | Implemented | Uses custom fields, custom DocTypes, Web Form, reports, stock entries. |
+
+## Remaining Gaps After MVP
+
+- Automatic conversion from shipment request to Pick List.
+- Automatic stock-ledger-based inventory snapshot refresh.
+- Dedicated client-facing discrepancy detail page.
+- Real email notifications after SMTP is configured.
+- Scanner-first/mobile warehouse UI.
+- Carrier labels and shipment tracking integrations.
 
 ## Current Recommended Next Build Step
 
-Build the client portal inventory view next, then shipment request creation.
-
-Reason:
-
-- Receiving Notice already gives the client a way to send inbound information.
-- Inventory visibility is the next most valuable read-only client function.
-- Shipment request creation is the next write-side workflow after receiving.
+Build automatic conversion from client shipment request to internal warehouse picking flow.

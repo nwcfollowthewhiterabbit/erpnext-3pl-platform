@@ -14,8 +14,12 @@ REQUIRED_DOCTYPES = [
     "Inbound Shipment Discrepancy",
     "Three PL Container",
     "Three PL Container Item",
+    "Three PL Inventory Snapshot",
+    "Three PL Shipment Request",
+    "Three PL Shipment Request Item",
+    "Three PL Client Instruction",
 ]
-REQUIRED_REPORTS = ["3PL ASN vs Received", "3PL Receiving Discrepancies", "3PL Containers"]
+REQUIRED_REPORTS = ["3PL ASN vs Received", "3PL Receiving Discrepancies", "3PL Containers", "3PL Shipment Requests", "3PL Client Inventory"]
 REQUIRED_CUSTOM_FIELDS = [
     "Item-owner_client",
     "Item-client_sku",
@@ -44,6 +48,12 @@ REQUIRED_PLACEHOLDER_EMAIL = "noreply@example.invalid"
 CLIENT_PORTAL_USER = "alpha.client@example.test"
 CLIENT_PORTAL_CUSTOMER = "Demo Client Alpha"
 CLIENT_PORTAL_ROUTE = "client/receiving-notice"
+CLIENT_PORTAL_ROUTES = {
+    "3PL Client Receiving Notice": ("client/receiving-notice", {"customer", "external_reference", "expected_arrival_date", "items"}),
+    "3PL Client Inventory": ("client/inventory", {"customer", "item_code", "client_sku", "qty", "warehouse", "container_code"}),
+    "3PL Client Shipment Request": ("client/shipment-request", {"customer", "external_reference", "requested_ship_date", "destination_name", "destination_address", "items"}),
+    "3PL Client Discrepancy Instruction": ("client/discrepancy-instruction", {"customer", "receiving_notice", "instruction_type", "instruction_text"}),
+}
 
 
 def require(condition, message):
@@ -147,21 +157,28 @@ def main():
         require(client_role.desk_access == 0, "3PL Client role must not have Desk access")
     require(client_role.home_page == CLIENT_PORTAL_ROUTE, f"Wrong 3PL Client home_page: {client_role.home_page}")
 
-    require(
-        frappe.db.exists("Portal Menu Item", {"title": "Receiving Notices", "route": CLIENT_PORTAL_ROUTE, "role": "3PL Client", "enabled": 1}),
-        "Missing client portal menu item",
-    )
+    for title, (route, _fields) in CLIENT_PORTAL_ROUTES.items():
+        menu_title = title.replace("3PL Client ", "")
+        if menu_title == "Receiving Notice":
+            menu_title = "Receiving Notices"
+        elif menu_title == "Shipment Request":
+            menu_title = "Shipment Requests"
+        elif menu_title == "Discrepancy Instruction":
+            menu_title = "Discrepancy Instructions"
+        require(
+            frappe.db.exists("Portal Menu Item", {"title": menu_title, "route": route, "role": "3PL Client", "enabled": 1}),
+            f"Missing client portal menu item: {menu_title}",
+        )
     portal_settings = frappe.get_single("Portal Settings")
     require(portal_settings.default_portal_home == CLIENT_PORTAL_ROUTE, f"Wrong default portal home: {portal_settings.default_portal_home}")
-    web_form_name = frappe.db.get_value("Web Form", {"route": CLIENT_PORTAL_ROUTE}, "name")
-    require(web_form_name, "Missing client receiving Web Form")
-    web_form = frappe.get_doc("Web Form", web_form_name)
-    require(web_form.title == "3PL Client Receiving Notice", f"Wrong client Web Form title: {web_form.title}")
-    require(web_form.route == CLIENT_PORTAL_ROUTE, f"Wrong client Web Form route: {web_form.route}")
-    require(web_form.login_required == 1, "Client Web Form must require login")
-    require(web_form.apply_document_permissions == 1, "Client Web Form must apply document permissions")
-    require(web_form.allow_multiple == 1, "Client Web Form must allow multiple notices")
-    require({row.fieldname for row in web_form.web_form_fields} >= {"customer", "external_reference", "expected_arrival_date", "items"}, "Client Web Form misses required fields")
+    for title, (route, expected_fields) in CLIENT_PORTAL_ROUTES.items():
+        web_form_name = frappe.db.get_value("Web Form", {"route": route}, "name")
+        require(web_form_name, f"Missing client Web Form: {title}")
+        web_form = frappe.get_doc("Web Form", web_form_name)
+        require(web_form.title == title, f"Wrong client Web Form title: {web_form.title}")
+        require(web_form.login_required == 1, f"Client Web Form must require login: {title}")
+        require(web_form.apply_document_permissions == 1, f"Client Web Form must apply document permissions: {title}")
+        require({row.fieldname for row in web_form.web_form_fields} >= expected_fields, f"Client Web Form misses required fields: {title}")
 
     require(
         frappe.db.exists("User Permission", {"user": CLIENT_PORTAL_USER, "allow": "Customer", "for_value": CLIENT_PORTAL_CUSTOMER}),
@@ -179,6 +196,9 @@ def main():
     require_role_perm("Inbound Shipment Notice", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Item", "3PL Client", read=1)
     require_role_perm("Three PL Container", "3PL Client", read=1)
+    require_role_perm("Three PL Inventory Snapshot", "3PL Client", read=1)
+    require_role_perm("Three PL Shipment Request", "3PL Client", read=1, write=1, create=1)
+    require_role_perm("Three PL Client Instruction", "3PL Client", read=1, write=1, create=1)
 
     owner_roles = [row.role for row in frappe.get_doc("User", "rupusm@gmail.com").roles]
     for doctype in ("Warehouse", "Item", "Item Group", "UOM"):
@@ -220,6 +240,9 @@ def main():
         any(row.discrepancy_type == "Quantity Difference" and row.item_code == "SKU-ALPHA-002" and row.variance_qty == -1 for row in notice.discrepancies),
         "Demo ASN misses quantity discrepancy",
     )
+    require(frappe.db.exists("Three PL Inventory Snapshot", {"customer": "Demo Client Alpha", "item_code": "SKU-ALPHA-001"}), "Missing demo client inventory snapshot")
+    require(frappe.db.exists("Three PL Shipment Request", {"customer": "Demo Client Alpha", "external_reference": "SHIP-ALPHA-001"}), "Missing demo shipment request")
+    require(frappe.db.exists("Three PL Client Instruction", {"customer": "Demo Client Alpha", "receiving_notice": notice_name}), "Missing demo client discrepancy instruction")
 
     validate_client_portal_permissions()
 
@@ -229,11 +252,19 @@ def main():
 def validate_client_portal_permissions():
     allowed_ref = "PORTAL-VALIDATION-ALPHA"
     forbidden_ref = "PORTAL-VALIDATION-BETA"
+    shipment_ref = "PORTAL-SHIPMENT-ALPHA"
+    forbidden_shipment_ref = "PORTAL-SHIPMENT-BETA"
     frappe.set_user("Administrator")
     for reference in (allowed_ref, forbidden_ref):
         existing = frappe.db.get_value("Inbound Shipment Notice", {"external_reference": reference}, "name")
         if existing:
             frappe.delete_doc("Inbound Shipment Notice", existing, ignore_permissions=True, force=True)
+    for reference in (shipment_ref, forbidden_shipment_ref):
+        existing = frappe.db.get_value("Three PL Shipment Request", {"external_reference": reference}, "name")
+        if existing:
+            frappe.delete_doc("Three PL Shipment Request", existing, ignore_permissions=True, force=True)
+    for existing in frappe.get_all("Three PL Client Instruction", filters={"instruction_text": ("like", "Portal validation%")}, pluck="name"):
+        frappe.delete_doc("Three PL Client Instruction", existing, ignore_permissions=True, force=True)
 
     frappe.set_user(CLIENT_PORTAL_USER)
     allowed = frappe.get_doc(
@@ -279,9 +310,75 @@ def validate_client_portal_permissions():
         pass
     else:
         raise RuntimeError("Client user can create receiving notice for another customer")
-    finally:
-        frappe.set_user("Administrator")
-        frappe.db.rollback()
+
+    shipment = frappe.get_doc(
+        {
+            "doctype": "Three PL Shipment Request",
+            "customer": CLIENT_PORTAL_CUSTOMER,
+            "external_reference": shipment_ref,
+            "requested_ship_date": frappe.utils.nowdate(),
+            "destination_name": "Portal Validation",
+            "destination_address": "Validation Address",
+            "portal_source": 1,
+            "items": [
+                {
+                    "item_code": "SKU-ALPHA-001",
+                    "client_sku": "ALPHA-001",
+                    "qty": 1,
+                    "uom": "Nos",
+                }
+            ],
+        }
+    )
+    shipment.insert()
+    require(shipment.owner == CLIENT_PORTAL_USER, f"Client-created shipment request has wrong owner: {shipment.owner}")
+
+    try:
+        forbidden_shipment = frappe.get_doc(
+            {
+                "doctype": "Three PL Shipment Request",
+                "customer": "Demo Client Beta",
+                "external_reference": forbidden_shipment_ref,
+                "requested_ship_date": frappe.utils.nowdate(),
+                "destination_name": "Portal Validation",
+                "destination_address": "Validation Address",
+                "portal_source": 1,
+                "items": [
+                    {
+                        "item_code": "SKU-BETA-001",
+                        "client_sku": "BETA-001",
+                        "qty": 1,
+                        "uom": "Nos",
+                    }
+                ],
+            }
+        )
+        forbidden_shipment.insert()
+    except frappe.PermissionError:
+        pass
+    else:
+        raise RuntimeError("Client user can create shipment request for another customer")
+
+    instruction = frappe.get_doc(
+        {
+            "doctype": "Three PL Client Instruction",
+            "customer": CLIENT_PORTAL_CUSTOMER,
+            "receiving_notice": frappe.db.get_value("Inbound Shipment Notice", {"external_reference": "ASN-ALPHA-001"}),
+            "item_code": "SKU-ALPHA-002",
+            "client_sku": "ALPHA-002",
+            "instruction_type": "Accept Difference",
+            "portal_source": 1,
+            "instruction_text": "Portal validation instruction",
+        }
+    )
+    instruction.insert()
+    require(instruction.owner == CLIENT_PORTAL_USER, f"Client-created instruction has wrong owner: {instruction.owner}")
+
+    inventory = frappe.get_doc("Three PL Inventory Snapshot", frappe.db.get_value("Three PL Inventory Snapshot", {"customer": CLIENT_PORTAL_CUSTOMER, "item_code": "SKU-ALPHA-001"}))
+    require(inventory.customer == CLIENT_PORTAL_CUSTOMER, "Client could not read own inventory snapshot")
+
+    frappe.set_user("Administrator")
+    frappe.db.rollback()
 
 
 main()

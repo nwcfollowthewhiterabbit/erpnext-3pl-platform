@@ -1,5 +1,5 @@
 import frappe
-from frappe.utils import nowdate
+from frappe.utils import now, nowdate
 
 
 CLIENTS = [
@@ -322,6 +322,104 @@ def ensure_stock_entry(notice_name):
     return entry
 
 
+def ensure_inventory_snapshots():
+    snapshots = [
+        {
+            "customer": "Demo Client Alpha",
+            "item_code": "SKU-ALPHA-001",
+            "client_sku": "ALPHA-001",
+            "item_name": "Demo Alpha Widget",
+            "qty": 10,
+            "uom": "Nos",
+            "warehouse": "Temporary Receiving - 3",
+            "container_code": "BOX-ALPHA-001",
+            "status": "Receiving",
+            "notes": "Demo inventory snapshot from receiving container.",
+        },
+        {
+            "customer": "Demo Client Alpha",
+            "item_code": "SKU-ALPHA-002",
+            "client_sku": "ALPHA-002",
+            "item_name": "Demo Alpha Cable",
+            "qty": 24,
+            "uom": "Nos",
+            "warehouse": "Temporary Receiving - 3",
+            "container_code": "BOX-ALPHA-001",
+            "status": "Receiving",
+            "notes": "Demo inventory snapshot with one missing unit versus ASN.",
+        },
+    ]
+
+    for snapshot in snapshots:
+        name = f"{snapshot['customer']}-{snapshot['item_code']}-{snapshot['container_code']}"
+        if frappe.db.exists("Three PL Inventory Snapshot", name):
+            doc = frappe.get_doc("Three PL Inventory Snapshot", name)
+        else:
+            doc = frappe.new_doc("Three PL Inventory Snapshot")
+
+        for key, value in snapshot.items():
+            setattr(doc, key, value)
+        doc.last_updated = now()
+        doc.save(ignore_permissions=True)
+
+
+def ensure_shipment_request():
+    external_reference = "SHIP-ALPHA-001"
+    existing = frappe.db.get_value(
+        "Three PL Shipment Request",
+        {"customer": "Demo Client Alpha", "external_reference": external_reference},
+        "name",
+    )
+    if existing:
+        request = frappe.get_doc("Three PL Shipment Request", existing)
+        request.set("items", [])
+    else:
+        request = frappe.new_doc("Three PL Shipment Request")
+
+    request.customer = "Demo Client Alpha"
+    request.external_reference = external_reference
+    request.requested_ship_date = nowdate()
+    request.status = "Submitted"
+    request.destination_name = "Demo Consignee"
+    request.destination_address = "Demo Street 1, Vilnius, Lithuania"
+    request.portal_source = 1
+    request.notes = "Demo outbound request created for client portal testing."
+    request.append(
+        "items",
+        {
+            "item_code": "SKU-ALPHA-001",
+            "client_sku": "ALPHA-001",
+            "qty": 1,
+            "uom": "Nos",
+        },
+    )
+    request.save(ignore_permissions=True)
+    return request
+
+
+def ensure_client_instruction(notice_name):
+    existing = frappe.db.get_value(
+        "Three PL Client Instruction",
+        {"customer": "Demo Client Alpha", "receiving_notice": notice_name, "item_code": "SKU-ALPHA-002"},
+        "name",
+    )
+    if existing:
+        instruction = frappe.get_doc("Three PL Client Instruction", existing)
+    else:
+        instruction = frappe.new_doc("Three PL Client Instruction")
+
+    instruction.customer = "Demo Client Alpha"
+    instruction.receiving_notice = notice_name
+    instruction.item_code = "SKU-ALPHA-002"
+    instruction.client_sku = "ALPHA-002"
+    instruction.instruction_type = "Accept Difference"
+    instruction.status = "Submitted"
+    instruction.portal_source = 1
+    instruction.instruction_text = "Demo instruction: accept the one-unit shortage and continue putaway for received goods."
+    instruction.save(ignore_permissions=True)
+    return instruction
+
+
 def main():
     ensure_master_data()
 
@@ -336,6 +434,9 @@ def main():
     notice = frappe.get_doc("Inbound Shipment Notice", notice.name)
     sync_notice_details(notice)
     ensure_stock_entry(notice.name)
+    ensure_inventory_snapshots()
+    ensure_shipment_request()
+    ensure_client_instruction(notice.name)
 
     frappe.db.commit()
     frappe.clear_cache()

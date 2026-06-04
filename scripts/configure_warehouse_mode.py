@@ -99,8 +99,11 @@ def configure_workspaces():
                 {"id": "3pl_containers", "type": "shortcut", "data": {"shortcut_name": "Containers", "col": 3}},
                 {"id": "3pl_stock_entries", "type": "shortcut", "data": {"shortcut_name": "Stock Entries", "col": 3}},
                 {"id": "3pl_pick_lists", "type": "shortcut", "data": {"shortcut_name": "Pick Lists", "col": 3}},
+                {"id": "3pl_shipment_requests", "type": "shortcut", "data": {"shortcut_name": "Shipment Requests", "col": 3}},
                 {"id": "3pl_asn_report", "type": "shortcut", "data": {"shortcut_name": "ASN vs Received", "col": 3}},
                 {"id": "3pl_discrepancies", "type": "shortcut", "data": {"shortcut_name": "Receiving Discrepancies", "col": 3}},
+                {"id": "3pl_client_inventory", "type": "shortcut", "data": {"shortcut_name": "Client Inventory", "col": 3}},
+                {"id": "3pl_client_instructions", "type": "shortcut", "data": {"shortcut_name": "Client Instructions", "col": 3}},
                 {"id": "3pl_spacer", "type": "spacer", "data": {"col": 12}},
                 {"id": "3pl_reports_header", "type": "header", "data": {"text": '<span class="h4"><b>Reports and Masters</b></span>', "col": 12}},
                 {"id": "3pl_items", "type": "shortcut", "data": {"shortcut_name": "Items", "col": 3}},
@@ -113,9 +116,12 @@ def configure_workspaces():
                 {"type": "DocType", "link_to": "Three PL Container", "doc_view": "List", "label": "Containers"},
                 {"type": "DocType", "link_to": "Stock Entry", "doc_view": "List", "label": "Stock Entries"},
                 {"type": "DocType", "link_to": "Pick List", "doc_view": "List", "label": "Pick Lists"},
+                {"type": "DocType", "link_to": "Three PL Shipment Request", "doc_view": "List", "label": "Shipment Requests"},
                 {"type": "Report", "link_to": "3PL ASN vs Received", "label": "ASN vs Received", "report_ref_doctype": "Inbound Shipment Notice"},
                 {"type": "Report", "link_to": "3PL Receiving Discrepancies", "label": "Receiving Discrepancies", "report_ref_doctype": "Inbound Shipment Notice"},
                 {"type": "Report", "link_to": "3PL Containers", "label": "Containers Report", "report_ref_doctype": "Three PL Container"},
+                {"type": "Report", "link_to": "3PL Client Inventory", "label": "Client Inventory", "report_ref_doctype": "Three PL Inventory Snapshot"},
+                {"type": "DocType", "link_to": "Three PL Client Instruction", "doc_view": "List", "label": "Client Instructions"},
                 {"type": "DocType", "link_to": "Item", "doc_view": "List", "label": "Items"},
                 {"type": "DocType", "link_to": "Warehouse", "doc_view": "Tree", "label": "Warehouses"},
                 {"type": "Report", "link_to": "Stock Balance", "label": "Stock Balance", "report_ref_doctype": "Stock Ledger Entry"},
@@ -126,6 +132,8 @@ def configure_workspaces():
                 {"type": "Link", "label": "Containers", "link_type": "DocType", "link_to": "Three PL Container"},
                 {"type": "Link", "label": "Stock Entries", "link_type": "DocType", "link_to": "Stock Entry"},
                 {"type": "Link", "label": "Pick Lists", "link_type": "DocType", "link_to": "Pick List"},
+                {"type": "Link", "label": "Shipment Requests", "link_type": "DocType", "link_to": "Three PL Shipment Request"},
+                {"type": "Link", "label": "Client Instructions", "link_type": "DocType", "link_to": "Three PL Client Instruction"},
                 {"type": "Link", "label": "Items", "link_type": "DocType", "link_to": "Item"},
                 {"type": "Link", "label": "Warehouses", "link_type": "DocType", "link_to": "Warehouse"},
             ],
@@ -414,6 +422,27 @@ def configure_custom_doctypes():
         discrepancy.name = "Inbound Shipment Discrepancy"
         discrepancy.insert(ignore_permissions=True)
 
+    if not frappe.db.exists("DocType", "Three PL Shipment Request Item"):
+        shipment_item = frappe.get_doc(
+            {
+                "doctype": "DocType",
+                "name": "Three PL Shipment Request Item",
+                "module": "Stock",
+                "custom": 1,
+                "istable": 1,
+                "editable_grid": 1,
+                "fields": [
+                    {"fieldname": "item_code", "label": "Item", "fieldtype": "Link", "options": "Item", "reqd": 1, "in_list_view": 1},
+                    {"fieldname": "client_sku", "label": "Client SKU", "fieldtype": "Data", "in_list_view": 1},
+                    {"fieldname": "qty", "label": "Qty", "fieldtype": "Float", "reqd": 1, "in_list_view": 1},
+                    {"fieldname": "uom", "label": "UOM", "fieldtype": "Link", "options": "UOM", "in_list_view": 1},
+                    {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
+                ],
+            }
+        )
+        shipment_item.name = "Three PL Shipment Request Item"
+        shipment_item.insert(ignore_permissions=True)
+
     if not frappe.db.exists("DocType", "Three PL Container Item"):
         container_item = frappe.get_doc(
             {
@@ -475,6 +504,105 @@ def configure_custom_doctypes():
         )
         container.name = "Three PL Container"
         container.insert(ignore_permissions=True)
+
+    if not frappe.db.exists("DocType", "Three PL Inventory Snapshot"):
+        inventory = frappe.get_doc(
+            {
+                "doctype": "DocType",
+                "name": "Three PL Inventory Snapshot",
+                "module": "Stock",
+                "custom": 1,
+                "track_changes": 1,
+                "title_field": "item_code",
+                "autoname": "format:{customer}-.{item_code}-.{container_code}",
+                "fields": [
+                    {"fieldname": "customer", "label": "Client", "fieldtype": "Link", "options": "Customer", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
+                    {"fieldname": "item_code", "label": "Item", "fieldtype": "Link", "options": "Item", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
+                    {"fieldname": "client_sku", "label": "Client SKU", "fieldtype": "Data", "in_list_view": 1},
+                    {"fieldname": "item_name", "label": "Item Name", "fieldtype": "Data", "in_list_view": 1},
+                    {"fieldname": "qty", "label": "Qty", "fieldtype": "Float", "in_list_view": 1},
+                    {"fieldname": "uom", "label": "UOM", "fieldtype": "Link", "options": "UOM", "in_list_view": 1},
+                    {"fieldname": "warehouse", "label": "Location", "fieldtype": "Link", "options": "Warehouse", "in_standard_filter": 1, "in_list_view": 1},
+                    {"fieldname": "container_code", "label": "Container / Box", "fieldtype": "Link", "options": "Three PL Container", "in_standard_filter": 1, "in_list_view": 1},
+                    {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Available\nReceiving\nHold\nAllocated\nShipped", "default": "Available", "in_list_view": 1},
+                    {"fieldname": "last_updated", "label": "Last Updated", "fieldtype": "Datetime", "read_only": 1},
+                    {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
+                ],
+                "permissions": [
+                    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+                    {"role": "Stock Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+                    {"role": "3PL Warehouse Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+                    {"role": "3PL Warehouse User", "read": 1, "report": 1},
+                    {"role": "3PL Client", "read": 1},
+                ],
+            }
+        )
+        inventory.name = "Three PL Inventory Snapshot"
+        inventory.insert(ignore_permissions=True)
+
+    if not frappe.db.exists("DocType", "Three PL Shipment Request"):
+        shipment = frappe.get_doc(
+            {
+                "doctype": "DocType",
+                "name": "Three PL Shipment Request",
+                "module": "Stock",
+                "custom": 1,
+                "track_changes": 1,
+                "title_field": "external_reference",
+                "fields": [
+                    {"fieldname": "customer", "label": "Client", "fieldtype": "Link", "options": "Customer", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
+                    {"fieldname": "external_reference", "label": "Client Shipment Ref", "fieldtype": "Data", "reqd": 1, "in_list_view": 1},
+                    {"fieldname": "requested_ship_date", "label": "Requested Ship Date", "fieldtype": "Date", "in_list_view": 1},
+                    {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Draft\nSubmitted\nAccepted\nPicking\nPacked\nShipped\nClosed\nCancelled", "default": "Submitted", "in_standard_filter": 1, "in_list_view": 1},
+                    {"fieldname": "destination_name", "label": "Destination Name", "fieldtype": "Data"},
+                    {"fieldname": "destination_address", "label": "Destination Address", "fieldtype": "Small Text"},
+                    {"fieldname": "portal_source", "label": "Portal Source", "fieldtype": "Check", "default": 0},
+                    {"fieldname": "items_section", "label": "Requested Products", "fieldtype": "Section Break"},
+                    {"fieldname": "items", "label": "Items", "fieldtype": "Table", "options": "Three PL Shipment Request Item"},
+                    {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
+                ],
+                "permissions": [
+                    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+                    {"role": "Stock Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+                    {"role": "3PL Warehouse Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+                    {"role": "3PL Warehouse User", "read": 1, "write": 1, "create": 1, "report": 1},
+                    {"role": "3PL Client", "read": 1, "write": 1, "create": 1},
+                ],
+            }
+        )
+        shipment.name = "Three PL Shipment Request"
+        shipment.insert(ignore_permissions=True)
+
+    if not frappe.db.exists("DocType", "Three PL Client Instruction"):
+        instruction = frappe.get_doc(
+            {
+                "doctype": "DocType",
+                "name": "Three PL Client Instruction",
+                "module": "Stock",
+                "custom": 1,
+                "track_changes": 1,
+                "title_field": "receiving_notice",
+                "fields": [
+                    {"fieldname": "customer", "label": "Client", "fieldtype": "Link", "options": "Customer", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
+                    {"fieldname": "receiving_notice", "label": "Receiving Notice", "fieldtype": "Link", "options": "Inbound Shipment Notice", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
+                    {"fieldname": "item_code", "label": "Item", "fieldtype": "Link", "options": "Item", "in_list_view": 1},
+                    {"fieldname": "client_sku", "label": "Client SKU", "fieldtype": "Data", "in_list_view": 1},
+                    {"fieldname": "instruction_type", "label": "Instruction Type", "fieldtype": "Select", "options": "Accept Difference\nReturn Goods\nHold For Review\nDispose Damaged Goods\nOther", "default": "Hold For Review", "in_list_view": 1},
+                    {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Submitted\nReviewed\nApplied\nClosed", "default": "Submitted", "in_standard_filter": 1, "in_list_view": 1},
+                    {"fieldname": "portal_source", "label": "Portal Source", "fieldtype": "Check", "default": 0},
+                    {"fieldname": "instruction_text", "label": "Instruction", "fieldtype": "Small Text", "reqd": 1},
+                ],
+                "permissions": [
+                    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+                    {"role": "Stock Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+                    {"role": "3PL Warehouse Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+                    {"role": "3PL Warehouse User", "read": 1, "write": 1, "create": 1, "report": 1},
+                    {"role": "3PL Client", "read": 1, "write": 1, "create": 1},
+                ],
+            }
+        )
+        instruction.name = "Three PL Client Instruction"
+        instruction.insert(ignore_permissions=True)
 
     if not frappe.db.exists("DocType", "Inbound Shipment Notice"):
         parent = frappe.get_doc(
@@ -541,8 +669,16 @@ def configure_custom_doctypes():
         ],
     )
 
-    for doctype in ("Inbound Shipment Notice", "Item", "Three PL Container"):
-        ensure_docperm(doctype, "3PL Client", read=1, write=1 if doctype == "Inbound Shipment Notice" else 0, create=1 if doctype == "Inbound Shipment Notice" else 0)
+    client_permissions = {
+        "Inbound Shipment Notice": {"read": 1, "write": 1, "create": 1},
+        "Item": {"read": 1},
+        "Three PL Container": {"read": 1},
+        "Three PL Inventory Snapshot": {"read": 1},
+        "Three PL Shipment Request": {"read": 1, "write": 1, "create": 1},
+        "Three PL Client Instruction": {"read": 1, "write": 1, "create": 1},
+    }
+    for doctype, permissions in client_permissions.items():
+        ensure_docperm(doctype, "3PL Client", **permissions)
 
 
 def ensure_docperm(doctype, role, **permissions):
@@ -726,8 +862,101 @@ def configure_custom_fields():
 
 
 def configure_client_portal():
-    form_name = "3PL Client Receiving Notice"
-    existing_form = frappe.db.get_value("Web Form", {"route": "client/receiving-notice"}, "name") or frappe.db.get_value("Web Form", {"title": form_name}, "name")
+    configure_portal_web_form(
+        form_name="3PL Client Receiving Notice",
+        route="client/receiving-notice",
+        doc_type="Inbound Shipment Notice",
+        list_title="Receiving Notices",
+        button_label="Submit Receiving Notice",
+        introduction_text="Create and review receiving notices for inbound warehouse shipments.",
+        success_title="Receiving Notice Submitted",
+        success_message="The warehouse team can now review the expected inbound shipment.",
+        fields=[
+            {"fieldname": "customer", "fieldtype": "Link", "label": "Client", "options": "Customer", "reqd": 1, "show_in_filter": 1},
+            {"fieldname": "external_reference", "fieldtype": "Data", "label": "Client Notice Ref", "reqd": 1, "show_in_filter": 1},
+            {"fieldname": "expected_arrival_date", "fieldtype": "Date", "label": "Expected Arrival Date", "reqd": 1},
+            {"fieldname": "items", "fieldtype": "Table", "label": "Expected Products", "options": "Inbound Shipment Notice Item", "reqd": 1},
+            {"fieldname": "notes", "fieldtype": "Small Text", "label": "Notes"},
+        ],
+    )
+    configure_portal_web_form(
+        form_name="3PL Client Inventory",
+        route="client/inventory",
+        doc_type="Three PL Inventory Snapshot",
+        list_title="Inventory",
+        button_label="View Inventory",
+        introduction_text="Review current inventory snapshots for your products.",
+        success_title="Inventory",
+        success_message="",
+        allow_edit=0,
+        allow_multiple=0,
+        fields=[
+            {"fieldname": "customer", "fieldtype": "Link", "label": "Client", "options": "Customer", "read_only": 1, "show_in_filter": 1},
+            {"fieldname": "item_code", "fieldtype": "Link", "label": "Item", "options": "Item", "read_only": 1, "show_in_filter": 1},
+            {"fieldname": "client_sku", "fieldtype": "Data", "label": "Client SKU", "read_only": 1},
+            {"fieldname": "item_name", "fieldtype": "Data", "label": "Item Name", "read_only": 1},
+            {"fieldname": "qty", "fieldtype": "Float", "label": "Qty", "read_only": 1},
+            {"fieldname": "uom", "fieldtype": "Link", "label": "UOM", "options": "UOM", "read_only": 1},
+            {"fieldname": "warehouse", "fieldtype": "Link", "label": "Location", "options": "Warehouse", "read_only": 1},
+            {"fieldname": "container_code", "fieldtype": "Link", "label": "Container / Box", "options": "Three PL Container", "read_only": 1},
+            {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "Available\nReceiving\nHold\nAllocated\nShipped", "read_only": 1},
+        ],
+    )
+    configure_portal_web_form(
+        form_name="3PL Client Shipment Request",
+        route="client/shipment-request",
+        doc_type="Three PL Shipment Request",
+        list_title="Shipment Requests",
+        button_label="Submit Shipment Request",
+        introduction_text="Create outbound shipment requests for products stored in the warehouse.",
+        success_title="Shipment Request Submitted",
+        success_message="The warehouse team can now review and start picking.",
+        fields=[
+            {"fieldname": "customer", "fieldtype": "Link", "label": "Client", "options": "Customer", "reqd": 1, "show_in_filter": 1},
+            {"fieldname": "external_reference", "fieldtype": "Data", "label": "Client Shipment Ref", "reqd": 1, "show_in_filter": 1},
+            {"fieldname": "requested_ship_date", "fieldtype": "Date", "label": "Requested Ship Date", "reqd": 1},
+            {"fieldname": "destination_name", "fieldtype": "Data", "label": "Destination Name", "reqd": 1},
+            {"fieldname": "destination_address", "fieldtype": "Small Text", "label": "Destination Address", "reqd": 1},
+            {"fieldname": "items", "fieldtype": "Table", "label": "Products To Ship", "options": "Three PL Shipment Request Item", "reqd": 1},
+            {"fieldname": "notes", "fieldtype": "Small Text", "label": "Notes"},
+        ],
+    )
+    configure_portal_web_form(
+        form_name="3PL Client Discrepancy Instruction",
+        route="client/discrepancy-instruction",
+        doc_type="Three PL Client Instruction",
+        list_title="Discrepancy Instructions",
+        button_label="Submit Instruction",
+        introduction_text="Send warehouse instructions for receiving discrepancies.",
+        success_title="Instruction Submitted",
+        success_message="The warehouse team can now review your instruction.",
+        fields=[
+            {"fieldname": "customer", "fieldtype": "Link", "label": "Client", "options": "Customer", "reqd": 1, "show_in_filter": 1},
+            {"fieldname": "receiving_notice", "fieldtype": "Link", "label": "Receiving Notice", "options": "Inbound Shipment Notice", "reqd": 1, "show_in_filter": 1},
+            {"fieldname": "item_code", "fieldtype": "Link", "label": "Item", "options": "Item"},
+            {"fieldname": "client_sku", "fieldtype": "Data", "label": "Client SKU"},
+            {"fieldname": "instruction_type", "fieldtype": "Select", "label": "Instruction Type", "options": "Accept Difference\nReturn Goods\nHold For Review\nDispose Damaged Goods\nOther", "reqd": 1},
+            {"fieldname": "instruction_text", "fieldtype": "Small Text", "label": "Instruction", "reqd": 1},
+        ],
+    )
+
+    configure_portal_menu()
+
+
+def configure_portal_web_form(
+    form_name,
+    route,
+    doc_type,
+    list_title,
+    button_label,
+    introduction_text,
+    success_title,
+    success_message,
+    fields,
+    allow_edit=1,
+    allow_multiple=1,
+):
+    existing_form = frappe.db.get_value("Web Form", {"route": route}, "name") or frappe.db.get_value("Web Form", {"title": form_name}, "name")
     if existing_form:
         form = frappe.get_doc("Web Form", existing_form)
         form.set("web_form_fields", [])
@@ -735,52 +964,56 @@ def configure_client_portal():
         form = frappe.new_doc("Web Form")
         form.title = form_name
 
-    form.route = "client/receiving-notice"
-    form.doc_type = "Inbound Shipment Notice"
+    form.route = route
+    form.doc_type = doc_type
     form.module = "Stock"
     form.published = 1
     form.login_required = 1
     form.anonymous = 0
     form.apply_document_permissions = 1
-    form.allow_edit = 1
-    form.allow_multiple = 1
+    form.allow_edit = allow_edit
+    form.allow_multiple = allow_multiple
     form.allow_delete = 0
     form.allow_print = 1
     form.show_list = 1
-    form.list_title = "Receiving Notices"
-    form.button_label = "Submit Receiving Notice"
-    form.introduction_text = "Create and review receiving notices for inbound warehouse shipments."
-    form.success_title = "Receiving Notice Submitted"
-    form.success_message = "The warehouse team can now review the expected inbound shipment."
-    form.success_url = "/client/receiving-notice"
+    form.list_title = list_title
+    form.button_label = button_label
+    form.introduction_text = introduction_text
+    form.success_title = success_title
+    form.success_message = success_message
+    form.success_url = f"/{route}"
 
-    for field in [
-        {"fieldname": "customer", "fieldtype": "Link", "label": "Client", "options": "Customer", "reqd": 1, "show_in_filter": 1},
-        {"fieldname": "external_reference", "fieldtype": "Data", "label": "Client Notice Ref", "reqd": 1, "show_in_filter": 1},
-        {"fieldname": "expected_arrival_date", "fieldtype": "Date", "label": "Expected Arrival Date", "reqd": 1},
-        {"fieldname": "items", "fieldtype": "Table", "label": "Expected Products", "options": "Inbound Shipment Notice Item", "reqd": 1},
-        {"fieldname": "notes", "fieldtype": "Small Text", "label": "Notes"},
-    ]:
+    for field in fields:
         form.append("web_form_fields", field)
 
     form.save(ignore_permissions=True)
 
+
+def configure_portal_menu():
     menu_title = "Receiving Notices"
     portal_settings = frappe.get_single("Portal Settings")
-    item = None
-    for row in portal_settings.menu:
-        if row.title == menu_title or row.route == "client/receiving-notice":
-            item = row
-            break
-    if item is None:
-        item = portal_settings.append("menu", {})
+    menu_items = [
+        ("Receiving Notices", "client/receiving-notice", "Inbound Shipment Notice"),
+        ("Inventory", "client/inventory", "Three PL Inventory Snapshot"),
+        ("Shipment Requests", "client/shipment-request", "Three PL Shipment Request"),
+        ("Discrepancy Instructions", "client/discrepancy-instruction", "Three PL Client Instruction"),
+    ]
+    for title, route, reference_doctype in menu_items:
+        item = None
+        for row in portal_settings.menu:
+            if row.title == title or row.route == route:
+                item = row
+                break
+        if item is None:
+            item = portal_settings.append("menu", {})
 
-    item.title = menu_title
-    item.enabled = 1
-    item.route = "client/receiving-notice"
-    item.reference_doctype = "Inbound Shipment Notice"
-    item.role = "3PL Client"
-    item.target = ""
+        item.title = title
+        item.enabled = 1
+        item.route = route
+        item.reference_doctype = reference_doctype
+        item.role = "3PL Client"
+        item.target = ""
+
     portal_settings.default_role = "3PL Client"
     portal_settings.default_portal_home = "client/receiving-notice"
     portal_settings.save(ignore_permissions=True)
@@ -845,6 +1078,43 @@ select
 from `tabThree PL Container` c
 left join `tabThree PL Container Item` ci on ci.parent = c.name
 order by c.creation desc, ci.idx asc
+""".strip(),
+        },
+        "3PL Shipment Requests": {
+            "ref_doctype": "Three PL Shipment Request",
+            "query": """
+select
+    sr.name as "Shipment Request:Link/Three PL Shipment Request:170",
+    sr.external_reference as "Client Shipment Ref:Data:160",
+    sr.customer as "Client:Link/Customer:170",
+    sr.status as "Status:Data:120",
+    sr.requested_ship_date as "Requested Ship Date:Date:130",
+    sr.destination_name as "Destination:Data:180",
+    item.item_code as "Item:Link/Item:150",
+    item.client_sku as "Client SKU:Data:120",
+    item.qty as "Qty:Float:90",
+    item.uom as "UOM:Link/UOM:80"
+from `tabThree PL Shipment Request` sr
+left join `tabThree PL Shipment Request Item` item on item.parent = sr.name
+order by sr.creation desc, item.idx asc
+""".strip(),
+        },
+        "3PL Client Inventory": {
+            "ref_doctype": "Three PL Inventory Snapshot",
+            "query": """
+select
+    inv.customer as "Client:Link/Customer:170",
+    inv.item_code as "Item:Link/Item:150",
+    inv.client_sku as "Client SKU:Data:120",
+    inv.item_name as "Item Name:Data:180",
+    inv.qty as "Qty:Float:90",
+    inv.uom as "UOM:Link/UOM:80",
+    inv.warehouse as "Location:Link/Warehouse:180",
+    inv.container_code as "Container / Box:Link/Three PL Container:150",
+    inv.status as "Status:Data:120",
+    inv.last_updated as "Last Updated:Datetime:160"
+from `tabThree PL Inventory Snapshot` inv
+order by inv.customer asc, inv.item_code asc
 """.strip(),
         },
     }
