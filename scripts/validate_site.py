@@ -173,13 +173,16 @@ def main():
         web_form = frappe.get_doc("Web Form", web_form_name)
         require(web_form.title == title, f"Wrong client Web Form title: {web_form.title}")
         require(web_form.login_required == 1, f"Client Web Form must require login: {title}")
-        require(web_form.apply_document_permissions == 1, f"Client Web Form must apply document permissions: {title}")
+        require(web_form.apply_document_permissions == 0, f"Client Web Form must use owner-based portal permissions: {title}")
         require({row.fieldname for row in web_form.web_form_fields} >= expected_fields, f"Client Web Form misses required fields: {title}")
         require("Receiving Notices" in web_form.introduction_text, f"Client Web Form misses portal nav: {title}")
         customer_field = next((row for row in web_form.web_form_fields if row.fieldname == "customer"), None)
         require(customer_field, f"Client Web Form misses customer field: {title}")
         require(customer_field.hidden == 1, f"Client Web Form customer field must be hidden: {title}")
         require(customer_field.default == CLIENT_PORTAL_CUSTOMER, f"Client Web Form customer field has wrong default: {title}")
+        for field in web_form.web_form_fields:
+            if field.fieldtype == "Link":
+                require(field.allow_read_on_all_link_options == 1, f"Client Web Form Link field must not be owner-filtered: {title}.{field.fieldname}")
 
     require(
         frappe.db.exists("User Permission", {"user": CLIENT_PORTAL_USER, "allow": "Customer", "for_value": CLIENT_PORTAL_CUSTOMER}),
@@ -197,7 +200,10 @@ def main():
     require_role_perm("Inbound Shipment Notice", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Inbound Shipment Notice Item", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Inbound Shipment Discrepancy", "3PL Client", read=1)
+    require_role_perm("Customer", "3PL Client", read=1)
     require_role_perm("Item", "3PL Client", read=1)
+    require_role_perm("UOM", "3PL Client", read=1)
+    require_role_perm("Warehouse", "3PL Client", read=1)
     require_role_perm("Three PL Container", "3PL Client", read=1)
     require_role_perm("Three PL Container Item", "3PL Client", read=1)
     require_role_perm("Three PL Inventory Snapshot", "3PL Client", read=1)

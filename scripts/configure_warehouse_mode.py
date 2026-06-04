@@ -551,6 +551,7 @@ def configure_custom_doctypes():
                 {"fieldname": "temporary_warehouse", "label": "Temporary Warehouse", "fieldtype": "Link", "options": "Warehouse", "default": f"Temporary Receiving - {COMPANY_ABBR}"},
                 {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Draft\nPartially Received\nReceived\nClosed", "default": "Draft", "in_list_view": 1},
                 {"fieldname": "client_instruction_status", "label": "Client Instruction Status", "fieldtype": "Select", "options": "\nNot Required\nWaiting for Client\nInstruction Received", "default": "Not Required", "insert_after": "status", "in_standard_filter": 1},
+                {"fieldname": "portal_items_description", "label": "Portal Products and Quantities", "fieldtype": "Small Text", "insert_after": "client_instruction_status"},
                 {"fieldname": "items_section", "label": "Expected Products", "fieldtype": "Section Break"},
                 {"fieldname": "items", "label": "Items", "fieldtype": "Table", "options": "Inbound Shipment Notice Item"},
                 {"fieldname": "discrepancy_section", "label": "Discrepancies", "fieldtype": "Section Break", "insert_after": "items"},
@@ -606,6 +607,7 @@ def configure_custom_doctypes():
                 {"fieldname": "destination_name", "label": "Destination Name", "fieldtype": "Data"},
                 {"fieldname": "destination_address", "label": "Destination Address", "fieldtype": "Small Text"},
                 {"fieldname": "portal_source", "label": "Portal Source", "fieldtype": "Check", "default": 0},
+                {"fieldname": "portal_items_description", "label": "Portal Products and Quantities", "fieldtype": "Small Text", "insert_after": "portal_source"},
                 {"fieldname": "items_section", "label": "Requested Products", "fieldtype": "Section Break"},
                 {"fieldname": "items", "label": "Items", "fieldtype": "Table", "options": "Three PL Shipment Request Item"},
                 {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
@@ -663,7 +665,10 @@ def configure_custom_doctypes():
         "Inbound Shipment Notice": {"read": 1, "write": 1, "create": 1},
         "Inbound Shipment Notice Item": {"read": 1, "write": 1, "create": 1},
         "Inbound Shipment Discrepancy": {"read": 1},
+        "Customer": {"read": 1},
         "Item": {"read": 1},
+        "UOM": {"read": 1},
+        "Warehouse": {"read": 1},
         "Three PL Container": {"read": 1},
         "Three PL Container Item": {"read": 1},
         "Three PL Inventory Snapshot": {"read": 1},
@@ -873,6 +878,7 @@ def configure_client_portal():
         )
 
     configure_portal_menu()
+    configure_client_portal_website_script()
 
 
 def build_client_portal_nav():
@@ -881,6 +887,75 @@ def build_client_portal_nav():
         label = frappe.utils.escape_html(form["menu_title"])
         links.append(f'<a class="btn btn-sm btn-default" href="/{form["route"]}">{label}</a>')
     return f'<div class="mb-4 d-flex flex-wrap gap-2">{" ".join(links)}</div>'
+
+
+def configure_client_portal_website_script():
+    nav_html = build_client_portal_nav().replace("'", "\\'")
+    script = f"""
+(function () {{
+  function isClientPortal() {{
+    return window.location.pathname.indexOf('/client/') === 0;
+  }}
+
+  function installClientPortalNav() {{
+    if (!isClientPortal()) return;
+
+    var brand = document.querySelector('.navbar-brand');
+    if (brand) {{
+      brand.setAttribute('href', '/{CLIENT_PORTAL_HOME}');
+      var label = brand.querySelector('span');
+      if (label) label.textContent = 'Client Portal';
+    }}
+
+    var deskLink = document.querySelector('.switch-to-desk');
+    if (deskLink) deskLink.remove();
+
+    if (!document.querySelector('[data-client-portal-nav]')) {{
+      var nav = document.createElement('div');
+      nav.setAttribute('data-client-portal-nav', '1');
+      nav.innerHTML = '{nav_html}';
+      var target = document.querySelector('.web-list-actions') || document.querySelector('.web-form-container') || document.querySelector('.page_content');
+      if (target && target.parentNode) {{
+        target.parentNode.insertBefore(nav, target);
+      }}
+    }}
+  }}
+
+  function removeDeskPermissionNoise() {{
+    if (!isClientPortal()) return;
+    document.querySelectorAll('.modal').forEach(function (modal) {{
+      if (/Not permitted|No permission/i.test(modal.textContent || '')) {{
+        modal.remove();
+      }}
+    }});
+    document.querySelectorAll('.modal-backdrop').forEach(function (backdrop) {{
+      backdrop.remove();
+    }});
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('padding-right');
+  }}
+
+  if (window.frappe && frappe.ready) {{
+    frappe.ready(function () {{
+      installClientPortalNav();
+      removeDeskPermissionNoise();
+      setTimeout(removeDeskPermissionNoise, 250);
+      setTimeout(removeDeskPermissionNoise, 1000);
+    }});
+  }} else {{
+    document.addEventListener('DOMContentLoaded', function () {{
+      installClientPortalNav();
+      removeDeskPermissionNoise();
+    }});
+  }}
+}})();
+""".strip()
+
+    settings = frappe.get_single("Website Script")
+    if settings.javascript != script:
+        settings.javascript = script
+        settings.save(ignore_permissions=True)
 
 
 def configure_portal_web_form(
@@ -910,7 +985,7 @@ def configure_portal_web_form(
     form.published = 1
     form.login_required = 1
     form.anonymous = 0
-    form.apply_document_permissions = 1
+    form.apply_document_permissions = 0
     form.allow_edit = allow_edit
     form.allow_multiple = allow_multiple
     form.allow_delete = 0

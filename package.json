@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "scripts": {
+    "test:client-portal": "playwright test tests/client_portal.spec.js --reporter=line"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.60.0"
+  }
+}

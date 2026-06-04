@@ -1,7 +1,7 @@
 import frappe
 from frappe.utils import now, nowdate
 
-from project_config import COUNTRY, DEMO_CLIENTS, DEMO_ITEMS
+from project_config import CLIENT_PORTAL_USER, COUNTRY, DEMO_CLIENTS, DEMO_ITEMS
 
 
 def ensure_master_data():
@@ -70,6 +70,12 @@ def meta_has_field(doctype, fieldname):
 def set_if_field(doc, fieldname, value):
     if doc.meta.has_field(fieldname) and getattr(doc, fieldname, None) != value:
         setattr(doc, fieldname, value)
+
+
+def set_owner_after_save(doc, owner):
+    if not doc.is_new() and doc.owner != owner:
+        frappe.db.set_value(doc.doctype, doc.name, "owner", owner, update_modified=False)
+        doc.owner = owner
 
 
 def ensure_item(item_code, item_name, client, client_sku, client_product_name, barcode):
@@ -150,6 +156,7 @@ def ensure_inbound_notice():
     if meta_has_field("Inbound Shipment Notice", "client_instruction_status"):
         notice.client_instruction_status = "Waiting for Client"
     sync_notice_details(notice)
+    notice.owner = CLIENT_PORTAL_USER
     notice.insert(ignore_permissions=True)
     return notice
 
@@ -231,6 +238,7 @@ def sync_notice_details(notice):
 
     if not notice.is_new():
         notice.save(ignore_permissions=True)
+        set_owner_after_save(notice, CLIENT_PORTAL_USER)
 
 
 def ensure_container(notice_name):
@@ -384,8 +392,13 @@ def ensure_inventory_snapshots():
 
         for key, value in snapshot.items():
             setattr(doc, key, value)
+        should_set_client_owner = snapshot["customer"] == "Demo Client Alpha"
+        if should_set_client_owner and doc.is_new():
+            doc.owner = CLIENT_PORTAL_USER
         doc.last_updated = now()
         doc.save(ignore_permissions=True)
+        if should_set_client_owner:
+            set_owner_after_save(doc, CLIENT_PORTAL_USER)
 
 
 def ensure_shipment_request():
@@ -408,6 +421,8 @@ def ensure_shipment_request():
     request.destination_name = "Demo Consignee"
     request.destination_address = "Demo Street 1, Vilnius, Lithuania"
     request.portal_source = 1
+    if request.is_new():
+        request.owner = CLIENT_PORTAL_USER
     request.notes = "Demo outbound request created for client portal testing."
     request.append(
         "items",
@@ -419,6 +434,7 @@ def ensure_shipment_request():
         },
     )
     request.save(ignore_permissions=True)
+    set_owner_after_save(request, CLIENT_PORTAL_USER)
     return request
 
 
@@ -440,8 +456,11 @@ def ensure_client_instruction(notice_name):
     instruction.instruction_type = "Accept Difference"
     instruction.status = "Submitted"
     instruction.portal_source = 1
+    if instruction.is_new():
+        instruction.owner = CLIENT_PORTAL_USER
     instruction.instruction_text = "Demo instruction: accept the one-unit shortage and continue putaway for received goods."
     instruction.save(ignore_permissions=True)
+    set_owner_after_save(instruction, CLIENT_PORTAL_USER)
     return instruction
 
 
