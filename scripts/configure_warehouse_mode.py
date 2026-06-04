@@ -156,6 +156,61 @@ def configure_workspaces():
     for name in frappe.get_all("Workspace", pluck="name"):
         frappe.db.set_value("Workspace", name, "is_hidden", 1, update_modified=True)
 
+    guard_block_name = "3PL Warehouse Desk Guard"
+    guard_script = """
+(function () {
+  function isWarehouseRole() {
+    var roles = (window.frappe && frappe.user_roles) || [];
+    return roles.indexOf("3PL Warehouse User") !== -1 || roles.indexOf("3PL Warehouse Manager") !== -1;
+  }
+
+  function isWarehouseWorkspace() {
+    return window.location.pathname.indexOf("/desk/3pl-warehouse") === 0
+      || window.location.pathname.indexOf("/app/3pl-warehouse") === 0
+      || (window.frappe && frappe.get_route && frappe.get_route().join("/").indexOf("3pl-warehouse") !== -1);
+  }
+
+  function patchDeskHomeLink() {
+    if (!isWarehouseRole() || !isWarehouseWorkspace()) return;
+
+    var block = root_element && root_element.closest ? root_element.closest(".ce-block") : null;
+    if (block) block.style.display = "none";
+
+    document.querySelectorAll('a[href="/desk"]').forEach(function (link) {
+      link.setAttribute("href", "/desk/3pl-warehouse");
+      link.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (window.frappe && frappe.set_route) {
+          frappe.set_route("3pl-warehouse");
+        } else {
+          window.location.href = "/desk/3pl-warehouse";
+        }
+      }, true);
+    });
+  }
+
+  patchDeskHomeLink();
+  setTimeout(patchDeskHomeLink, 250);
+  setTimeout(patchDeskHomeLink, 1000);
+}());
+"""
+
+    if frappe.db.exists("Custom HTML Block", guard_block_name):
+        guard_block = frappe.get_doc("Custom HTML Block", guard_block_name)
+    else:
+        guard_block = frappe.new_doc("Custom HTML Block")
+        guard_block.name = guard_block_name
+
+    guard_block.html = '<div class="three-pl-desk-guard"></div>'
+    guard_block.script = guard_script
+    guard_block.style = ".three-pl-desk-guard { display: none !important; }"
+    guard_block.private = 0
+    guard_block.set("roles", [])
+    for role_name in ("3PL Warehouse User", "3PL Warehouse Manager"):
+        guard_block.append("roles", {"role": role_name})
+    guard_block.save(ignore_permissions=True)
+
     workspaces = [
         {
             "name": "3PL Warehouse",
@@ -165,10 +220,14 @@ def configure_workspaces():
             "indicator_color": "green",
             "hide_custom": 1,
             "content": [
+                {"id": "3pl_desk_guard", "type": "custom_block", "data": {"custom_block_name": guard_block_name, "col": 12}},
                 {"id": "3pl_header", "type": "header", "data": {"text": '<span class="h4"><b>3PL Warehouse</b></span>', "col": 12}},
                 {"id": "3pl_inbound_card", "type": "card", "data": {"card_name": "Inbound Work", "col": 4}},
                 {"id": "3pl_outbound_card", "type": "card", "data": {"card_name": "Outbound Work", "col": 4}},
                 {"id": "3pl_reports_card", "type": "card", "data": {"card_name": "Reports", "col": 4}},
+            ],
+            "custom_blocks": [
+                {"custom_block_name": guard_block_name, "label": "3PL Warehouse Desk Guard"},
             ],
             "shortcuts": [
                 {"type": "DocType", "link_to": "Inbound Shipment Notice", "doc_view": "List", "label": "Receiving Notices"},
@@ -238,6 +297,7 @@ def configure_workspaces():
             doc = frappe.get_doc("Workspace", workspace_data["name"])
             doc.set("shortcuts", [])
             doc.set("links", [])
+            doc.set("custom_blocks", [])
         else:
             doc = frappe.new_doc("Workspace")
             doc.name = workspace_data["name"]
@@ -253,6 +313,8 @@ def configure_workspaces():
             doc.append("shortcuts", shortcut)
         for link in workspace_data["links"]:
             doc.append("links", link)
+        for custom_block in workspace_data.get("custom_blocks", []):
+            doc.append("custom_blocks", custom_block)
 
         doc.save(ignore_permissions=True)
 
