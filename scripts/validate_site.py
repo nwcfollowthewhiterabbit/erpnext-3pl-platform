@@ -233,6 +233,7 @@ def main():
         "Demo ASN misses quantity discrepancy",
     )
     require(frappe.db.exists("Three PL Inventory Snapshot", {"customer": "Demo Client Alpha", "item_code": "SKU-ALPHA-001"}), "Missing demo client inventory snapshot")
+    require(frappe.db.exists("Three PL Inventory Snapshot", {"customer": "Demo Client Beta", "item_code": "SKU-BETA-001"}), "Missing demo beta inventory snapshot")
     require(frappe.db.exists("Three PL Shipment Request", {"customer": "Demo Client Alpha", "external_reference": "SHIP-ALPHA-001"}), "Missing demo shipment request")
     require(frappe.db.exists("Three PL Client Instruction", {"customer": "Demo Client Alpha", "receiving_notice": notice_name}), "Missing demo client discrepancy instruction")
 
@@ -368,6 +369,22 @@ def validate_client_portal_permissions():
 
     inventory = frappe.get_doc("Three PL Inventory Snapshot", frappe.db.get_value("Three PL Inventory Snapshot", {"customer": CLIENT_PORTAL_CUSTOMER, "item_code": "SKU-ALPHA-001"}))
     require(inventory.customer == CLIENT_PORTAL_CUSTOMER, "Client could not read own inventory snapshot")
+
+    forbidden_docs = [
+        ("Item", frappe.db.get_value("Item", {"item_code": "SKU-BETA-001"})),
+        ("Three PL Inventory Snapshot", frappe.db.get_value("Three PL Inventory Snapshot", {"customer": "Demo Client Beta", "item_code": "SKU-BETA-001"})),
+    ]
+    for doctype, name in forbidden_docs:
+        require(name, f"Missing forbidden demo record for permission validation: {doctype}")
+        doc = frappe.get_doc(doctype, name)
+        require(not frappe.has_permission(doctype, "read", doc=doc), f"Client user can read another customer's {doctype}: {name}")
+
+        try:
+            doc.check_permission("read")
+        except frappe.PermissionError:
+            pass
+        else:
+            raise RuntimeError(f"Client user passed direct permission check for another customer's {doctype}: {name}")
 
     frappe.set_user("Administrator")
     frappe.db.rollback()

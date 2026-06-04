@@ -41,6 +41,21 @@ Use this guide for the current ERPNext 3PL test instance.
 
 ## What Is Ready To Test
 
+## Recommended Demo Walkthrough
+
+Use this sequence for the first customer review.
+
+1. Log in as the Client Portal User and create a new Receiving Notice for `Demo Client Alpha`.
+2. Open Inventory in the portal and confirm only Alpha stock is visible.
+3. Open Shipment Requests in the portal and create a simple outbound request.
+4. Open Discrepancy Instructions in the portal and submit an instruction for `ASN-ALPHA-001`.
+5. Log in as the Warehouse Operator and open `3PL Warehouse`.
+6. Open `ASN-ALPHA-001`, confirm expected vs received quantities and the quantity discrepancy.
+7. Open `BOX-ALPHA-001`, confirm it is linked to the notice and temporary receiving location.
+8. Log in as the Business Owner and confirm products and warehouse locations can be created or edited.
+
+This walkthrough covers the current MVP boundary: client portal input, customer data isolation, receiving notice review, discrepancy tracking, container/box visibility, and owner-level administration.
+
 ### Client Portal
 
 Open `https://erpnext.77.237.244.169.sslip.io/client/receiving-notice`.
@@ -57,6 +72,7 @@ Expected result:
 - Client can create Receiving Notices through the portal.
 - Client user is a `Website User`, not a Desk/System user.
 - User permission restricts the client to `Demo Client Alpha`.
+- Client must not see or create records for `Demo Client Beta`.
 
 Additional client portal routes:
 
@@ -130,6 +146,21 @@ Expected result:
 - A cardboard box can be tracked as a separate warehouse container.
 - Products inside the box are visible before final putaway.
 - The box can stay in receiving, move to storage, then be used during picking/packing later.
+
+### Client Data Isolation
+
+Use the Client Portal User.
+
+Test:
+
+- Confirm portal inventory contains Alpha products such as `SKU-ALPHA-001`.
+- Confirm Beta data such as `SKU-BETA-001` / `Demo Client Beta` is not available to the client.
+- Try creating a Receiving Notice or Shipment Request for another customer only as a negative test.
+
+Expected result:
+
+- The client can work only with their own customer account.
+- Cross-customer create/read operations are blocked by server-side permissions.
 
 ### Receiving And Stock Entry
 

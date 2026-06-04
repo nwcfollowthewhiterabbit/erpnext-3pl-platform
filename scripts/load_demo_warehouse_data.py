@@ -316,6 +316,18 @@ def ensure_inventory_snapshots():
             "status": "Receiving",
             "notes": "Demo inventory snapshot with one missing unit versus ASN.",
         },
+        {
+            "customer": "Demo Client Beta",
+            "item_code": "SKU-BETA-001",
+            "client_sku": "BETA-001",
+            "item_name": "Demo Beta Accessory",
+            "qty": 7,
+            "uom": "Nos",
+            "warehouse": "Aisle B - 3",
+            "container_code": None,
+            "status": "Available",
+            "notes": "Demo data used to validate that Alpha client cannot read Beta inventory.",
+        },
     ]
 
     for snapshot in snapshots:

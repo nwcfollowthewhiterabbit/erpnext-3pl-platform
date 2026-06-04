@@ -69,14 +69,14 @@ Main flow:
 1. Warehouse records a discrepancy during receiving.
 2. Client opens the relevant Receiving Notice.
 3. Client sees discrepancy type, item, expected quantity, actual quantity, and notes.
-4. Client gives further instructions outside the system or in a future portal workflow.
+4. Client submits an instruction through the portal when a warehouse decision is needed.
 
 Expected result:
 
 - Discrepancies are stored and can be tracked.
 - The client can understand what needs a decision.
 
-Implementation status: partially implemented.
+Implementation status: implemented as portal MVP.
 
 Discrepancies are modeled on the Receiving Notice and visible internally. Client instructions can be submitted through the portal as a separate instruction record linked to the Receiving Notice.
 
@@ -296,7 +296,7 @@ The business owner has broad system rights. The warehouse manager is operational
 | Verification/inspection step | Partially implemented | Warehouse and discrepancy model exist; no automated workflow state machine yet. |
 | Discrepancy types | Implemented | Missing, unexpected, quantity difference, damaged, quality issue. |
 | Client notification for discrepancies | Not implemented | Placeholder email exists only to prevent ERPNext email-account errors. |
-| Client instructions for discrepancies | Not implemented | Needs portal action/workflow. |
+| Client instructions for discrepancies | Implemented as MVP | Portal Web Form creates `Three PL Client Instruction` records linked to a Receiving Notice. |
 | Dynamic storage locations | Implemented as warehouse hierarchy | Locations are modeled as warehouses. |
 | Putaway process | Implemented as Stock Entry flow | Uses standard ERPNext stock movement. |
 | Picking from locations | Partially implemented | Pick List exists; shipment request source flow not implemented. |
