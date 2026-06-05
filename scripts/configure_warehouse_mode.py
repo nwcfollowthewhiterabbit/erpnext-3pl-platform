@@ -1671,6 +1671,8 @@ def configure_scanner_pages():
         page.login_required = 1
     page.content_type = "HTML"
     page.main_section = html
+    if page.meta.has_field("main_section_html"):
+        page.main_section_html = html
     page.javascript = script
     page.insert_code = 0
     page.show_sidebar = 0
