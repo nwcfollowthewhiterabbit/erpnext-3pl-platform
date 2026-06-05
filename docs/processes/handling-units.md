@@ -74,17 +74,18 @@ Example:
 
 - Handling Unit DocType exists as `Three PL Container`.
 - Container move operation DocType exists as `Three PL Container Move`.
+- Container repack operation DocType exists as `Three PL Container Repack`.
 - Movement history DocType exists as `Three PL Container Movement`.
 - Container fields and statuses are created by `scripts/configure_warehouse_mode.py`.
 - Demo containers are loaded by `scripts/load_demo_warehouse_data.py`.
 - Demo movement records are loaded for received and putaway containers.
 - Demo move operation `MOVE-ALPHA-001` is applied by `scripts/apply_container_moves.py`.
+- Demo repack operation `REPACK-ALPHA-001` is applied by `scripts/apply_container_repacks.py`.
 - Validation checks required fields, statuses, movement history, and reports in `scripts/validate_site.py`.
-- Reports include container references through `3PL Containers`, `3PL Container Moves`, `3PL Container Movements`, and related receiving/inventory reports.
+- Reports include container references through `3PL Containers`, `3PL Container Moves`, `3PL Container Repacks`, `3PL Container Movements`, and related receiving/inventory reports.
 
 ## Not Automated Yet
 
-- Repack flow, for example two small boxes replaced by one larger box.
 - Split/merge validation.
 - Lifecycle transition buttons and guards.
 - Scanner-first mobile page.

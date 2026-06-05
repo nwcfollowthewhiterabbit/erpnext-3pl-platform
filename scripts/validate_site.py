@@ -33,6 +33,9 @@ REQUIRED_DOCTYPES = [
     "Three PL Container Item",
     "Three PL Container Move",
     "Three PL Container Movement",
+    "Three PL Container Repack",
+    "Three PL Repack Source",
+    "Three PL Repack Item",
     "Three PL Inventory Snapshot",
     "Three PL Shipment Request",
     "Three PL Shipment Request Item",
@@ -87,11 +90,23 @@ REQUIRED_CONTAINER_MOVE_FIELDS = {
     "stock_entry",
     "movement",
 }
+REQUIRED_CONTAINER_REPACK_FIELDS = {
+    "operation_reference",
+    "operation_datetime",
+    "status",
+    "client",
+    "target_container",
+    "target_location",
+    "movement",
+    "source_containers",
+    "items",
+}
 REQUIRED_REPORTS = [
     "3PL ASN vs Received",
     "3PL Receiving Discrepancies",
     "3PL Containers",
     "3PL Container Moves",
+    "3PL Container Repacks",
     "3PL Container Movements",
     "3PL Shipment Requests",
     "3PL Client Inventory",
@@ -190,6 +205,9 @@ def main():
     move_meta = frappe.get_meta("Three PL Container Move")
     move_fields = {field.fieldname for field in move_meta.fields}
     require(move_fields >= REQUIRED_CONTAINER_MOVE_FIELDS, "Three PL Container Move misses required fields")
+    repack_meta = frappe.get_meta("Three PL Container Repack")
+    repack_fields = {field.fieldname for field in repack_meta.fields}
+    require(repack_fields >= REQUIRED_CONTAINER_REPACK_FIELDS, "Three PL Container Repack misses required fields")
 
     for report in REQUIRED_REPORTS:
         require(frappe.db.exists("Report", report), f"Missing Report: {report}")
@@ -272,7 +290,7 @@ def main():
         "Missing client Contact link",
     )
 
-    for doctype in ("Inbound Shipment Notice", "Three PL Container", "Three PL Container Move", "Three PL Container Movement"):
+    for doctype in ("Inbound Shipment Notice", "Three PL Container", "Three PL Container Move", "Three PL Container Movement", "Three PL Container Repack"):
         require_role_perm(doctype, "3PL Warehouse User", read=1, write=1, create=1)
         require_role_perm(doctype, "3PL Warehouse Manager", read=1, write=1, create=1, delete=1)
         require_role_perm(doctype, "System Manager", read=1, write=1, create=1, delete=1)
@@ -288,6 +306,9 @@ def main():
     require_role_perm("Three PL Container Item", "3PL Client", read=1)
     require_role_perm("Three PL Container Move", "3PL Client", read=1)
     require_role_perm("Three PL Container Movement", "3PL Client", read=1)
+    require_role_perm("Three PL Container Repack", "3PL Client", read=1)
+    require_role_perm("Three PL Repack Source", "3PL Client", read=1)
+    require_role_perm("Three PL Repack Item", "3PL Client", read=1)
     require_role_perm("Three PL Inventory Snapshot", "3PL Client", read=1)
     require_role_perm("Three PL Shipment Request", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Three PL Shipment Request Item", "3PL Client", read=1, write=1, create=1)
@@ -348,6 +369,20 @@ def main():
     storage_container = frappe.get_doc("Three PL Container", "BOX-ALPHA-002")
     require(storage_container.current_warehouse == "Aisle A - 3", "Applied container move did not update container location")
     require(storage_container.status == "Stored", "Applied container move did not update container status")
+    repack_name = frappe.db.get_value("Three PL Container Repack", {"operation_reference": "REPACK-ALPHA-001"}, "name")
+    require(repack_name, "Missing demo container repack operation")
+    repack = frappe.get_doc("Three PL Container Repack", repack_name)
+    require(repack.status == "Applied", "Demo container repack is not applied")
+    require(repack.target_container == "BOX-ALPHA-005", "Demo container repack has wrong target container")
+    require(repack.movement and frappe.db.exists("Three PL Container Movement", repack.movement), "Demo container repack is not linked to movement history")
+    for source_name in ("BOX-ALPHA-003", "BOX-ALPHA-004"):
+        source = frappe.get_doc("Three PL Container", source_name)
+        require(source.status == "Replaced", f"Demo source container is not replaced: {source_name}")
+        require(source.replaced_by == "BOX-ALPHA-005", f"Demo source container has wrong replacement: {source_name}")
+    target = frappe.get_doc("Three PL Container", "BOX-ALPHA-005")
+    require(target.status == "Stored", "Demo repack target is not stored")
+    require(target.current_warehouse == "Aisle A - 3", "Demo repack target has wrong location")
+    require(any(row.item_code == "SKU-ALPHA-003" and row.qty == 18 for row in target.items), "Demo repack target misses expected contents")
 
     notice = frappe.get_doc("Inbound Shipment Notice", notice_name)
     require(

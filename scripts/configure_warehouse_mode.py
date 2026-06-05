@@ -233,6 +233,7 @@ def configure_workspaces():
                 {"type": "DocType", "link_to": "Inbound Shipment Notice", "doc_view": "List", "label": "Receiving Notices"},
                 {"type": "DocType", "link_to": "Three PL Container", "doc_view": "List", "label": "Containers"},
                 {"type": "DocType", "link_to": "Three PL Container Move", "doc_view": "List", "label": "Container Moves"},
+                {"type": "DocType", "link_to": "Three PL Container Repack", "doc_view": "List", "label": "Container Repacks"},
                 {"type": "DocType", "link_to": "Stock Entry", "doc_view": "List", "label": "Stock Entries"},
                 {"type": "DocType", "link_to": "Pick List", "doc_view": "List", "label": "Pick Lists"},
                 {"type": "DocType", "link_to": "Three PL Shipment Request", "doc_view": "List", "label": "Shipment Requests"},
@@ -240,6 +241,7 @@ def configure_workspaces():
                 {"type": "Report", "link_to": "3PL Receiving Discrepancies", "label": "Receiving Discrepancies", "report_ref_doctype": "Inbound Shipment Notice"},
                 {"type": "Report", "link_to": "3PL Containers", "label": "Containers Report", "report_ref_doctype": "Three PL Container"},
                 {"type": "Report", "link_to": "3PL Container Moves", "label": "Container Moves Report", "report_ref_doctype": "Three PL Container Move"},
+                {"type": "Report", "link_to": "3PL Container Repacks", "label": "Container Repacks Report", "report_ref_doctype": "Three PL Container Repack"},
                 {"type": "Report", "link_to": "3PL Container Movements", "label": "Container Movements", "report_ref_doctype": "Three PL Container Movement"},
                 {"type": "Report", "link_to": "3PL Client Inventory", "label": "Client Inventory", "report_ref_doctype": "Three PL Inventory Snapshot"},
                 {"type": "DocType", "link_to": "Three PL Client Instruction", "doc_view": "List", "label": "Client Instructions"},
@@ -252,6 +254,7 @@ def configure_workspaces():
                 {"type": "Card Break", "label": "Inbound Work"},
                 {"type": "Link", "label": "Receiving Notices", "link_type": "DocType", "link_to": "Inbound Shipment Notice"},
                 {"type": "Link", "label": "Container Moves", "link_type": "DocType", "link_to": "Three PL Container Move"},
+                {"type": "Link", "label": "Container Repacks", "link_type": "DocType", "link_to": "Three PL Container Repack"},
                 {"type": "Link", "label": "Stock Entries", "link_type": "DocType", "link_to": "Stock Entry"},
                 {"type": "Link", "label": "ASN vs Received", "link_type": "Report", "link_to": "3PL ASN vs Received", "is_query_report": 1},
                 {"type": "Link", "label": "Receiving Discrepancies", "link_type": "Report", "link_to": "3PL Receiving Discrepancies", "is_query_report": 1},
@@ -263,6 +266,7 @@ def configure_workspaces():
                 {"type": "Link", "label": "Receiving Discrepancies", "link_type": "Report", "link_to": "3PL Receiving Discrepancies", "is_query_report": 1},
                 {"type": "Link", "label": "Containers Report", "link_type": "Report", "link_to": "3PL Containers", "is_query_report": 1},
                 {"type": "Link", "label": "Container Moves Report", "link_type": "Report", "link_to": "3PL Container Moves", "is_query_report": 1},
+                {"type": "Link", "label": "Container Repacks Report", "link_type": "Report", "link_to": "3PL Container Repacks", "is_query_report": 1},
                 {"type": "Link", "label": "Container Movements", "link_type": "Report", "link_to": "3PL Container Movements", "is_query_report": 1},
                 {"type": "Link", "label": "Stock Balance", "link_type": "Report", "link_to": "Stock Balance", "is_query_report": 1},
                 {"type": "Link", "label": "Stock Ledger", "link_type": "Report", "link_to": "Stock Ledger", "is_query_report": 1},
@@ -567,6 +571,33 @@ def configure_custom_doctypes():
                 {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
             ],
         },
+        {
+            "name": "Three PL Repack Source",
+            "module": "Stock",
+            "custom": 1,
+            "istable": 1,
+            "editable_grid": 1,
+            "fields": [
+                {"fieldname": "source_container", "label": "Source Container", "fieldtype": "Link", "options": "Three PL Container", "reqd": 1, "in_list_view": 1},
+                {"fieldname": "source_location", "label": "Source Location", "fieldtype": "Link", "options": "Warehouse", "in_list_view": 1},
+                {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
+            ],
+        },
+        {
+            "name": "Three PL Repack Item",
+            "module": "Stock",
+            "custom": 1,
+            "istable": 1,
+            "editable_grid": 1,
+            "fields": [
+                {"fieldname": "item_code", "label": "Item", "fieldtype": "Link", "options": "Item", "reqd": 1, "in_list_view": 1},
+                {"fieldname": "client_sku", "label": "Client SKU", "fieldtype": "Data", "in_list_view": 1},
+                {"fieldname": "qty", "label": "Qty", "fieldtype": "Float", "reqd": 1, "in_list_view": 1},
+                {"fieldname": "uom", "label": "UOM", "fieldtype": "Link", "options": "UOM", "in_list_view": 1},
+                {"fieldname": "condition_status", "label": "Condition", "fieldtype": "Select", "options": "\nOK\nDamaged\nQuality Issue\nHold", "default": "OK", "in_list_view": 1},
+                {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
+            ],
+        },
     ]
     for spec in child_doctype_specs:
         ensure_custom_doctype(spec)
@@ -721,6 +752,33 @@ def configure_custom_doctypes():
             ],
         },
         {
+            "name": "Three PL Container Repack",
+            "module": "Stock",
+            "custom": 1,
+            "track_changes": 1,
+            "title_field": "operation_reference",
+            "autoname": "naming_series:",
+            "fields": [
+                {"fieldname": "naming_series", "label": "Series", "fieldtype": "Select", "options": "HU-REPACK-.YYYY.-.#####", "default": "HU-REPACK-.YYYY.-.#####", "reqd": 1},
+                {"fieldname": "operation_reference", "label": "Operation Reference", "fieldtype": "Data", "reqd": 1, "unique": 1, "in_list_view": 1},
+                {"fieldname": "operation_datetime", "label": "Operation Time", "fieldtype": "Datetime", "default": "Now", "reqd": 1, "in_list_view": 1},
+                {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Draft\nApplied\nCancelled", "default": "Draft", "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "client", "label": "Client", "fieldtype": "Link", "options": "Customer", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "target_container", "label": "Target Container", "fieldtype": "Link", "options": "Three PL Container", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "target_location", "label": "Target Location", "fieldtype": "Link", "options": "Warehouse", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "movement", "label": "Movement Record", "fieldtype": "Link", "options": "Three PL Container Movement", "read_only": 1},
+                {"fieldname": "sources_section", "label": "Source Containers", "fieldtype": "Section Break"},
+                {"fieldname": "source_containers", "label": "Source Containers", "fieldtype": "Table", "options": "Three PL Repack Source"},
+                {"fieldname": "items_section", "label": "Resulting Contents", "fieldtype": "Section Break"},
+                {"fieldname": "items", "label": "Items", "fieldtype": "Table", "options": "Three PL Repack Item"},
+                {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
+            ],
+            "permissions": warehouse_permissions
+            + [
+                {"role": "Stock User", "read": 1, "write": 1, "create": 1, "report": 1},
+            ],
+        },
+        {
             "name": "Three PL Shipment Request",
             "module": "Stock",
             "custom": 1,
@@ -801,6 +859,9 @@ def configure_custom_doctypes():
         "Three PL Container Item": {"read": 1},
         "Three PL Container Move": {"read": 1},
         "Three PL Container Movement": {"read": 1},
+        "Three PL Container Repack": {"read": 1},
+        "Three PL Repack Source": {"read": 1},
+        "Three PL Repack Item": {"read": 1},
         "Three PL Inventory Snapshot": {"read": 1},
         "Three PL Shipment Request": {"read": 1, "write": 1, "create": 1},
         "Three PL Shipment Request Item": {"read": 1, "write": 1, "create": 1},
@@ -1361,6 +1422,31 @@ select
     cm.notes as "Notes:Small Text:240"
 from `tabThree PL Container Move` cm
 order by cm.operation_datetime desc, cm.creation desc
+""".strip(),
+        },
+        "3PL Container Repacks": {
+            "ref_doctype": "Three PL Container Repack",
+            "query": """
+select
+    r.name as "Repack:Link/Three PL Container Repack:170",
+    r.operation_reference as "Operation Ref:Data:150",
+    r.operation_datetime as "Operation Time:Datetime:160",
+    r.status as "Status:Data:100",
+    r.client as "Client:Link/Customer:170",
+    r.target_container as "Target Container:Link/Three PL Container:150",
+    r.target_location as "Target Location:Link/Warehouse:180",
+    src.source_container as "Source Container:Link/Three PL Container:150",
+    src.source_location as "Source Location:Link/Warehouse:180",
+    item.item_code as "Item:Link/Item:150",
+    item.client_sku as "Client SKU:Data:120",
+    item.qty as "Qty:Float:90",
+    item.uom as "UOM:Link/UOM:80",
+    r.movement as "Movement:Link/Three PL Container Movement:160",
+    r.notes as "Notes:Small Text:240"
+from `tabThree PL Container Repack` r
+left join `tabThree PL Repack Source` src on src.parent = r.name
+left join `tabThree PL Repack Item` item on item.parent = r.name
+order by r.operation_datetime desc, r.creation desc, src.idx asc, item.idx asc
 """.strip(),
         },
         "3PL Client Inventory": {

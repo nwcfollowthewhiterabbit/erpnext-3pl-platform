@@ -14,6 +14,7 @@ Current process notes:
 
 - [Handling Units](handling-units.md)
 - [Container Move](container-move.md)
+- [Container Repack](container-repack.md)
 - [Warehouse Locations](warehouse-locations.md)
 
 Client-facing summaries can be drafted from these files and then copied into emails, PDFs, or demo notes.

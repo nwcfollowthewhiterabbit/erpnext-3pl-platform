@@ -419,6 +419,75 @@ def ensure_container_move_operation():
     return move
 
 
+def ensure_repack_source_container(name, qty):
+    if frappe.db.exists("Three PL Container", name):
+        container = frappe.get_doc("Three PL Container", name)
+        container.set("items", [])
+    else:
+        container = frappe.new_doc("Three PL Container")
+        container.container_code = name
+
+    container.barcode = name
+    if container.meta.has_field("container_type"):
+        container.container_type = "Box"
+    container.client = "Demo Client Alpha"
+    container.current_warehouse = "Aisle A - 3"
+    if container.status != "Replaced":
+        container.status = "Stored"
+    if container.meta.has_field("last_moved_at") and not container.last_moved_at:
+        container.last_moved_at = now()
+    container.notes = "Demo source box for repack/consolidation testing."
+    container.append(
+        "items",
+        {
+            "item_code": "SKU-ALPHA-003",
+            "client_sku": "ALPHA-003",
+            "qty": qty,
+            "uom": "Nos",
+            "condition_status": "OK",
+        },
+    )
+    container.save(ignore_permissions=True)
+    return container
+
+
+def ensure_container_repack_operation():
+    source_a = ensure_repack_source_container("BOX-ALPHA-003", 8)
+    source_b = ensure_repack_source_container("BOX-ALPHA-004", 10)
+
+    operation_reference = "REPACK-ALPHA-001"
+    existing = frappe.db.get_value("Three PL Container Repack", {"operation_reference": operation_reference}, "name")
+    repack = frappe.get_doc("Three PL Container Repack", existing) if existing else frappe.new_doc("Three PL Container Repack")
+
+    repack.operation_reference = operation_reference
+    if repack.is_new() or not repack.operation_datetime:
+        repack.operation_datetime = now()
+    if repack.status != "Applied":
+        repack.status = "Draft"
+    repack.client = "Demo Client Alpha"
+    repack.target_container = "BOX-ALPHA-005"
+    repack.target_location = "Aisle A - 3"
+    repack.notes = "Demo repack: consolidate two smaller boxes into one larger box."
+
+    if repack.status == "Draft":
+        repack.set("source_containers", [])
+        repack.append("source_containers", {"source_container": source_a.name, "source_location": source_a.current_warehouse})
+        repack.append("source_containers", {"source_container": source_b.name, "source_location": source_b.current_warehouse})
+        repack.set("items", [])
+        repack.append(
+            "items",
+            {
+                "item_code": "SKU-ALPHA-003",
+                "client_sku": "ALPHA-003",
+                "qty": 18,
+                "uom": "Nos",
+                "condition_status": "OK",
+            },
+        )
+    repack.save(ignore_permissions=True)
+    return repack
+
+
 def ensure_stock_entry(notice_name):
     name = "DEMO-RECEIVING-ALPHA-001"
     if frappe.db.exists("Stock Entry", name):
@@ -732,6 +801,7 @@ def main():
     ensure_alpha_storage_container()
     ensure_demo_container_movements(notice.name)
     ensure_container_move_operation()
+    ensure_container_repack_operation()
     notice = frappe.get_doc("Inbound Shipment Notice", notice.name)
     sync_notice_details(notice)
     ensure_stock_entry(notice.name)

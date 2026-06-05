@@ -29,6 +29,7 @@ docker cp scripts/configure_warehouse_mode.py "$backend_cid":/tmp/configure_ware
 docker cp scripts/create_demo_users.py "$backend_cid":/tmp/create_demo_users.py
 docker cp scripts/load_demo_warehouse_data.py "$backend_cid":/tmp/load_demo_warehouse_data.py
 docker cp scripts/apply_container_moves.py "$backend_cid":/tmp/apply_container_moves.py
+docker cp scripts/apply_container_repacks.py "$backend_cid":/tmp/apply_container_repacks.py
 
 project_env=(
   -e "WAREHOUSE_OPERATOR_PASSWORD=${WAREHOUSE_OPERATOR_PASSWORD:?set WAREHOUSE_OPERATOR_PASSWORD}"
@@ -49,6 +50,8 @@ docker exec "${project_env[@]}" "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/load_demo_warehouse_data.py 1"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/apply_container_moves.py 0"
+docker exec "${project_env[@]}" "$backend_cid" bash -lc \
+  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/apply_container_repacks.py 0"
 docker exec "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && bench --site ${site_name} clear-cache"
 

@@ -116,8 +116,10 @@ Implemented:
 - Containers have a last moved timestamp field.
 - Container item rows can show what is inside the box.
 - Container move operations are stored in `Three PL Container Move`.
+- Container repack operations are stored in `Three PL Container Repack`.
 - Container movement history is stored in `Three PL Container Movement`.
 - Draft container moves can be applied by `scripts/apply_container_moves.py`.
+- Draft container repacks can be applied by `scripts/apply_container_repacks.py`.
 - Container links exist in receiving, putaway, picking, packing, and inventory snapshot contexts.
 - Reports include container references and movement history where relevant.
 

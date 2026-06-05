@@ -51,13 +51,15 @@ Implemented:
 - `Three PL Container Movement` DocType and `3PL Container Movements` report for movement history.
 - `Three PL Container Move` operation DocType and `3PL Container Moves` report for explicit move operations.
 - `scripts/apply_container_moves.py` processor for applying draft container moves.
+- `Three PL Container Repack` operation DocType and `3PL Container Repacks` report for consolidation/repack operations.
+- `scripts/apply_container_repacks.py` processor for applying draft repacks.
 - Container references in receiving, putaway, picking, packing, discrepancy, and inventory reporting contexts.
 
 Remaining:
 
 - Agree and import the real location naming scheme.
 - Add ERPNext form submit-time or scanner-page automation for container move operations.
-- Add repack workflow, for example two small boxes replaced by one larger box.
+- Add stronger split/merge quantity validation for repack operations.
 - Add UI actions and validation for empty / closed / replaced container lifecycle transitions.
 - Automate inventory snapshot updates from stock and container movements.
 - Decide whether mixed client / mixed SKU storage is allowed in one location.

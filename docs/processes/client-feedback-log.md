@@ -17,19 +17,22 @@ Implemented:
 
 - `Three PL Container` exists.
 - `Three PL Container Move` exists.
+- `Three PL Container Repack` exists.
 - Basic lifecycle fields are defined.
 - Demo containers exist.
 - `Three PL Container Movement` exists.
 - Demo applied move operation exists as `MOVE-ALPHA-001`.
+- Demo applied repack operation exists as `REPACK-ALPHA-001`.
 - Demo received and putaway movement records exist.
 - Reports show containers.
 - Reports show container move operations.
+- Reports show container repack operations.
 - Reports show container movement history.
 
 Open:
 
 - real location naming convention;
-- repack workflow;
+- advanced split/merge validation;
 - submit-time automation for move/repack operations;
 - scanner/mobile UX;
 - automatic inventory snapshot updates.
