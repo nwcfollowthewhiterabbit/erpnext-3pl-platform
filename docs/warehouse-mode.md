@@ -49,6 +49,8 @@ Boxes must not be modeled as ERPNext `Warehouse` locations. A box is transient: 
 
 Boxes are modeled as `Three PL Container` records instead. A container has an owner client, current warehouse location, status, optional barcode / label, and item rows. This lets warehouse staff identify a physical box first, then inspect or move products inside it.
 
+In WMS terminology, `Three PL Container` is the project-level Handling Unit model. Standard ERPNext does not provide a complete 3PL Handling Unit workflow out of the box, so this repository adds that layer while keeping ERPNext stock movements, warehouses, items, pick lists, and stock entries as the operational base.
+
 Example:
 
 - `Aisle A / Rack 01 / Shelf 02 / Bin 03` is a warehouse location.
@@ -107,7 +109,11 @@ Implemented:
 
 - `Three PL Container` DocType exists.
 - Containers can be linked to owner clients.
+- Containers have a type, for example box, carton, pallet, tote, or other.
 - Containers have current warehouse location and status.
+- Containers have lifecycle statuses: expected, received, verification, putaway-ready, stored, picking, picked, packed, shipped, empty, closed, and replaced.
+- Containers can reference a parent container and replacement container.
+- Containers have a last moved timestamp field.
 - Container item rows can show what is inside the box.
 - Container links exist in receiving, putaway, picking, packing, and inventory snapshot contexts.
 - Reports include container references where relevant.

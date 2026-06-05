@@ -36,6 +36,32 @@ REQUIRED_DOCTYPES = [
     "Three PL Shipment Request Item",
     "Three PL Client Instruction",
 ]
+REQUIRED_CONTAINER_FIELDS = {
+    "container_code",
+    "barcode",
+    "container_type",
+    "client",
+    "current_warehouse",
+    "status",
+    "last_moved_at",
+    "parent_container",
+    "replaced_by",
+    "items",
+}
+REQUIRED_CONTAINER_STATUSES = {
+    "Expected",
+    "Received",
+    "In Verification",
+    "Ready for Putaway",
+    "Stored",
+    "Picking",
+    "Picked",
+    "Packed",
+    "Shipped",
+    "Empty",
+    "Closed",
+    "Replaced",
+}
 REQUIRED_REPORTS = ["3PL ASN vs Received", "3PL Receiving Discrepancies", "3PL Containers", "3PL Shipment Requests", "3PL Client Inventory"]
 REQUIRED_CUSTOM_FIELDS = [
     "Item-owner_client",
@@ -117,6 +143,14 @@ def main():
 
     for doctype in REQUIRED_DOCTYPES:
         require(frappe.db.exists("DocType", doctype), f"Missing DocType: {doctype}")
+
+    container_meta = frappe.get_meta("Three PL Container")
+    container_fields = {field.fieldname for field in container_meta.fields}
+    require(container_fields >= REQUIRED_CONTAINER_FIELDS, "Three PL Container misses Handling Unit fields")
+    status_field = container_meta.get_field("status")
+    require(status_field, "Three PL Container misses status field")
+    status_options = set((status_field.options or "").splitlines())
+    require(status_options >= REQUIRED_CONTAINER_STATUSES, "Three PL Container misses Handling Unit statuses")
 
     for report in REQUIRED_REPORTS:
         require(frappe.db.exists("Report", report), f"Missing Report: {report}")
@@ -245,6 +279,7 @@ def main():
 
     container = frappe.get_doc("Three PL Container", "BOX-ALPHA-001")
     require(container.client == "Demo Client Alpha", "Demo container has wrong client")
+    require(container.container_type == "Box", "Demo container has wrong container type")
     require(container.current_warehouse == "Temporary Receiving - 3", "Demo container has wrong location")
     require(container.inbound_shipment_notice == notice_name, "Demo container is not linked to demo ASN")
     require(any(row.item_code == "SKU-ALPHA-002" and row.qty == 24 for row in container.items), "Demo container misses expected item row")

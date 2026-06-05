@@ -47,6 +47,7 @@ Implemented:
 
 - Base warehouse hierarchy for demo receiving, inspection, storage, packing, and shipping.
 - `Three PL Container` DocType with client, current location, status, barcode/label context, and item rows.
+- Handling Unit fields on `Three PL Container`: container type, parent container, replacement container, last moved timestamp, and lifecycle statuses.
 - Container references in receiving, putaway, picking, packing, discrepancy, and inventory reporting contexts.
 
 Remaining:
@@ -54,7 +55,7 @@ Remaining:
 - Agree and import the real location naming scheme.
 - Add container movement history.
 - Add repack workflow, for example two small boxes replaced by one larger box.
-- Add empty / closed / replaced container lifecycle states.
+- Add UI actions and validation for empty / closed / replaced container lifecycle transitions.
 - Automate inventory snapshot updates from stock and container movements.
 - Decide whether mixed client / mixed SKU storage is allowed in one location.
 

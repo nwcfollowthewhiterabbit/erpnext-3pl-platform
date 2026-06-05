@@ -30,6 +30,8 @@
 - коробки вести как `Three PL Container`;
 - у коробки хранить текущую локацию, клиента, статус, штрихкод/лейбл и товары внутри.
 
+В терминах WMS `Three PL Container` - это наш слой Handling Units. В стандартном ERPNext есть базовая складская логика, но нет полноценного готового 3PL Handling Unit процесса для коробок, палет, переупаковки и истории перемещений. Поэтому этот функционал создается как кастомный слой поверх стандартного ERPNext.
+
 ## Что уже реализовано
 
 Уже есть базовая модель:
@@ -37,7 +39,10 @@
 - складская иерархия для receiving, inspection, storage, packing и shipping;
 - `Three PL Container` для коробок/контейнеров;
 - привязка контейнера к клиенту;
+- тип контейнера: box, carton, pallet, tote, other;
 - текущая складская локация контейнера;
+- статусы жизненного цикла: expected, received, in verification, ready for putaway, stored, picking, picked, packed, shipped, empty, closed, replaced;
+- связь с parent container и replaced by для палетизации и переупаковки;
 - товары внутри контейнера;
 - ссылки на контейнеры в приемке, putaway, picking, packing и отчетах;
 - demo-контейнеры и demo-данные для Alpha Client.

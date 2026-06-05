@@ -280,10 +280,14 @@ def ensure_container(notice_name):
         container.container_code = name
 
     container.barcode = "BOX300000000001"
+    if container.meta.has_field("container_type"):
+        container.container_type = "Box"
     container.client = "Demo Client Alpha"
     container.current_warehouse = "Temporary Receiving - 3"
     container.inbound_shipment_notice = notice_name
     container.status = "In Verification"
+    if container.meta.has_field("last_moved_at"):
+        container.last_moved_at = now()
     container.notes = "Demo receiving box used to test containerized receiving and discrepancy review."
     container.append(
         "items",
@@ -320,9 +324,13 @@ def ensure_alpha_storage_container():
         container.container_code = name
 
     container.barcode = "BOX300000000002"
+    if container.meta.has_field("container_type"):
+        container.container_type = "Box"
     container.client = "Demo Client Alpha"
     container.current_warehouse = "Aisle A - 3"
     container.status = "Stored"
+    if container.meta.has_field("last_moved_at"):
+        container.last_moved_at = now()
     container.notes = "Demo storage box used by Alpha client inventory snapshots."
     container.append(
         "items",
