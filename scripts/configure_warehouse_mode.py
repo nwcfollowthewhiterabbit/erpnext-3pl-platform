@@ -872,6 +872,104 @@ def configure_custom_doctypes():
     for doctype, permissions in client_permissions.items():
         ensure_docperm(doctype, "3PL Client", **permissions)
 
+    # Frappe treats Custom DocPerm rows as an override for a DocType. Whenever
+    # client portal read/create access creates a Custom DocPerm row, preserve the
+    # warehouse and system roles in Custom DocPerm too; otherwise Desk/API access
+    # for those roles can disappear even though the standard DocPerm still exists.
+    custom_override_permissions = {
+        "Inbound Shipment Notice": [
+            {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "submit": 1, "cancel": 1, "amend": 1, "report": 1, "export": 1},
+            {"role": "Stock Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "submit": 1, "cancel": 1, "amend": 1, "report": 1, "export": 1},
+            {"role": "Stock User", "read": 1, "write": 1, "create": 1, "submit": 1, "report": 1, "export": 1},
+            {"role": "3PL Warehouse Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "submit": 1, "cancel": 1, "amend": 1, "report": 1, "export": 1},
+            {"role": "3PL Warehouse User", "read": 1, "write": 1, "create": 1, "submit": 1, "report": 1},
+        ],
+        "Inbound Shipment Notice Item": warehouse_permissions
+        + [
+            {"role": "Stock User", "read": 1, "write": 1, "create": 1, "report": 1},
+        ],
+        "Inbound Shipment Discrepancy": warehouse_permissions
+        + [
+            {"role": "Stock User", "read": 1, "write": 1, "create": 1, "report": 1},
+        ],
+        "Three PL Container": warehouse_permissions
+        + [
+            {"role": "Stock User", "read": 1, "write": 1, "create": 1, "report": 1},
+        ],
+        "Three PL Container Item": warehouse_permissions
+        + [
+            {"role": "Stock User", "read": 1, "write": 1, "create": 1, "report": 1},
+        ],
+        "Three PL Container Move": warehouse_permissions
+        + [
+            {"role": "Stock User", "read": 1, "write": 1, "create": 1, "report": 1},
+        ],
+        "Three PL Container Movement": warehouse_permissions
+        + [
+            {"role": "Stock User", "read": 1, "write": 1, "create": 1, "report": 1},
+        ],
+        "Three PL Container Repack": warehouse_permissions
+        + [
+            {"role": "Stock User", "read": 1, "write": 1, "create": 1, "report": 1},
+        ],
+        "Three PL Repack Source": warehouse_permissions
+        + [
+            {"role": "Stock User", "read": 1, "write": 1, "create": 1, "report": 1},
+        ],
+        "Three PL Repack Item": warehouse_permissions
+        + [
+            {"role": "Stock User", "read": 1, "write": 1, "create": 1, "report": 1},
+        ],
+        "Three PL Inventory Snapshot": [
+            {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+            {"role": "Stock Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+            {"role": "Stock User", "read": 1, "report": 1, "export": 1},
+            {"role": "3PL Warehouse Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+            {"role": "3PL Warehouse User", "read": 1, "report": 1},
+        ],
+        "Three PL Shipment Request": warehouse_permissions,
+        "Three PL Shipment Request Item": warehouse_permissions,
+        "Three PL Client Instruction": warehouse_permissions,
+        "Customer": [
+            {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+            {"role": "Stock Manager", "read": 1, "report": 1, "export": 1},
+            {"role": "Stock User", "read": 1, "report": 1},
+            {"role": "3PL Warehouse Manager", "read": 1, "report": 1, "export": 1},
+            {"role": "3PL Warehouse User", "read": 1, "report": 1},
+        ],
+        "Item": [
+            {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+            {"role": "Stock Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+            {"role": "Stock User", "read": 1, "report": 1},
+            {"role": "3PL Warehouse Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+            {"role": "3PL Warehouse User", "read": 1, "report": 1},
+        ],
+        "UOM": [
+            {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+            {"role": "Stock Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+            {"role": "Stock User", "read": 1, "report": 1},
+            {"role": "3PL Warehouse Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+            {"role": "3PL Warehouse User", "read": 1, "report": 1},
+        ],
+        "Warehouse": [
+            {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+            {"role": "Stock Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+            {"role": "Stock User", "read": 1, "report": 1},
+            {"role": "3PL Warehouse Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+            {"role": "3PL Warehouse User", "read": 1, "report": 1},
+        ],
+        "Web Form": [
+            {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+            {"role": "3PL Warehouse Manager", "read": 1, "report": 1},
+            {"role": "3PL Warehouse User", "read": 1, "report": 1},
+        ],
+    }
+    for doctype, role_permissions in custom_override_permissions.items():
+        for permission in role_permissions:
+            permission = permission.copy()
+            role = permission.pop("role")
+            ensure_docperm(doctype, role, **permission)
+
 
 def ensure_docperm(doctype, role, **permissions):
     filters = {"parent": doctype, "role": role, "permlevel": 0}
@@ -1532,8 +1630,65 @@ def configure_scanner_pages():
     target.textContent = message || '';
     target.className = isError ? 'text-danger small' : 'text-muted small';
   }
+  function getCsrfToken() {
+    if (frappe.csrf_token && frappe.csrf_token !== 'None') {
+      return Promise.resolve(frappe.csrf_token);
+    }
+    if (window.__threePlCsrfTokenPromise) {
+      return window.__threePlCsrfTokenPromise;
+    }
+    window.__threePlCsrfTokenPromise = fetch('/app', { credentials: 'same-origin' })
+      .then(function (response) { return response.text(); })
+      .then(function (html) {
+        var match = html.match(/frappe\\.csrf_token\\s*=\\s*"([^"]+)"/);
+        if (!match || !match[1] || match[1] === 'None') {
+          throw new Error('Could not initialize session token. Please refresh and try again.');
+        }
+        frappe.csrf_token = match[1];
+        return match[1];
+      });
+    return window.__threePlCsrfTokenPromise;
+  }
+  function parseServerMessage(payload) {
+    if (!payload) return null;
+    if (payload._server_messages) {
+      try {
+        var messages = JSON.parse(payload._server_messages);
+        if (messages.length) {
+          var first = JSON.parse(messages[0]);
+          if (first.message) return first.message.replace(/<[^>]*>/g, '');
+        }
+      } catch (error) {
+        return payload._error_message || payload.exception || null;
+      }
+    }
+    return payload._error_message || payload.exception || null;
+  }
   function api(method, args) {
-    return frappe.call({ method: method, args: args || {} });
+    return getCsrfToken().then(function (csrfToken) {
+      var body = new URLSearchParams();
+      Object.keys(args || {}).forEach(function (key) {
+        var value = args[key];
+        body.set(key, typeof value === 'string' ? value : JSON.stringify(value));
+      });
+      return fetch('/api/method/' + method, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Frappe-CSRF-Token': csrfToken
+        },
+        body: body
+      }).then(function (response) {
+        return response.text().then(function (text) {
+          var payload = text ? JSON.parse(text) : {};
+          if (!response.ok) {
+            throw new Error(parseServerMessage(payload) || ('Request failed: ' + response.status));
+          }
+          return payload;
+        });
+      });
+    });
   }
   function getValue(doctype, filters, fieldname) {
     return api('frappe.client.get_value', { doctype: doctype, filters: filters, fieldname: fieldname });
@@ -1546,6 +1701,13 @@ def configure_scanner_pages():
   }
   function setValue(doctype, name, fieldname, value) {
     return api('frappe.client.set_value', { doctype: doctype, name: name, fieldname: fieldname, value: value });
+  }
+  function setValues(doctype, name, values) {
+    return Object.keys(values).reduce(function (promise, fieldname) {
+      return promise.then(function () {
+        return setValue(doctype, name, fieldname, values[fieldname]);
+      });
+    }, Promise.resolve());
   }
   function hasWarehouseRole() {
     var roles = (frappe.user_roles || []);
@@ -1575,12 +1737,12 @@ def configure_scanner_pages():
       notes: 'Applied immediately from scanner-first container move page.'
     }).then(function (movementResponse) {
       var movement = movementResponse.message;
-      return setValue('Three PL Container', moveDoc.container_code, {
+      return setValues('Three PL Container', moveDoc.container_code, {
         current_warehouse: moveDoc.to_warehouse,
         status: 'Stored',
         last_moved_at: movementTime
       }).then(function () {
-        return setValue('Three PL Container Move', moveDoc.name, {
+        return setValues('Three PL Container Move', moveDoc.name, {
           status: 'Applied',
           movement: movement.name
         }).then(function () {

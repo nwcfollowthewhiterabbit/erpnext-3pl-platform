@@ -150,6 +150,19 @@ def require_role_perm(doctype, role, **expected):
     )
 
 
+def require_effective_perm(user, doctype, *permission_types):
+    current_user = frappe.session.user
+    try:
+        frappe.set_user(user)
+        for permission_type in permission_types:
+            require(
+                frappe.has_permission(doctype, permission_type),
+                f"{user} lacks effective {permission_type} permission for {doctype}",
+            )
+    finally:
+        frappe.set_user(current_user)
+
+
 def portal_list_route(route):
     return route if route.endswith("/list") else f"{route}/list"
 
@@ -321,6 +334,15 @@ def main():
     require_role_perm("Three PL Shipment Request", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Three PL Shipment Request Item", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Three PL Client Instruction", "3PL Client", read=1, write=1, create=1)
+
+    for doctype in ("Warehouse", "Item", "Inbound Shipment Notice", "Three PL Container", "Three PL Container Move"):
+        require_effective_perm(WAREHOUSE_MANAGER_USER, doctype, "read", "create")
+    for doctype in ("Warehouse", "Inbound Shipment Notice", "Three PL Container", "Three PL Container Move"):
+        require_effective_perm(WAREHOUSE_OPERATOR_USER, doctype, "read")
+    for doctype in ("Inbound Shipment Notice", "Three PL Container", "Three PL Container Move"):
+        require_effective_perm(WAREHOUSE_OPERATOR_USER, doctype, "create")
+    for doctype in ("Warehouse", "Item", "Item Group", "UOM", "Three PL Container", "Inbound Shipment Notice"):
+        require_effective_perm(BUSINESS_OWNER_USER, doctype, "read", "create")
 
     owner_roles = [row.role for row in frappe.get_doc("User", BUSINESS_OWNER_USER).roles]
     for doctype in ("Warehouse", "Item", "Item Group", "UOM"):
