@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>ERPNext 3PL Demo - сценарии для проверки</title>
+  <style>
+    @page { margin: 22mm 18mm; }
+    body {
+      color: #1f2328;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      font-size: 13px;
+      line-height: 1.45;
+      margin: 0;
+    }
+    h1 {
+      font-size: 24px;
+      margin: 0 0 16px;
+    }
+    h2 {
+      border-bottom: 1px solid #d8dee4;
+      font-size: 18px;
+      margin: 24px 0 10px;
+      padding-bottom: 4px;
+    }
+    h3 {
+      font-size: 15px;
+      margin: 16px 0 6px;
+    }
+    p {
+      margin: 6px 0;
+    }
+    ul {
+      margin: 6px 0 10px 22px;
+      padding: 0;
+    }
+    li {
+      margin: 3px 0;
+    }
+    code {
+      background: #f6f8fa;
+      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      padding: 1px 4px;
+    }
+    .meta {
+      background: #f6f8fa;
+      border: 1px solid #d8dee4;
+      border-radius: 6px;
+      margin: 10px 0 16px;
+      padding: 10px 12px;
+    }
+    .flow {
+      background: #fff8c5;
+      border: 1px solid #eac54f;
+      border-radius: 6px;
+      margin-top: 8px;
+      padding: 8px 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>ERPNext 3PL Demo: краткие сценарии для проверки</h1>
+
+  <h2>Клиентский портал</h2>
+  <div class="meta">
+    <p><strong>Логин:</strong> <code>alpha.client@example.test</code></p>
+    <p><strong>Пароль:</strong> <code>AlphaClient2026!</code></p>
+    <p><strong>Ссылка:</strong> https://erpnext.77.237.244.169.sslip.io/client/receiving-notice/list</p>
+  </div>
+
+  <h3>1. Создание Receiving Notice</h3>
+  <p>Клиент заранее сообщает складу о входящей поставке.</p>
+  <p><strong>Что работает:</strong></p>
+  <ul>
+    <li>клиент открывает раздел Receiving Notices;</li>
+    <li>создает новое уведомление о поставке;</li>
+    <li>указывает ожидаемые товары и количества в описании;</li>
+    <li>документ автоматически привязан к <code>Demo Client Alpha</code>;</li>
+    <li>клиент не видит и не может использовать данные других клиентов.</li>
+  </ul>
+
+  <h3>2. Просмотр своих Receiving Notices</h3>
+  <p>Клиент видит только свои уведомления о поставках.</p>
+  <p><strong>Демо-записи:</strong></p>
+  <ul>
+    <li><code>ASN-ALPHA-001</code></li>
+    <li><code>ASN-ALPHA-002</code></li>
+    <li><code>ASN-ALPHA-003</code></li>
+  </ul>
+
+  <h3>3. Просмотр остатков</h3>
+  <p>Клиент видит свой складской остаток.</p>
+  <p><strong>Демо-SKU:</strong></p>
+  <ul>
+    <li><code>ALPHA-001</code></li>
+    <li><code>ALPHA-002</code></li>
+    <li><code>ALPHA-003</code></li>
+  </ul>
+
+  <h3>4. Создание Shipment Request</h3>
+  <p>Клиент может создать запрос на отгрузку товара со склада.</p>
+  <p><strong>Что работает:</strong></p>
+  <ul>
+    <li>клиент указывает reference, дату, адрес назначения и описание товаров;</li>
+    <li>складская команда видит этот запрос в ERPNext.</li>
+  </ul>
+  <p><strong>Демо-записи:</strong></p>
+  <ul>
+    <li><code>SHIP-ALPHA-001</code></li>
+    <li><code>SHIP-ALPHA-002</code></li>
+  </ul>
+
+  <h3>5. Инструкции по расхождениям</h3>
+  <p>Клиент может оставить инструкцию по проблемам приемки.</p>
+  <p><strong>Примеры:</strong></p>
+  <ul>
+    <li>принять недостачу;</li>
+    <li>оставить поврежденный товар на удержании;</li>
+    <li>запросить дополнительную проверку.</li>
+  </ul>
+
+  <h2>Менеджер склада</h2>
+  <div class="meta">
+    <p><strong>Логин:</strong> <code>warehouse.manager@example.test</code></p>
+    <p><strong>Пароль:</strong> <code>WarehouseManager2026!</code></p>
+    <p><strong>Ссылка:</strong> https://erpnext.77.237.244.169.sslip.io/desk/3pl-warehouse</p>
+  </div>
+
+  <h3>1. Работа со складской панелью</h3>
+  <p>Менеджер работает через workspace <code>3PL Warehouse</code>.</p>
+  <p><strong>Доступны:</strong></p>
+  <ul>
+    <li>Stock Entries;</li>
+    <li>отчет ASN vs Received;</li>
+    <li>отчет Receiving Discrepancies;</li>
+    <li>Pick Lists;</li>
+    <li>складские отчеты.</li>
+  </ul>
+
+  <h3>2. Приемка товара</h3>
+  <p>Товар принимается через стандартный ERPNext stock flow.</p>
+  <p><strong>Что работает:</strong></p>
+  <ul>
+    <li>приемка выполняется через <code>Stock Entry</code>;</li>
+    <li>товар сначала попадает в <code>Temporary Receiving - 3</code>;</li>
+    <li>товар не размещается сразу в финальные storage locations.</li>
+  </ul>
+
+  <h3>3. Проверка расхождений</h3>
+  <p>Менеджер может смотреть расхождения между ожидаемым и фактически принятым товаром.</p>
+  <p><strong>Поддерживаются типы расхождений:</strong></p>
+  <ul>
+    <li>отсутствующий товар;</li>
+    <li>неожиданный товар;</li>
+    <li>разница в количестве;</li>
+    <li>поврежденный товар;</li>
+    <li>проблема качества.</li>
+  </ul>
+
+  <h3>4. Putaway</h3>
+  <p>После проверки товар можно переместить из receiving area в storage location через стандартное складское перемещение ERPNext.</p>
+
+  <h3>5. Outbound flow</h3>
+  <p>Менеджер может работать с исходящими процессами.</p>
+  <p><strong>Доступны:</strong></p>
+  <ul>
+    <li>Pick Lists;</li>
+    <li>shipment requests, созданные клиентом.</li>
+  </ul>
+
+  <h3>6. Отчеты</h3>
+  <p>Менеджер может открывать операционные отчеты:</p>
+  <ul>
+    <li>ASN vs Received;</li>
+    <li>Receiving Discrepancies;</li>
+    <li>Containers Report;</li>
+    <li>Stock Balance;</li>
+    <li>Stock Ledger.</li>
+  </ul>
+
+  <h2>Краткая логика решения</h2>
+  <ul>
+    <li>Используется чистая установка ERPNext v16.</li>
+    <li>3PL-функциональность добавлена поверх стандартного ERPNext.</li>
+    <li>Core ERPNext stock logic не изменялся.</li>
+    <li>Клиенты работают через клиентский портал.</li>
+    <li>Складские пользователи работают через ERPNext Desk.</li>
+    <li>Владение товаром моделируется как <code>Client + SKU</code>.</li>
+    <li>Коробки/контейнеры моделируются как <code>Three PL Container</code>.</li>
+  </ul>
+
+  <div class="flow">
+    <strong>Базовый receiving flow:</strong>
+    Receiving Notice → Receiving Area → Verification → Putaway → Storage Location
+  </div>
+</body>
+</html>
