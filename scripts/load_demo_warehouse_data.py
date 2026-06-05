@@ -454,6 +454,20 @@ def ensure_repack_source_container(name, qty):
 def ensure_container_repack_operation():
     source_a = ensure_repack_source_container("BOX-ALPHA-003", 8)
     source_b = ensure_repack_source_container("BOX-ALPHA-004", 10)
+    if frappe.db.exists("Three PL Container", "BOX-ALPHA-005"):
+        target = frappe.get_doc("Three PL Container", "BOX-ALPHA-005")
+    else:
+        target = frappe.new_doc("Three PL Container")
+        target.container_code = "BOX-ALPHA-005"
+    target.barcode = "BOX-ALPHA-005"
+    if target.meta.has_field("container_type"):
+        target.container_type = "Box"
+    target.client = "Demo Client Alpha"
+    target.current_warehouse = "Aisle A - 3"
+    if target.status != "Stored":
+        target.status = "Expected"
+    target.notes = "Demo target box for repack/consolidation testing."
+    target.save(ignore_permissions=True)
 
     operation_reference = "REPACK-ALPHA-001"
     existing = frappe.db.get_value("Three PL Container Repack", {"operation_reference": operation_reference}, "name")
