@@ -31,16 +31,43 @@ Status: in progress.
 - Validate Business Owner access to products, warehouses, and UOMs.
 - Capture client feedback on missing fields, screen friction, and scanner needs.
 
-## Phase 3 - Scanner and Mobile Workflow
+## Phase 3 - Warehouse Locations And Containers
+
+Status: in progress.
+
+Decision captured:
+
+- ERPNext `Warehouse` records model only stable physical locations.
+- Boxes / cartons are not warehouse locations.
+- Boxes / cartons are modeled as `Three PL Container` records.
+- The working model is `location + container + item/SKU + quantity`.
+- Real warehouse location tree should be created after naming convention and hierarchy depth are agreed with the client.
+
+Implemented:
+
+- Base warehouse hierarchy for demo receiving, inspection, storage, packing, and shipping.
+- `Three PL Container` DocType with client, current location, status, barcode/label context, and item rows.
+- Container references in receiving, putaway, picking, packing, discrepancy, and inventory reporting contexts.
+
+Remaining:
+
+- Agree and import the real location naming scheme.
+- Add container movement history.
+- Add repack workflow, for example two small boxes replaced by one larger box.
+- Add empty / closed / replaced container lifecycle states.
+- Automate inventory snapshot updates from stock and container movements.
+- Decide whether mixed client / mixed SKU storage is allowed in one location.
+
+## Phase 4 - Scanner and Mobile Workflow
 
 Status: pending.
 
 - Decide whether first stage uses browser plus USB/Bluetooth barcode scanner or dedicated TSD devices.
 - Validate scan behavior in ERPNext forms.
 - Decide whether a custom scanner-first page is needed for warehouse operators.
-- Define required barcode labels for SKU and warehouse locations.
+- Define required barcode labels for SKU, warehouse locations, and containers.
 
-## Phase 4 - Multi-Client Stock Model
+## Phase 5 - Multi-Client Stock Model
 
 Status: pending.
 
@@ -51,7 +78,7 @@ Status: pending.
   - custom stock dimension;
   - custom app logic.
 
-## Phase 5 - Traceability
+## Phase 6 - Traceability
 
 Status: pending.
 
@@ -60,7 +87,7 @@ Status: pending.
 - Confirm whether expiry dates are needed.
 - Configure item templates and validation rules accordingly.
 
-## Phase 6 - Integrations
+## Phase 7 - Integrations
 
 Status: pending.
 

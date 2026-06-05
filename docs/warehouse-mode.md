@@ -14,6 +14,18 @@ Accounting, Buying, Selling, CRM, Manufacturing, Projects, Support, Website, and
 
 ## Warehouse Structure
 
+ERPNext `Warehouse` records are used for stable physical warehouse locations only. They should describe places that exist independently from the stock currently inside them:
+
+- receiving areas;
+- inspection areas;
+- zones;
+- aisles;
+- racks;
+- shelves;
+- bins / cells.
+
+Current seed structure:
+
 - `Receiving Area - 3`
 - `Temporary Receiving - 3`
 - `Inspection and Comparison - 3`
@@ -23,6 +35,42 @@ Accounting, Buying, Selling, CRM, Manufacturing, Projects, Support, Website, and
 - `Overflow - 3`
 - `Packing - 3`
 - `Shipping - 3`
+
+### Locations vs Containers
+
+The current architecture separates physical locations from boxes / cartons:
+
+- Location means where goods are stored.
+- Container / box means what physical handling unit holds the goods.
+- Item / SKU means what product is inside.
+- Quantity means how much product is inside.
+
+Boxes must not be modeled as ERPNext `Warehouse` locations. A box is transient: it can be replaced, merged, repacked, emptied, or closed. ERPNext warehouse locations cannot be freely deleted after stock transactions, so using boxes as warehouse locations would create an unstable and hard-to-maintain warehouse tree.
+
+Boxes are modeled as `Three PL Container` records instead. A container has an owner client, current warehouse location, status, optional barcode / label, and item rows. This lets warehouse staff identify a physical box first, then inspect or move products inside it.
+
+Example:
+
+- `Aisle A / Rack 01 / Shelf 02 / Bin 03` is a warehouse location.
+- `BOX-ALPHA-001` is a container currently stored in that location.
+- `ALPHA-SKU-001` is an item inside the container.
+- `10 pcs` is the quantity.
+
+If two small boxes are later replaced by one larger box, the location stays the same. The old containers should be marked empty / closed / replaced, and the new container should receive the consolidated contents. That workflow is not fully automated yet.
+
+### Location Naming Convention
+
+Before creating the real warehouse tree, agree the naming convention and required detail level. Recommended format:
+
+`ZONE-AISLE-RACK-SHELF-BIN`
+
+Examples:
+
+- `A-01-R01-S02-B03`
+- `A-01-R01-S02-B04`
+- `B-02-R03-S01-B01`
+
+The client can start preparing the warehouse location scheme now, but the final import should wait until the naming convention and hierarchy depth are confirmed. Locations that were used in stock transactions should be disabled or archived instead of deleted.
 
 ## Receiving Flow
 
@@ -52,3 +100,23 @@ Custom fields were added to:
 - `Pick List Item`: `Scanned Location`
 
 This is intentionally a lightweight starting point. It records client ownership on warehouse documents, but does not yet enforce client-level stock segregation in the stock ledger.
+
+## Current Container Implementation
+
+Implemented:
+
+- `Three PL Container` DocType exists.
+- Containers can be linked to owner clients.
+- Containers have current warehouse location and status.
+- Container item rows can show what is inside the box.
+- Container links exist in receiving, putaway, picking, packing, and inventory snapshot contexts.
+- Reports include container references where relevant.
+
+Still pending:
+
+- automatic container movement history;
+- repack workflow, for example two small boxes consolidated into one larger box;
+- empty / closed / replaced container lifecycle actions;
+- scanner-first UX for scanning location, then container, then item / quantity;
+- automatic inventory snapshot updates from stock movements and container movements;
+- import or guided creation of the client's real warehouse location tree.
