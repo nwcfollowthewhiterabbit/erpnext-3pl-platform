@@ -38,8 +38,12 @@ Status mapping:
 
 The processor is versioned and runs during post-deploy. It can also be run after operational batches.
 
+The repository also provides:
+
+- detailed report: `3PL Client Inventory`;
+- aggregated report: `3PL Client Inventory Summary`.
+
 Still pending:
 
-- automatic run after every scanner operation;
 - stock-ledger reconciliation;
 - shipment allocation logic.

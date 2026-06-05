@@ -55,13 +55,14 @@ Implemented:
 - `scripts/apply_container_repacks.py` processor for applying draft repacks.
 - Strict repack quantity validation between source containers and target contents.
 - `scripts/sync_inventory_snapshots.py` processor for syncing client inventory snapshots from active containers.
-- Minimal scanner-first container move page at `/warehouse/container-move`.
+- Aggregated inventory report `3PL Client Inventory Summary`.
+- Minimal scanner-first container move page at `/warehouse/container-move` with immediate apply for warehouse roles.
 - Container references in receiving, putaway, picking, packing, discrepancy, and inventory reporting contexts.
 
 Remaining:
 
 - Agree and import the real location naming scheme.
-- Add ERPNext form submit-time or scanner-page automation for container move operations.
+- Add ERPNext form submit-time automation for container move operations.
 - Add stronger split/merge quantity validation for repack operations.
 - Add scanner-first repack and picking pages.
 - Add UI actions and validation for empty / closed / replaced container lifecycle transitions.

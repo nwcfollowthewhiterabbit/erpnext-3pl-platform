@@ -85,6 +85,17 @@ The page lets a warehouse user scan or enter:
 
 It creates a Draft `Three PL Container Move`. The versioned processor applies pending moves.
 
+Current behavior:
+
+- guest users are redirected to login;
+- only warehouse roles can use the UI;
+- the page creates a move operation;
+- the page immediately writes movement history;
+- the page updates the container current location and status;
+- the page marks the move as `Applied`.
+
+The processor remains available for batch application and recovery of Draft moves.
+
 ## Related Reports
 
 - `3PL Container Moves`

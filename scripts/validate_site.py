@@ -110,6 +110,7 @@ REQUIRED_REPORTS = [
     "3PL Container Movements",
     "3PL Shipment Requests",
     "3PL Client Inventory",
+    "3PL Client Inventory Summary",
 ]
 REQUIRED_CUSTOM_FIELDS = [
     "Item-owner_client",
@@ -410,6 +411,17 @@ def main():
         ),
         "Missing synced repack target inventory snapshot",
     )
+    summary_rows = frappe.db.sql(
+        """
+        select sum(qty)
+        from `tabThree PL Inventory Snapshot`
+        where customer = 'Demo Client Alpha'
+          and item_code = 'SKU-ALPHA-003'
+          and status = 'Available'
+        """,
+        as_list=True,
+    )
+    require(summary_rows and summary_rows[0][0] == 36, "Wrong Alpha SKU-ALPHA-003 available inventory summary")
     require(
         not frappe.db.exists("Three PL Inventory Snapshot", {"container_code": ("in", ["BOX-ALPHA-003", "BOX-ALPHA-004"])}),
         "Stale source container inventory snapshots were not removed",

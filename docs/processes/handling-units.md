@@ -82,7 +82,8 @@ Example:
 - Demo move operation `MOVE-ALPHA-001` is applied by `scripts/apply_container_moves.py`.
 - Demo repack operation `REPACK-ALPHA-001` is applied by `scripts/apply_container_repacks.py`.
 - Inventory snapshots are synchronized from active containers by `scripts/sync_inventory_snapshots.py`.
-- Minimal scanner-first container move page exists at `/warehouse/container-move`.
+- Minimal scanner-first container move page exists at `/warehouse/container-move` and applies moves immediately for warehouse roles.
+- Aggregated inventory report exists as `3PL Client Inventory Summary`.
 - Validation checks required fields, statuses, movement history, and reports in `scripts/validate_site.py`.
 - Reports include container references through `3PL Containers`, `3PL Container Moves`, `3PL Container Repacks`, `3PL Container Movements`, and related receiving/inventory reports.
 

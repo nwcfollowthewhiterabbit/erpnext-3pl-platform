@@ -244,6 +244,7 @@ def configure_workspaces():
                 {"type": "Report", "link_to": "3PL Container Repacks", "label": "Container Repacks Report", "report_ref_doctype": "Three PL Container Repack"},
                 {"type": "Report", "link_to": "3PL Container Movements", "label": "Container Movements", "report_ref_doctype": "Three PL Container Movement"},
                 {"type": "Report", "link_to": "3PL Client Inventory", "label": "Client Inventory", "report_ref_doctype": "Three PL Inventory Snapshot"},
+                {"type": "Report", "link_to": "3PL Client Inventory Summary", "label": "Inventory Summary", "report_ref_doctype": "Three PL Inventory Snapshot"},
                 {"type": "DocType", "link_to": "Three PL Client Instruction", "doc_view": "List", "label": "Client Instructions"},
                 {"type": "DocType", "link_to": "Item", "doc_view": "List", "label": "Items"},
                 {"type": "DocType", "link_to": "Warehouse", "doc_view": "Tree", "label": "Warehouses"},
@@ -268,6 +269,7 @@ def configure_workspaces():
                 {"type": "Link", "label": "Container Moves Report", "link_type": "Report", "link_to": "3PL Container Moves", "is_query_report": 1},
                 {"type": "Link", "label": "Container Repacks Report", "link_type": "Report", "link_to": "3PL Container Repacks", "is_query_report": 1},
                 {"type": "Link", "label": "Container Movements", "link_type": "Report", "link_to": "3PL Container Movements", "is_query_report": 1},
+                {"type": "Link", "label": "Inventory Summary", "link_type": "Report", "link_to": "3PL Client Inventory Summary", "is_query_report": 1},
                 {"type": "Link", "label": "Stock Balance", "link_type": "Report", "link_to": "Stock Balance", "is_query_report": 1},
                 {"type": "Link", "label": "Stock Ledger", "link_type": "Report", "link_to": "Stock Ledger", "is_query_report": 1},
             ],
@@ -1467,6 +1469,25 @@ from `tabThree PL Inventory Snapshot` inv
 order by inv.customer asc, inv.item_code asc
 """.strip(),
         },
+        "3PL Client Inventory Summary": {
+            "ref_doctype": "Three PL Inventory Snapshot",
+            "query": """
+select
+    inv.customer as "Client:Link/Customer:170",
+    inv.item_code as "Item:Link/Item:150",
+    inv.client_sku as "Client SKU:Data:120",
+    inv.item_name as "Item Name:Data:180",
+    sum(inv.qty) as "Total Qty:Float:110",
+    inv.uom as "UOM:Link/UOM:80",
+    inv.status as "Status:Data:120",
+    group_concat(distinct inv.warehouse order by inv.warehouse separator ', ') as "Locations:Data:240",
+    group_concat(distinct inv.container_code order by inv.container_code separator ', ') as "Containers:Data:260",
+    max(inv.last_updated) as "Last Updated:Datetime:160"
+from `tabThree PL Inventory Snapshot` inv
+group by inv.customer, inv.item_code, inv.client_sku, inv.item_name, inv.uom, inv.status
+order by inv.customer asc, inv.item_code asc, inv.status asc
+""".strip(),
+        },
     }
 
     for report_name, report_data in reports.items():
@@ -1520,18 +1541,67 @@ def configure_scanner_pages():
   function insertMove(doc) {
     return api('frappe.client.insert', { doc: doc });
   }
+  function insertDoc(doc) {
+    return api('frappe.client.insert', { doc: doc });
+  }
+  function setValue(doctype, name, fieldname, value) {
+    return api('frappe.client.set_value', { doctype: doctype, name: name, fieldname: fieldname, value: value });
+  }
+  function hasWarehouseRole() {
+    var roles = (frappe.user_roles || []);
+    return roles.indexOf('3PL Warehouse User') !== -1 || roles.indexOf('3PL Warehouse Manager') !== -1 || roles.indexOf('System Manager') !== -1;
+  }
+  function requireWarehouseRole() {
+    if (!hasWarehouseRole()) {
+      setStatus('This scanner page is only available to warehouse users.', true);
+      var button = byId('create-move');
+      if (button) button.disabled = true;
+      return false;
+    }
+    return true;
+  }
+  function applyMove(moveDoc) {
+    var movementTime = frappe.datetime.now_datetime();
+    return insertDoc({
+      doctype: 'Three PL Container Movement',
+      movement_datetime: movementTime,
+      container_code: moveDoc.container_code,
+      client: moveDoc.client,
+      movement_type: 'Moved',
+      from_warehouse: moveDoc.from_warehouse,
+      to_warehouse: moveDoc.to_warehouse,
+      reference_doctype: 'Three PL Container Move',
+      reference_name: moveDoc.name,
+      notes: 'Applied immediately from scanner-first container move page.'
+    }).then(function (movementResponse) {
+      var movement = movementResponse.message;
+      return setValue('Three PL Container', moveDoc.container_code, {
+        current_warehouse: moveDoc.to_warehouse,
+        status: 'Stored',
+        last_moved_at: movementTime
+      }).then(function () {
+        return setValue('Three PL Container Move', moveDoc.name, {
+          status: 'Applied',
+          movement: movement.name
+        }).then(function () {
+          return movement;
+        });
+      });
+    });
+  }
   function createMove() {
     if (frappe.session && frappe.session.user === 'Guest') {
       window.location.href = '/login?redirect-to=' + encodeURIComponent('/warehouse/container-move');
       return;
     }
+    if (!requireWarehouseRole()) return;
     var containerCode = (byId('container-code').value || '').trim();
     var targetLocation = (byId('target-location').value || '').trim();
     if (!containerCode || !targetLocation) {
       setStatus('Scan container and target location first.', true);
       return;
     }
-    setStatus('Creating move...', false);
+    setStatus('Creating and applying move...', false);
     getValue('Three PL Container', { name: containerCode }, ['client', 'current_warehouse']).then(function (containerResponse) {
       var container = containerResponse.message;
       if (!container || !container.client) throw new Error('Container not found.');
@@ -1552,8 +1622,12 @@ def configure_scanner_pages():
         });
       });
     }).then(function (insertResponse) {
-      var name = insertResponse.message && insertResponse.message.name;
-      setStatus('Draft move created: ' + name + '. It will be applied by the move processor.', false);
+      var move = insertResponse.message;
+      return applyMove(move).then(function (movement) {
+        return { move: move, movement: movement };
+      });
+    }).then(function (result) {
+      setStatus('Move applied: ' + result.move.name + ' / ' + result.movement.name + '.', false);
       byId('container-code').value = '';
       byId('target-location').value = '';
       byId('container-code').focus();
@@ -1566,6 +1640,7 @@ def configure_scanner_pages():
       window.location.href = '/login?redirect-to=' + encodeURIComponent('/warehouse/container-move');
       return;
     }
+    requireWarehouseRole();
     var button = byId('create-move');
     if (button) button.addEventListener('click', createMove);
     ['container-code', 'target-location'].forEach(function (id) {
