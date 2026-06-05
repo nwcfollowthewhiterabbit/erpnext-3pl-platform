@@ -1521,6 +1521,10 @@ def configure_scanner_pages():
     return api('frappe.client.insert', { doc: doc });
   }
   function createMove() {
+    if (frappe.session && frappe.session.user === 'Guest') {
+      window.location.href = '/login?redirect-to=' + encodeURIComponent('/warehouse/container-move');
+      return;
+    }
     var containerCode = (byId('container-code').value || '').trim();
     var targetLocation = (byId('target-location').value || '').trim();
     if (!containerCode || !targetLocation) {
@@ -1558,6 +1562,10 @@ def configure_scanner_pages():
     });
   }
   frappe.ready(function () {
+    if (frappe.session && frappe.session.user === 'Guest') {
+      window.location.href = '/login?redirect-to=' + encodeURIComponent('/warehouse/container-move');
+      return;
+    }
     var button = byId('create-move');
     if (button) button.addEventListener('click', createMove);
     ['container-code', 'target-location'].forEach(function (id) {
