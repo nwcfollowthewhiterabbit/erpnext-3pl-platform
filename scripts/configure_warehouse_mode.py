@@ -1583,7 +1583,8 @@ def configure_scanner_pages():
     page.title = "Container Move"
     page.route = "warehouse/container-move"
     page.published = 1
-    page.login_required = 1
+    if page.meta.has_field("login_required"):
+        page.login_required = 1
     page.content_type = "HTML"
     page.main_section = html
     page.javascript = script

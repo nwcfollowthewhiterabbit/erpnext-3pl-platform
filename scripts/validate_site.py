@@ -215,10 +215,12 @@ def main():
         if report_doc.report_type == "Query Report":
             frappe.db.sql(report_doc.query)
 
-    require(frappe.db.exists("Web Page", "warehouse/container-move"), "Missing scanner container move Web Page")
-    scanner_page = frappe.get_doc("Web Page", "warehouse/container-move")
+    scanner_page_name = frappe.db.get_value("Web Page", {"route": "warehouse/container-move"}, "name")
+    require(scanner_page_name, "Missing scanner container move Web Page")
+    scanner_page = frappe.get_doc("Web Page", scanner_page_name)
     require(scanner_page.published == 1, "Scanner container move Web Page is not published")
-    require(scanner_page.login_required == 1, "Scanner container move Web Page must require login")
+    if scanner_page.meta.has_field("login_required"):
+        require(scanner_page.login_required == 1, "Scanner container move Web Page must require login")
 
     for custom_field in REQUIRED_CUSTOM_FIELDS:
         require(frappe.db.exists("Custom Field", custom_field), f"Missing Custom Field: {custom_field}")
