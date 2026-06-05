@@ -78,7 +78,7 @@ Example:
 - Container fields and statuses are created by `scripts/configure_warehouse_mode.py`.
 - Demo containers are loaded by `scripts/load_demo_warehouse_data.py`.
 - Demo movement records are loaded for received and putaway containers.
-- Demo applied move operation is loaded as `MOVE-ALPHA-001`.
+- Demo move operation `MOVE-ALPHA-001` is applied by `scripts/apply_container_moves.py`.
 - Validation checks required fields, statuses, movement history, and reports in `scripts/validate_site.py`.
 - Reports include container references through `3PL Containers`, `3PL Container Moves`, `3PL Container Movements`, and related receiving/inventory reports.
 

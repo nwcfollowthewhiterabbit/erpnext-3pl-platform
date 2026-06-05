@@ -398,31 +398,23 @@ def ensure_container_move_operation():
     existing = frappe.db.get_value("Three PL Container Move", {"operation_reference": operation_reference}, "name")
     move = frappe.get_doc("Three PL Container Move", existing) if existing else frappe.new_doc("Three PL Container Move")
 
-    movement = ensure_container_movement(
-        "BOX-ALPHA-002",
-        "Moved",
-        "Aisle A - 3",
-        from_warehouse="Temporary Receiving - 3",
-        reference_doctype="Three PL Container Move",
-        reference_name=move.name if not move.is_new() else None,
-        notes="Demo operation: warehouse moved the container into final storage.",
-    )
-
     move.operation_reference = operation_reference
-    move.operation_datetime = now()
-    move.status = "Applied"
+    if move.is_new() or not move.operation_datetime:
+        move.operation_datetime = now()
+    if move.status != "Applied":
+        move.status = "Draft"
     move.container_code = "BOX-ALPHA-002"
     move.client = "Demo Client Alpha"
     move.from_warehouse = "Temporary Receiving - 3"
     move.to_warehouse = "Aisle A - 3"
-    move.movement = movement.name
-    move.notes = "Demo applied container move operation. Current MVP records the operation and movement history; submit-time automation is a future custom-app/server-script step."
+    move.notes = "Demo container move operation. The versioned move processor applies Draft moves, updates the container, and creates movement history."
     move.save(ignore_permissions=True)
 
-    if movement.reference_name != move.name:
-        movement.reference_doctype = "Three PL Container Move"
-        movement.reference_name = move.name
-        movement.save(ignore_permissions=True)
+    if move.status == "Draft":
+        container = frappe.get_doc("Three PL Container", "BOX-ALPHA-002")
+        container.current_warehouse = move.from_warehouse
+        container.status = "Ready for Putaway"
+        container.save(ignore_permissions=True)
 
     return move
 

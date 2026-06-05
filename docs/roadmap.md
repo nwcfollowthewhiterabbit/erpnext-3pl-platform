@@ -50,12 +50,13 @@ Implemented:
 - Handling Unit fields on `Three PL Container`: container type, parent container, replacement container, last moved timestamp, and lifecycle statuses.
 - `Three PL Container Movement` DocType and `3PL Container Movements` report for movement history.
 - `Three PL Container Move` operation DocType and `3PL Container Moves` report for explicit move operations.
+- `scripts/apply_container_moves.py` processor for applying draft container moves.
 - Container references in receiving, putaway, picking, packing, discrepancy, and inventory reporting contexts.
 
 Remaining:
 
 - Agree and import the real location naming scheme.
-- Add submit-time automation for container move operations.
+- Add ERPNext form submit-time or scanner-page automation for container move operations.
 - Add repack workflow, for example two small boxes replaced by one larger box.
 - Add UI actions and validation for empty / closed / replaced container lifecycle transitions.
 - Automate inventory snapshot updates from stock and container movements.

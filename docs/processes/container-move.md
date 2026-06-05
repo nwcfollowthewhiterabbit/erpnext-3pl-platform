@@ -27,7 +27,7 @@ The movement history is stored separately in `Three PL Container Movement`.
 
 ## Current MVP Behavior
 
-The current repository creates the DocType, report, permissions, demo operation, and validation.
+The current repository creates the DocType, report, permissions, demo operation, move processor, and validation.
 
 Demo operation:
 
@@ -37,11 +37,11 @@ Demo operation:
 - To: `Aisle A - 3`
 - Status: `Applied`
 
-This demonstrates how an applied move should be represented in the system.
+The demo operation starts as `Draft` during demo-data loading. `scripts/apply_container_moves.py` applies it, updates the container current location, creates a `Three PL Container Movement` record, and marks the operation as `Applied`.
 
 ## Important Boundary
 
-At this stage, the move operation document is a structured operational record. Submit-time automation from the ERPNext form is not implemented yet.
+At this stage, the move operation can be applied by the versioned processor script. Submit-time automation directly from the ERPNext form is not implemented yet.
 
 The next implementation decision is whether automation should be done through:
 
@@ -49,7 +49,7 @@ The next implementation decision is whether automation should be done through:
 - Server Scripts, if enabled and accepted for the deployment;
 - a dedicated scanner/mobile operation page.
 
-The preferred long-term direction is a custom app or scanner-first operation page, because it is easier to test, version, and validate than hidden manual server scripts.
+The preferred long-term direction is a custom app or scanner-first operation page, because it is easier to test, version, and validate than hidden manual server scripts. The processor script keeps the behavior versioned and testable until that UI/controller layer is added.
 
 ## Target Flow
 
@@ -60,6 +60,17 @@ The preferred long-term direction is a custom app or scanner-first operation pag
 5. System updates container current location.
 6. System writes a `Three PL Container Movement` record.
 7. System updates inventory snapshot if needed.
+
+## Processor
+
+Run pending moves inside the ERPNext backend through the project runner:
+
+```bash
+cd /home/frappe/frappe-bench
+./env/bin/python /tmp/run_project_script.py SITE_NAME /tmp/apply_container_moves.py 0
+```
+
+The post-deploy script already copies and runs this processor.
 
 ## Related Reports
 

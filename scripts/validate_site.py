@@ -345,6 +345,9 @@ def main():
     require(move.container_code == "BOX-ALPHA-002", "Demo container move has wrong container")
     require(move.from_warehouse == "Temporary Receiving - 3" and move.to_warehouse == "Aisle A - 3", "Demo container move has wrong locations")
     require(move.movement and frappe.db.exists("Three PL Container Movement", move.movement), "Demo container move is not linked to movement history")
+    storage_container = frappe.get_doc("Three PL Container", "BOX-ALPHA-002")
+    require(storage_container.current_warehouse == "Aisle A - 3", "Applied container move did not update container location")
+    require(storage_container.status == "Stored", "Applied container move did not update container status")
 
     notice = frappe.get_doc("Inbound Shipment Notice", notice_name)
     require(
