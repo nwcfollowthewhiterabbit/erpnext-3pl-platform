@@ -59,6 +59,12 @@ server {
         return 302 /desk/3pl-warehouse;
     }
 
+    location = /docs/erpnext-3pl-demo-use-cases-ru.pdf {
+        alias /opt/erpnext-3pl-platform/docs/erpnext-3pl-demo-use-cases-ru.pdf;
+        default_type application/pdf;
+        add_header Content-Disposition "attachment; filename=erpnext-3pl-demo-use-cases-ru.pdf";
+    }
+
     proxy_set_header Host \$host;
     proxy_set_header X-Real-IP \$remote_addr;
     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
