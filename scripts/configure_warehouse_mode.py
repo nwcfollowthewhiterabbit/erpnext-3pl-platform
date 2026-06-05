@@ -238,6 +238,7 @@ def configure_workspaces():
                 {"type": "Report", "link_to": "3PL ASN vs Received", "label": "ASN vs Received", "report_ref_doctype": "Inbound Shipment Notice"},
                 {"type": "Report", "link_to": "3PL Receiving Discrepancies", "label": "Receiving Discrepancies", "report_ref_doctype": "Inbound Shipment Notice"},
                 {"type": "Report", "link_to": "3PL Containers", "label": "Containers Report", "report_ref_doctype": "Three PL Container"},
+                {"type": "Report", "link_to": "3PL Container Movements", "label": "Container Movements", "report_ref_doctype": "Three PL Container Movement"},
                 {"type": "Report", "link_to": "3PL Client Inventory", "label": "Client Inventory", "report_ref_doctype": "Three PL Inventory Snapshot"},
                 {"type": "DocType", "link_to": "Three PL Client Instruction", "doc_view": "List", "label": "Client Instructions"},
                 {"type": "DocType", "link_to": "Item", "doc_view": "List", "label": "Items"},
@@ -258,6 +259,7 @@ def configure_workspaces():
                 {"type": "Link", "label": "ASN vs Received", "link_type": "Report", "link_to": "3PL ASN vs Received", "is_query_report": 1},
                 {"type": "Link", "label": "Receiving Discrepancies", "link_type": "Report", "link_to": "3PL Receiving Discrepancies", "is_query_report": 1},
                 {"type": "Link", "label": "Containers Report", "link_type": "Report", "link_to": "3PL Containers", "is_query_report": 1},
+                {"type": "Link", "label": "Container Movements", "link_type": "Report", "link_to": "3PL Container Movements", "is_query_report": 1},
                 {"type": "Link", "label": "Stock Balance", "link_type": "Report", "link_to": "Stock Balance", "is_query_report": 1},
                 {"type": "Link", "label": "Stock Ledger", "link_type": "Report", "link_to": "Stock Ledger", "is_query_report": 1},
             ],
@@ -660,6 +662,35 @@ def configure_custom_doctypes():
             ],
         },
         {
+            "name": "Three PL Container Movement",
+            "module": "Stock",
+            "custom": 1,
+            "track_changes": 1,
+            "title_field": "container_code",
+            "autoname": "naming_series:",
+            "fields": [
+                {"fieldname": "naming_series", "label": "Series", "fieldtype": "Select", "options": "HU-MOV-.YYYY.-.#####", "default": "HU-MOV-.YYYY.-.#####", "reqd": 1},
+                {"fieldname": "movement_datetime", "label": "Movement Time", "fieldtype": "Datetime", "default": "Now", "reqd": 1, "in_list_view": 1},
+                {"fieldname": "container_code", "label": "Container / Handling Unit", "fieldtype": "Link", "options": "Three PL Container", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "client", "label": "Client", "fieldtype": "Link", "options": "Customer", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "movement_type", "label": "Movement Type", "fieldtype": "Select", "options": "Expected\nReceived\nMoved\nPutaway\nPicked\nPacked\nShipped\nRepacked\nAdjusted", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "location_section", "label": "Location", "fieldtype": "Section Break"},
+                {"fieldname": "from_warehouse", "label": "From Location", "fieldtype": "Link", "options": "Warehouse", "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "to_warehouse", "label": "To Location", "fieldtype": "Link", "options": "Warehouse", "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "container_section", "label": "Container Relation", "fieldtype": "Section Break"},
+                {"fieldname": "from_container", "label": "From Container", "fieldtype": "Link", "options": "Three PL Container"},
+                {"fieldname": "to_container", "label": "To Container", "fieldtype": "Link", "options": "Three PL Container"},
+                {"fieldname": "reference_section", "label": "Reference", "fieldtype": "Section Break"},
+                {"fieldname": "reference_doctype", "label": "Reference DocType", "fieldtype": "Link", "options": "DocType"},
+                {"fieldname": "reference_name", "label": "Reference Name", "fieldtype": "Dynamic Link", "options": "reference_doctype"},
+                {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
+            ],
+            "permissions": warehouse_permissions
+            + [
+                {"role": "Stock User", "read": 1, "write": 1, "create": 1, "report": 1},
+            ],
+        },
+        {
             "name": "Three PL Shipment Request",
             "module": "Stock",
             "custom": 1,
@@ -738,6 +769,7 @@ def configure_custom_doctypes():
         "Web Form": {"read": 1},
         "Three PL Container": {"read": 1},
         "Three PL Container Item": {"read": 1},
+        "Three PL Container Movement": {"read": 1},
         "Three PL Inventory Snapshot": {"read": 1},
         "Three PL Shipment Request": {"read": 1, "write": 1, "create": 1},
         "Three PL Shipment Request Item": {"read": 1, "write": 1, "create": 1},
@@ -1259,6 +1291,26 @@ select
 from `tabThree PL Shipment Request` sr
 left join `tabThree PL Shipment Request Item` item on item.parent = sr.name
 order by sr.creation desc, item.idx asc
+""".strip(),
+        },
+        "3PL Container Movements": {
+            "ref_doctype": "Three PL Container Movement",
+            "query": """
+select
+    m.name as "Movement:Link/Three PL Container Movement:160",
+    m.movement_datetime as "Movement Time:Datetime:160",
+    m.container_code as "Container / HU:Link/Three PL Container:150",
+    m.client as "Client:Link/Customer:170",
+    m.movement_type as "Type:Data:110",
+    m.from_warehouse as "From Location:Link/Warehouse:180",
+    m.to_warehouse as "To Location:Link/Warehouse:180",
+    m.from_container as "From Container:Link/Three PL Container:150",
+    m.to_container as "To Container:Link/Three PL Container:150",
+    m.reference_doctype as "Reference Type:Data:140",
+    m.reference_name as "Reference:Dynamic Link/reference_doctype:170",
+    m.notes as "Notes:Small Text:240"
+from `tabThree PL Container Movement` m
+order by m.movement_datetime desc, m.creation desc
 """.strip(),
         },
         "3PL Client Inventory": {

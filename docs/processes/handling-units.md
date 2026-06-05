@@ -23,6 +23,21 @@ It stores:
 - last moved timestamp;
 - item rows with SKU, client SKU, quantity, UOM, and condition.
 
+Handling Unit movements are stored in `Three PL Container Movement`.
+
+Movement records store:
+
+- movement time;
+- container / Handling Unit;
+- client;
+- movement type;
+- source location;
+- target location;
+- source container;
+- target container;
+- reference document;
+- notes.
+
 Lifecycle statuses:
 
 - Expected
@@ -58,20 +73,22 @@ Example:
 ## Implemented
 
 - Handling Unit DocType exists as `Three PL Container`.
+- Movement history DocType exists as `Three PL Container Movement`.
 - Container fields and statuses are created by `scripts/configure_warehouse_mode.py`.
 - Demo containers are loaded by `scripts/load_demo_warehouse_data.py`.
-- Validation checks required fields and statuses in `scripts/validate_site.py`.
-- Reports include container references through `3PL Containers` and related receiving/inventory reports.
+- Demo movement records are loaded for received and putaway containers.
+- Validation checks required fields, statuses, movement history, and reports in `scripts/validate_site.py`.
+- Reports include container references through `3PL Containers`, `3PL Container Movements`, and related receiving/inventory reports.
 
 ## Not Automated Yet
 
-- Container movement history.
 - Repack flow, for example two small boxes replaced by one larger box.
 - Split/merge validation.
 - Lifecycle transition buttons and guards.
 - Scanner-first mobile page.
+- Automatic movement generation after every stock or container movement.
 - Automatic inventory snapshot recalculation after every stock or container movement.
 
 ## Client Feedback Wording
 
-Standard ERPNext gives us the core stock operations, but not a full Handling Unit module for 3PL warehouse work. We are implementing Handling Units as `Three PL Container`: a custom layer for boxes, cartons, pallets, barcodes, current location, contents, status, and future repack/movement history. This approach lets us stay close to ERPNext stock workflows without modifying core ERPNext logic.
+Standard ERPNext gives us the core stock operations, but not a full Handling Unit module for 3PL warehouse work. We are implementing Handling Units as `Three PL Container`: a custom layer for boxes, cartons, pallets, barcodes, current location, contents, status, and movement history. This approach lets us stay close to ERPNext stock workflows without modifying core ERPNext logic.

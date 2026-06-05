@@ -18,13 +18,16 @@ Implemented:
 - `Three PL Container` exists.
 - Basic lifecycle fields are defined.
 - Demo containers exist.
+- `Three PL Container Movement` exists.
+- Demo received and putaway movement records exist.
 - Reports show containers.
+- Reports show container movement history.
 
 Open:
 
 - real location naming convention;
 - repack workflow;
-- container movement history;
+- automatic container movement generation;
 - scanner/mobile UX;
 - automatic inventory snapshot updates.
 

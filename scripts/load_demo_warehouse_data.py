@@ -346,6 +346,53 @@ def ensure_alpha_storage_container():
     return container
 
 
+def ensure_container_movement(container_code, movement_type, to_warehouse, from_warehouse=None, reference_doctype=None, reference_name=None, notes=None):
+    existing = frappe.db.get_value(
+        "Three PL Container Movement",
+        {
+            "container_code": container_code,
+            "movement_type": movement_type,
+            "from_warehouse": from_warehouse,
+            "to_warehouse": to_warehouse,
+            "reference_doctype": reference_doctype,
+            "reference_name": reference_name,
+        },
+        "name",
+    )
+    movement = frappe.get_doc("Three PL Container Movement", existing) if existing else frappe.new_doc("Three PL Container Movement")
+    container = frappe.get_doc("Three PL Container", container_code)
+
+    movement.movement_datetime = now()
+    movement.container_code = container_code
+    movement.client = container.client
+    movement.movement_type = movement_type
+    movement.from_warehouse = from_warehouse
+    movement.to_warehouse = to_warehouse
+    movement.reference_doctype = reference_doctype
+    movement.reference_name = reference_name
+    movement.notes = notes
+    movement.save(ignore_permissions=True)
+    return movement
+
+
+def ensure_demo_container_movements(notice_name):
+    ensure_container_movement(
+        "BOX-ALPHA-001",
+        "Received",
+        "Temporary Receiving - 3",
+        reference_doctype="Inbound Shipment Notice",
+        reference_name=notice_name,
+        notes="Demo movement: container received into temporary receiving for verification.",
+    )
+    ensure_container_movement(
+        "BOX-ALPHA-002",
+        "Putaway",
+        "Aisle A - 3",
+        from_warehouse="Temporary Receiving - 3",
+        notes="Demo movement: container moved from receiving into storage.",
+    )
+
+
 def ensure_stock_entry(notice_name):
     name = "DEMO-RECEIVING-ALPHA-001"
     if frappe.db.exists("Stock Entry", name):
@@ -657,6 +704,7 @@ def main():
     ensure_beta_inbound_notice()
     ensure_container(notice.name)
     ensure_alpha_storage_container()
+    ensure_demo_container_movements(notice.name)
     notice = frappe.get_doc("Inbound Shipment Notice", notice.name)
     sync_notice_details(notice)
     ensure_stock_entry(notice.name)

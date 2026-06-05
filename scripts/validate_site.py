@@ -31,6 +31,7 @@ REQUIRED_DOCTYPES = [
     "Inbound Shipment Discrepancy",
     "Three PL Container",
     "Three PL Container Item",
+    "Three PL Container Movement",
     "Three PL Inventory Snapshot",
     "Three PL Shipment Request",
     "Three PL Shipment Request Item",
@@ -62,7 +63,26 @@ REQUIRED_CONTAINER_STATUSES = {
     "Closed",
     "Replaced",
 }
-REQUIRED_REPORTS = ["3PL ASN vs Received", "3PL Receiving Discrepancies", "3PL Containers", "3PL Shipment Requests", "3PL Client Inventory"]
+REQUIRED_CONTAINER_MOVEMENT_FIELDS = {
+    "movement_datetime",
+    "container_code",
+    "client",
+    "movement_type",
+    "from_warehouse",
+    "to_warehouse",
+    "from_container",
+    "to_container",
+    "reference_doctype",
+    "reference_name",
+}
+REQUIRED_REPORTS = [
+    "3PL ASN vs Received",
+    "3PL Receiving Discrepancies",
+    "3PL Containers",
+    "3PL Container Movements",
+    "3PL Shipment Requests",
+    "3PL Client Inventory",
+]
 REQUIRED_CUSTOM_FIELDS = [
     "Item-owner_client",
     "Item-client_sku",
@@ -151,6 +171,9 @@ def main():
     require(status_field, "Three PL Container misses status field")
     status_options = set((status_field.options or "").splitlines())
     require(status_options >= REQUIRED_CONTAINER_STATUSES, "Three PL Container misses Handling Unit statuses")
+    movement_meta = frappe.get_meta("Three PL Container Movement")
+    movement_fields = {field.fieldname for field in movement_meta.fields}
+    require(movement_fields >= REQUIRED_CONTAINER_MOVEMENT_FIELDS, "Three PL Container Movement misses required fields")
 
     for report in REQUIRED_REPORTS:
         require(frappe.db.exists("Report", report), f"Missing Report: {report}")
@@ -233,7 +256,7 @@ def main():
         "Missing client Contact link",
     )
 
-    for doctype in ("Inbound Shipment Notice", "Three PL Container"):
+    for doctype in ("Inbound Shipment Notice", "Three PL Container", "Three PL Container Movement"):
         require_role_perm(doctype, "3PL Warehouse User", read=1, write=1, create=1)
         require_role_perm(doctype, "3PL Warehouse Manager", read=1, write=1, create=1, delete=1)
         require_role_perm(doctype, "System Manager", read=1, write=1, create=1, delete=1)
@@ -247,6 +270,7 @@ def main():
     require_role_perm("Web Form", "3PL Client", read=1)
     require_role_perm("Three PL Container", "3PL Client", read=1)
     require_role_perm("Three PL Container Item", "3PL Client", read=1)
+    require_role_perm("Three PL Container Movement", "3PL Client", read=1)
     require_role_perm("Three PL Inventory Snapshot", "3PL Client", read=1)
     require_role_perm("Three PL Shipment Request", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Three PL Shipment Request Item", "3PL Client", read=1, write=1, create=1)
@@ -283,6 +307,20 @@ def main():
     require(container.current_warehouse == "Temporary Receiving - 3", "Demo container has wrong location")
     require(container.inbound_shipment_notice == notice_name, "Demo container is not linked to demo ASN")
     require(any(row.item_code == "SKU-ALPHA-002" and row.qty == 24 for row in container.items), "Demo container misses expected item row")
+    require(
+        frappe.db.exists(
+            "Three PL Container Movement",
+            {"container_code": "BOX-ALPHA-001", "movement_type": "Received", "to_warehouse": "Temporary Receiving - 3"},
+        ),
+        "Missing demo received container movement",
+    )
+    require(
+        frappe.db.exists(
+            "Three PL Container Movement",
+            {"container_code": "BOX-ALPHA-002", "movement_type": "Putaway", "to_warehouse": "Aisle A - 3"},
+        ),
+        "Missing demo putaway container movement",
+    )
 
     notice = frappe.get_doc("Inbound Shipment Notice", notice_name)
     require(
