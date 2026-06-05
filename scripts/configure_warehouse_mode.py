@@ -234,6 +234,7 @@ def configure_workspaces():
                 {"type": "DocType", "link_to": "Three PL Container", "doc_view": "List", "label": "Containers"},
                 {"type": "DocType", "link_to": "Three PL Container Move", "doc_view": "List", "label": "Container Moves"},
                 {"type": "DocType", "link_to": "Three PL Container Repack", "doc_view": "List", "label": "Container Repacks"},
+                {"type": "URL", "url": "/warehouse/container-move", "label": "Scan Container Move"},
                 {"type": "DocType", "link_to": "Stock Entry", "doc_view": "List", "label": "Stock Entries"},
                 {"type": "DocType", "link_to": "Pick List", "doc_view": "List", "label": "Pick Lists"},
                 {"type": "DocType", "link_to": "Three PL Shipment Request", "doc_view": "List", "label": "Shipment Requests"},
@@ -255,6 +256,7 @@ def configure_workspaces():
                 {"type": "Link", "label": "Receiving Notices", "link_type": "DocType", "link_to": "Inbound Shipment Notice"},
                 {"type": "Link", "label": "Container Moves", "link_type": "DocType", "link_to": "Three PL Container Move"},
                 {"type": "Link", "label": "Container Repacks", "link_type": "DocType", "link_to": "Three PL Container Repack"},
+                {"type": "Link", "label": "Scan Container Move", "link_type": "URL", "url": "/warehouse/container-move"},
                 {"type": "Link", "label": "Stock Entries", "link_type": "DocType", "link_to": "Stock Entry"},
                 {"type": "Link", "label": "ASN vs Received", "link_type": "Report", "link_to": "3PL ASN vs Received", "is_query_report": 1},
                 {"type": "Link", "label": "Receiving Discrepancies", "link_type": "Report", "link_to": "3PL Receiving Discrepancies", "is_query_report": 1},
@@ -1484,6 +1486,114 @@ order by inv.customer asc, inv.item_code asc
         report.save(ignore_permissions=True)
 
 
+def configure_scanner_pages():
+    html = """
+<section class="container py-4" style="max-width: 760px;">
+  <h1 class="h3 mb-3">Container Move</h1>
+  <div class="mb-3">
+    <label class="form-label" for="container-code">Container / HU</label>
+    <input class="form-control" id="container-code" autocomplete="off" autofocus>
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="target-location">Target Location</label>
+    <input class="form-control" id="target-location" autocomplete="off">
+  </div>
+  <div class="d-flex gap-2 align-items-center">
+    <button class="btn btn-primary" id="create-move" type="button">Create Move</button>
+    <span class="text-muted small" id="move-status"></span>
+  </div>
+</section>
+""".strip()
+    script = """
+(function () {
+  function byId(id) { return document.getElementById(id); }
+  function setStatus(message, isError) {
+    var target = byId('move-status');
+    if (!target) return;
+    target.textContent = message || '';
+    target.className = isError ? 'text-danger small' : 'text-muted small';
+  }
+  function api(method, args) {
+    return frappe.call({ method: method, args: args || {} });
+  }
+  function getValue(doctype, filters, fieldname) {
+    return api('frappe.client.get_value', { doctype: doctype, filters: filters, fieldname: fieldname });
+  }
+  function insertMove(doc) {
+    return api('frappe.client.insert', { doc: doc });
+  }
+  function createMove() {
+    var containerCode = (byId('container-code').value || '').trim();
+    var targetLocation = (byId('target-location').value || '').trim();
+    if (!containerCode || !targetLocation) {
+      setStatus('Scan container and target location first.', true);
+      return;
+    }
+    setStatus('Creating move...', false);
+    getValue('Three PL Container', { name: containerCode }, ['client', 'current_warehouse']).then(function (containerResponse) {
+      var container = containerResponse.message;
+      if (!container || !container.client) throw new Error('Container not found.');
+      if (container.current_warehouse === targetLocation) throw new Error('Target location is the current location.');
+      return getValue('Warehouse', { name: targetLocation }, 'name').then(function (warehouseResponse) {
+        if (!warehouseResponse.message || !warehouseResponse.message.name) throw new Error('Target location not found.');
+        var reference = 'MOVE-' + containerCode + '-' + Date.now();
+        return insertMove({
+          doctype: 'Three PL Container Move',
+          operation_reference: reference,
+          operation_datetime: frappe.datetime.now_datetime(),
+          status: 'Draft',
+          container_code: containerCode,
+          client: container.client,
+          from_warehouse: container.current_warehouse,
+          to_warehouse: targetLocation,
+          notes: 'Created from scanner-first container move page.'
+        });
+      });
+    }).then(function (insertResponse) {
+      var name = insertResponse.message && insertResponse.message.name;
+      setStatus('Draft move created: ' + name + '. It will be applied by the move processor.', false);
+      byId('container-code').value = '';
+      byId('target-location').value = '';
+      byId('container-code').focus();
+    }).catch(function (error) {
+      setStatus(error.message || 'Could not create move.', true);
+    });
+  }
+  frappe.ready(function () {
+    var button = byId('create-move');
+    if (button) button.addEventListener('click', createMove);
+    ['container-code', 'target-location'].forEach(function (id) {
+      var input = byId(id);
+      if (input) input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          if (id === 'container-code') byId('target-location').focus();
+          else createMove();
+        }
+      });
+    });
+  });
+})();
+""".strip()
+
+    if frappe.db.exists("Web Page", "warehouse/container-move"):
+        page = frappe.get_doc("Web Page", "warehouse/container-move")
+    else:
+        page = frappe.new_doc("Web Page")
+        page.name = "warehouse/container-move"
+
+    page.title = "Container Move"
+    page.route = "warehouse/container-move"
+    page.published = 1
+    page.login_required = 1
+    page.content_type = "HTML"
+    page.main_section = html
+    page.javascript = script
+    page.insert_code = 0
+    page.show_sidebar = 0
+    page.save(ignore_permissions=True)
+
+
 def configure_defaults():
     settings = frappe.get_single("Stock Settings")
     settings.item_naming_by = "Item Code"
@@ -1540,6 +1650,7 @@ def main():
     configure_client_portal()
     configure_reports()
     configure_workspaces()
+    configure_scanner_pages()
     configure_defaults()
     configure_email_placeholder()
     mark_setup_complete()

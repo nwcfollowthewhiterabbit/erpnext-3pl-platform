@@ -72,6 +72,19 @@ cd /home/frappe/frappe-bench
 
 The post-deploy script already copies and runs this processor.
 
+## Scanner-First Page
+
+The repository creates a minimal scanner page:
+
+`/warehouse/container-move`
+
+The page lets a warehouse user scan or enter:
+
+- container / HU;
+- target location.
+
+It creates a Draft `Three PL Container Move`. The versioned processor applies pending moves.
+
 ## Related Reports
 
 - `3PL Container Moves`

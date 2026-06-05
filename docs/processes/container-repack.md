@@ -49,6 +49,7 @@ Demo operation:
 
 - validates source container ownership;
 - rejects shipped, closed, or already replaced source containers;
+- validates that source item quantities match target item quantities;
 - creates or updates the target container;
 - copies resulting item rows into the target container;
 - marks source containers as `Replaced`;
@@ -62,11 +63,9 @@ This is a controlled MVP repack flow. It applies the resulting contents entered 
 
 Still pending:
 
-- strict quantity reconciliation between source contents and target contents;
-- item-level split validation;
-- scanner-first UI;
+- scanner-first UI for repack;
 - ERPNext form submit-time automation;
-- inventory snapshot recalculation.
+- richer item-level split guidance for partial repacks.
 
 ## Target Flow
 

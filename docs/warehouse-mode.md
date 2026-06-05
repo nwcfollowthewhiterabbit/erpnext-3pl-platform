@@ -120,6 +120,8 @@ Implemented:
 - Container movement history is stored in `Three PL Container Movement`.
 - Draft container moves can be applied by `scripts/apply_container_moves.py`.
 - Draft container repacks can be applied by `scripts/apply_container_repacks.py`.
+- Inventory snapshots can be synchronized from active containers by `scripts/sync_inventory_snapshots.py`.
+- Minimal scanner-first container move page is available at `/warehouse/container-move`.
 - Container links exist in receiving, putaway, picking, packing, and inventory snapshot contexts.
 - Reports include container references and movement history where relevant.
 

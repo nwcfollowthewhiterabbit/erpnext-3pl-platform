@@ -215,6 +215,11 @@ def main():
         if report_doc.report_type == "Query Report":
             frappe.db.sql(report_doc.query)
 
+    require(frappe.db.exists("Web Page", "warehouse/container-move"), "Missing scanner container move Web Page")
+    scanner_page = frappe.get_doc("Web Page", "warehouse/container-move")
+    require(scanner_page.published == 1, "Scanner container move Web Page is not published")
+    require(scanner_page.login_required == 1, "Scanner container move Web Page must require login")
+
     for custom_field in REQUIRED_CUSTOM_FIELDS:
         require(frappe.db.exists("Custom Field", custom_field), f"Missing Custom Field: {custom_field}")
 
@@ -389,7 +394,24 @@ def main():
         any(row.discrepancy_type == "Quantity Difference" and row.item_code == "SKU-ALPHA-002" and row.variance_qty == -1 for row in notice.discrepancies),
         "Demo ASN misses quantity discrepancy",
     )
-    require(frappe.db.exists("Three PL Inventory Snapshot", {"customer": "Demo Client Alpha", "item_code": "SKU-ALPHA-001"}), "Missing demo client inventory snapshot")
+    require(
+        frappe.db.exists(
+            "Three PL Inventory Snapshot",
+            {"customer": "Demo Client Alpha", "item_code": "SKU-ALPHA-001", "container_code": "BOX-ALPHA-001", "warehouse": "Temporary Receiving - 3", "status": "Receiving"},
+        ),
+        "Missing synced receiving inventory snapshot",
+    )
+    require(
+        frappe.db.exists(
+            "Three PL Inventory Snapshot",
+            {"customer": "Demo Client Alpha", "item_code": "SKU-ALPHA-003", "container_code": "BOX-ALPHA-005", "warehouse": "Aisle A - 3", "status": "Available"},
+        ),
+        "Missing synced repack target inventory snapshot",
+    )
+    require(
+        not frappe.db.exists("Three PL Inventory Snapshot", {"container_code": ("in", ["BOX-ALPHA-003", "BOX-ALPHA-004"])}),
+        "Stale source container inventory snapshots were not removed",
+    )
     require(frappe.db.exists("Three PL Inventory Snapshot", {"customer": "Demo Client Beta", "item_code": "SKU-BETA-001"}), "Missing demo beta inventory snapshot")
     require(frappe.db.exists("Inbound Shipment Notice", {"customer": "Demo Client Beta", "external_reference": "ASN-BETA-001"}), "Missing demo beta ASN")
     require(frappe.db.exists("Three PL Shipment Request", {"customer": "Demo Client Alpha", "external_reference": "SHIP-ALPHA-001"}), "Missing demo shipment request")

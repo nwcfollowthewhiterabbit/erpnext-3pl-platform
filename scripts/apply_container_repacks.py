@@ -2,6 +2,36 @@ import frappe
 from frappe.utils import now
 
 
+def item_qty_key(row):
+    return (row.item_code, row.uom, row.condition_status or "OK")
+
+
+def sum_container_items(containers):
+    totals = {}
+    for container in containers:
+        for row in container.items:
+            key = item_qty_key(row)
+            totals[key] = totals.get(key, 0) + row.qty
+    return totals
+
+
+def sum_repack_items(repack):
+    totals = {}
+    for row in repack.items:
+        key = item_qty_key(row)
+        totals[key] = totals.get(key, 0) + row.qty
+    return totals
+
+
+def validate_repack_quantities(repack, source_containers):
+    source_totals = sum_container_items(source_containers)
+    target_totals = sum_repack_items(repack)
+    if source_totals != target_totals:
+        raise RuntimeError(
+            f"Container repack {repack.name} quantity mismatch: source={source_totals}, target={target_totals}"
+        )
+
+
 def create_movement_for_repack(repack):
     source_names = [row.source_container for row in repack.source_containers]
     movement = frappe.new_doc("Three PL Container Movement")
@@ -31,6 +61,7 @@ def apply_repack(repack):
             raise RuntimeError(f"Source container {container.name} belongs to {container.client}, not {repack.client}")
         if container.status in {"Shipped", "Closed", "Replaced"}:
             raise RuntimeError(f"Source container {container.name} cannot be repacked from status {container.status}")
+    validate_repack_quantities(repack, source_containers)
 
     if frappe.db.exists("Three PL Container", repack.target_container):
         target = frappe.get_doc("Three PL Container", repack.target_container)

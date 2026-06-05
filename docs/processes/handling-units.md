@@ -81,6 +81,8 @@ Example:
 - Demo movement records are loaded for received and putaway containers.
 - Demo move operation `MOVE-ALPHA-001` is applied by `scripts/apply_container_moves.py`.
 - Demo repack operation `REPACK-ALPHA-001` is applied by `scripts/apply_container_repacks.py`.
+- Inventory snapshots are synchronized from active containers by `scripts/sync_inventory_snapshots.py`.
+- Minimal scanner-first container move page exists at `/warehouse/container-move`.
 - Validation checks required fields, statuses, movement history, and reports in `scripts/validate_site.py`.
 - Reports include container references through `3PL Containers`, `3PL Container Moves`, `3PL Container Repacks`, `3PL Container Movements`, and related receiving/inventory reports.
 
@@ -88,9 +90,8 @@ Example:
 
 - Split/merge validation.
 - Lifecycle transition buttons and guards.
-- Scanner-first mobile page.
 - Submit-time automation that applies `Three PL Container Move` directly from the ERPNext form.
-- Automatic inventory snapshot recalculation after every stock or container movement.
+- Scanner-first UI for repack and picking.
 
 ## Client Feedback Wording
 
