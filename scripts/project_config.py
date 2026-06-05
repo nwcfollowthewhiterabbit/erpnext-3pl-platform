@@ -1,3 +1,13 @@
+import os
+
+
+def required_env(name):
+    value = os.environ.get(name)
+    if not value:
+        raise RuntimeError(f"Missing required environment variable: {name}")
+    return value
+
+
 COMPANY = "3pl"
 COMPANY_ABBR = "3"
 COUNTRY = "Lithuania"
@@ -7,17 +17,17 @@ TIME_ZONE = "Europe/Vilnius"
 PLACEHOLDER_EMAIL = "noreply@example.invalid"
 
 CLIENT_PORTAL_USER = "alpha.client@example.test"
-CLIENT_PORTAL_PASSWORD = "AlphaClient2026!"
+CLIENT_PORTAL_PASSWORD = required_env("CLIENT_PORTAL_PASSWORD")
 CLIENT_PORTAL_CUSTOMER = "Demo Client Alpha"
 CLIENT_PORTAL_RECEIVING_ROUTE = "client/receiving-notice"
 CLIENT_PORTAL_HOME = f"{CLIENT_PORTAL_RECEIVING_ROUTE}/list"
 
 WAREHOUSE_OPERATOR_USER = "warehouse.demo@example.test"
-WAREHOUSE_OPERATOR_PASSWORD = "WarehouseDemo2026!"
+WAREHOUSE_OPERATOR_PASSWORD = required_env("WAREHOUSE_OPERATOR_PASSWORD")
 WAREHOUSE_MANAGER_USER = "warehouse.manager@example.test"
-WAREHOUSE_MANAGER_PASSWORD = "WarehouseManager2026!"
-BUSINESS_OWNER_USER = "rupusm@gmail.com"
-BUSINESS_OWNER_PASSWORD = "6elz4oeiuUGAHSGRccwngNmb"
+WAREHOUSE_MANAGER_PASSWORD = required_env("WAREHOUSE_MANAGER_PASSWORD")
+BUSINESS_OWNER_USER = os.environ.get("BUSINESS_OWNER_USER", "business.owner@example.test")
+BUSINESS_OWNER_PASSWORD = required_env("BUSINESS_OWNER_PASSWORD")
 
 DEMO_CLIENTS = ["Demo Client Alpha", "Demo Client Beta"]
 

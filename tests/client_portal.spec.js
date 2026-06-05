@@ -2,7 +2,11 @@ const { test, expect } = require("@playwright/test");
 
 const baseURL = process.env.CLIENT_PORTAL_BASE_URL || "https://erpnext.77.237.244.169.sslip.io";
 const clientUser = process.env.CLIENT_PORTAL_USER || "alpha.client@example.test";
-const clientPassword = process.env.CLIENT_PORTAL_PASSWORD || "AlphaClient2026!";
+const clientPassword = process.env.CLIENT_PORTAL_PASSWORD;
+
+if (!clientPassword) {
+  throw new Error("CLIENT_PORTAL_PASSWORD must be set in the environment");
+}
 
 const portalPages = [
   "/client/receiving-notice/list",

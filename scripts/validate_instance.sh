@@ -16,6 +16,11 @@ set +a
 
 stack_name="${STACK_NAME:?set STACK_NAME}"
 site_name="${SITE_NAME:?set SITE_NAME}"
+warehouse_operator_password="${WAREHOUSE_OPERATOR_PASSWORD:?set WAREHOUSE_OPERATOR_PASSWORD}"
+warehouse_manager_password="${WAREHOUSE_MANAGER_PASSWORD:?set WAREHOUSE_MANAGER_PASSWORD}"
+business_owner_user="${BUSINESS_OWNER_USER:?set BUSINESS_OWNER_USER}"
+business_owner_password="${BUSINESS_OWNER_PASSWORD:?set BUSINESS_OWNER_PASSWORD}"
+client_portal_password="${CLIENT_PORTAL_PASSWORD:?set CLIENT_PORTAL_PASSWORD}"
 
 if [ -z "$base_url" ]; then
   base_url="http://127.0.0.1:${FRONTEND_PORT:-8080}"
@@ -49,7 +54,13 @@ fi
 docker cp scripts/run_project_script.py "$backend_cid":/tmp/run_project_script.py
 docker cp scripts/project_config.py "$backend_cid":/tmp/project_config.py
 docker cp scripts/validate_site.py "$backend_cid":/tmp/validate_site.py
-docker exec "$backend_cid" bash -lc \
+docker exec \
+  -e "WAREHOUSE_OPERATOR_PASSWORD=${warehouse_operator_password}" \
+  -e "WAREHOUSE_MANAGER_PASSWORD=${warehouse_manager_password}" \
+  -e "BUSINESS_OWNER_USER=${business_owner_user}" \
+  -e "BUSINESS_OWNER_PASSWORD=${business_owner_password}" \
+  -e "CLIENT_PORTAL_PASSWORD=${client_portal_password}" \
+  "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/validate_site.py 0"
 
 check_login() {
@@ -115,7 +126,7 @@ PY
       check_redirect_target "/desk"
       ;;
   esac
-  if [ "$user" = "rupusm@gmail.com" ]; then
+  if [ "$user" = "$business_owner_user" ]; then
     check_page "/app/item"
     check_page "/app/warehouse"
     check_page "/app/uom"
@@ -128,9 +139,9 @@ PY
   rm -f "$cookie_file" "$response_file" "$page_file"
 }
 
-check_login "warehouse.demo@example.test" "WarehouseDemo2026!"
-check_login "warehouse.manager@example.test" "WarehouseManager2026!"
-check_login "rupusm@gmail.com" "6elz4oeiuUGAHSGRccwngNmb"
+check_login "warehouse.demo@example.test" "$warehouse_operator_password"
+check_login "warehouse.manager@example.test" "$warehouse_manager_password"
+check_login "$business_owner_user" "$business_owner_password"
 
 check_portal_login() {
   user="$1"
@@ -177,7 +188,7 @@ PY
   rm -f "$cookie_file" "$response_file" "$page_file"
 }
 
-check_portal_login "alpha.client@example.test" "AlphaClient2026!"
+check_portal_login "alpha.client@example.test" "$client_portal_password"
 
 expect_redirect() {
   path="$1"

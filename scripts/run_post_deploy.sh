@@ -29,14 +29,22 @@ docker cp scripts/configure_warehouse_mode.py "$backend_cid":/tmp/configure_ware
 docker cp scripts/create_demo_users.py "$backend_cid":/tmp/create_demo_users.py
 docker cp scripts/load_demo_warehouse_data.py "$backend_cid":/tmp/load_demo_warehouse_data.py
 
+project_env=(
+  -e "WAREHOUSE_OPERATOR_PASSWORD=${WAREHOUSE_OPERATOR_PASSWORD:?set WAREHOUSE_OPERATOR_PASSWORD}"
+  -e "WAREHOUSE_MANAGER_PASSWORD=${WAREHOUSE_MANAGER_PASSWORD:?set WAREHOUSE_MANAGER_PASSWORD}"
+  -e "BUSINESS_OWNER_USER=${BUSINESS_OWNER_USER:?set BUSINESS_OWNER_USER}"
+  -e "BUSINESS_OWNER_PASSWORD=${BUSINESS_OWNER_PASSWORD:?set BUSINESS_OWNER_PASSWORD}"
+  -e "CLIENT_PORTAL_PASSWORD=${CLIENT_PORTAL_PASSWORD:?set CLIENT_PORTAL_PASSWORD}"
+)
+
 docker exec -u root "$backend_cid" bash -lc \
   "mkdir -p /home/frappe/logs /home/frappe/frappe-bench/sites/${site_name}/logs && chown -R frappe:frappe /home/frappe/logs /home/frappe/frappe-bench/sites/${site_name}/logs"
 
-docker exec "$backend_cid" bash -lc \
+docker exec "${project_env[@]}" "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/configure_warehouse_mode.py 0"
-docker exec "$backend_cid" bash -lc \
+docker exec "${project_env[@]}" "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/create_demo_users.py 1"
-docker exec "$backend_cid" bash -lc \
+docker exec "${project_env[@]}" "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/load_demo_warehouse_data.py 1"
 docker exec "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && bench --site ${site_name} clear-cache"

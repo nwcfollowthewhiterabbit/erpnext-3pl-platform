@@ -11,22 +11,22 @@ Use this guide for the current ERPNext 3PL test instance.
 ### Warehouse Operator
 
 - Login: `warehouse.demo@example.test`
-- Password: `WarehouseDemo2026!`
+- Password: `see WAREHOUSE_OPERATOR_PASSWORD in .env`
 - Purpose: receiving, stock entries, pick lists, basic warehouse operations.
 - Not intended for system setup or master-data administration.
 
 ### Warehouse Manager
 
 - Login: `warehouse.manager@example.test`
-- Password: `WarehouseManager2026!`
+- Password: `see WAREHOUSE_MANAGER_PASSWORD in .env`
 - Purpose: warehouse operations with manager-level stock rights.
 - Can work with receiving, stock entries, and pick lists.
 - Currently has read access to products and warehouses, but does not create product/location master data.
 
 ### Business Owner
 
-- Login: `rupusm@gmail.com`
-- Password: `6elz4oeiuUGAHSGRccwngNmb`
+- Login: `see BUSINESS_OWNER_USER in .env`
+- Password: `see BUSINESS_OWNER_PASSWORD in .env`
 - Purpose: owner-level testing and system setup.
 - Can create/edit warehouses, products, item groups, UOMs, users, roles, and stock documents.
 - Starts in the warehouse interface but has broad system permissions.
@@ -34,7 +34,7 @@ Use this guide for the current ERPNext 3PL test instance.
 ### Client Portal User
 
 - Login: `alpha.client@example.test`
-- Password: `AlphaClient2026!`
+- Password: `see CLIENT_PORTAL_PASSWORD in .env`
 - Purpose: client-side Receiving Notice testing.
 - Linked customer: `Demo Client Alpha`.
 - Uses the client portal, not ERPNext Desk.
