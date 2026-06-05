@@ -1574,8 +1574,9 @@ def configure_scanner_pages():
 })();
 """.strip()
 
-    if frappe.db.exists("Web Page", "warehouse/container-move"):
-        page = frappe.get_doc("Web Page", "warehouse/container-move")
+    existing_page = frappe.db.get_value("Web Page", {"route": "warehouse/container-move"}, "name")
+    if existing_page:
+        page = frappe.get_doc("Web Page", existing_page)
     else:
         page = frappe.new_doc("Web Page")
         page.name = "warehouse/container-move"
