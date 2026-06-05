@@ -88,7 +88,8 @@ It creates a Draft `Three PL Container Move`. The versioned processor applies pe
 Current behavior:
 
 - guest users are redirected to login;
-- only warehouse roles can use the UI;
+- authenticated users can open the page;
+- actual move creation and apply are protected by DocType permissions;
 - the page creates a move operation;
 - the page immediately writes movement history;
 - the page updates the container current location and status;

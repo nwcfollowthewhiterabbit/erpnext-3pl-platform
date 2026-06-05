@@ -1552,7 +1552,7 @@ def configure_scanner_pages():
     return roles.indexOf('3PL Warehouse User') !== -1 || roles.indexOf('3PL Warehouse Manager') !== -1 || roles.indexOf('System Manager') !== -1;
   }
   function requireWarehouseRole() {
-    if (!hasWarehouseRole()) {
+    if (frappe.user_roles && !hasWarehouseRole()) {
       setStatus('This scanner page is only available to warehouse users.', true);
       var button = byId('create-move');
       if (button) button.disabled = true;
