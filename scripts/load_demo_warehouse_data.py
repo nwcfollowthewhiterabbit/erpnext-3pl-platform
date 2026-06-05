@@ -393,6 +393,40 @@ def ensure_demo_container_movements(notice_name):
     )
 
 
+def ensure_container_move_operation():
+    operation_reference = "MOVE-ALPHA-001"
+    existing = frappe.db.get_value("Three PL Container Move", {"operation_reference": operation_reference}, "name")
+    move = frappe.get_doc("Three PL Container Move", existing) if existing else frappe.new_doc("Three PL Container Move")
+
+    movement = ensure_container_movement(
+        "BOX-ALPHA-002",
+        "Moved",
+        "Aisle A - 3",
+        from_warehouse="Temporary Receiving - 3",
+        reference_doctype="Three PL Container Move",
+        reference_name=move.name if not move.is_new() else None,
+        notes="Demo operation: warehouse moved the container into final storage.",
+    )
+
+    move.operation_reference = operation_reference
+    move.operation_datetime = now()
+    move.status = "Applied"
+    move.container_code = "BOX-ALPHA-002"
+    move.client = "Demo Client Alpha"
+    move.from_warehouse = "Temporary Receiving - 3"
+    move.to_warehouse = "Aisle A - 3"
+    move.movement = movement.name
+    move.notes = "Demo applied container move operation. Current MVP records the operation and movement history; submit-time automation is a future custom-app/server-script step."
+    move.save(ignore_permissions=True)
+
+    if movement.reference_name != move.name:
+        movement.reference_doctype = "Three PL Container Move"
+        movement.reference_name = move.name
+        movement.save(ignore_permissions=True)
+
+    return move
+
+
 def ensure_stock_entry(notice_name):
     name = "DEMO-RECEIVING-ALPHA-001"
     if frappe.db.exists("Stock Entry", name):
@@ -705,6 +739,7 @@ def main():
     ensure_container(notice.name)
     ensure_alpha_storage_container()
     ensure_demo_container_movements(notice.name)
+    ensure_container_move_operation()
     notice = frappe.get_doc("Inbound Shipment Notice", notice.name)
     sync_notice_details(notice)
     ensure_stock_entry(notice.name)

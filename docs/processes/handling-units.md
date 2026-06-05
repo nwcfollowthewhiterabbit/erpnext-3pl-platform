@@ -73,12 +73,14 @@ Example:
 ## Implemented
 
 - Handling Unit DocType exists as `Three PL Container`.
+- Container move operation DocType exists as `Three PL Container Move`.
 - Movement history DocType exists as `Three PL Container Movement`.
 - Container fields and statuses are created by `scripts/configure_warehouse_mode.py`.
 - Demo containers are loaded by `scripts/load_demo_warehouse_data.py`.
 - Demo movement records are loaded for received and putaway containers.
+- Demo applied move operation is loaded as `MOVE-ALPHA-001`.
 - Validation checks required fields, statuses, movement history, and reports in `scripts/validate_site.py`.
-- Reports include container references through `3PL Containers`, `3PL Container Movements`, and related receiving/inventory reports.
+- Reports include container references through `3PL Containers`, `3PL Container Moves`, `3PL Container Movements`, and related receiving/inventory reports.
 
 ## Not Automated Yet
 
@@ -86,7 +88,7 @@ Example:
 - Split/merge validation.
 - Lifecycle transition buttons and guards.
 - Scanner-first mobile page.
-- Automatic movement generation after every stock or container movement.
+- Submit-time automation that applies `Three PL Container Move` directly from the ERPNext form.
 - Automatic inventory snapshot recalculation after every stock or container movement.
 
 ## Client Feedback Wording

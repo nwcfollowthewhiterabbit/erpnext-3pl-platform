@@ -31,6 +31,7 @@ REQUIRED_DOCTYPES = [
     "Inbound Shipment Discrepancy",
     "Three PL Container",
     "Three PL Container Item",
+    "Three PL Container Move",
     "Three PL Container Movement",
     "Three PL Inventory Snapshot",
     "Three PL Shipment Request",
@@ -75,10 +76,22 @@ REQUIRED_CONTAINER_MOVEMENT_FIELDS = {
     "reference_doctype",
     "reference_name",
 }
+REQUIRED_CONTAINER_MOVE_FIELDS = {
+    "operation_reference",
+    "operation_datetime",
+    "status",
+    "container_code",
+    "client",
+    "from_warehouse",
+    "to_warehouse",
+    "stock_entry",
+    "movement",
+}
 REQUIRED_REPORTS = [
     "3PL ASN vs Received",
     "3PL Receiving Discrepancies",
     "3PL Containers",
+    "3PL Container Moves",
     "3PL Container Movements",
     "3PL Shipment Requests",
     "3PL Client Inventory",
@@ -174,6 +187,9 @@ def main():
     movement_meta = frappe.get_meta("Three PL Container Movement")
     movement_fields = {field.fieldname for field in movement_meta.fields}
     require(movement_fields >= REQUIRED_CONTAINER_MOVEMENT_FIELDS, "Three PL Container Movement misses required fields")
+    move_meta = frappe.get_meta("Three PL Container Move")
+    move_fields = {field.fieldname for field in move_meta.fields}
+    require(move_fields >= REQUIRED_CONTAINER_MOVE_FIELDS, "Three PL Container Move misses required fields")
 
     for report in REQUIRED_REPORTS:
         require(frappe.db.exists("Report", report), f"Missing Report: {report}")
@@ -256,7 +272,7 @@ def main():
         "Missing client Contact link",
     )
 
-    for doctype in ("Inbound Shipment Notice", "Three PL Container", "Three PL Container Movement"):
+    for doctype in ("Inbound Shipment Notice", "Three PL Container", "Three PL Container Move", "Three PL Container Movement"):
         require_role_perm(doctype, "3PL Warehouse User", read=1, write=1, create=1)
         require_role_perm(doctype, "3PL Warehouse Manager", read=1, write=1, create=1, delete=1)
         require_role_perm(doctype, "System Manager", read=1, write=1, create=1, delete=1)
@@ -270,6 +286,7 @@ def main():
     require_role_perm("Web Form", "3PL Client", read=1)
     require_role_perm("Three PL Container", "3PL Client", read=1)
     require_role_perm("Three PL Container Item", "3PL Client", read=1)
+    require_role_perm("Three PL Container Move", "3PL Client", read=1)
     require_role_perm("Three PL Container Movement", "3PL Client", read=1)
     require_role_perm("Three PL Inventory Snapshot", "3PL Client", read=1)
     require_role_perm("Three PL Shipment Request", "3PL Client", read=1, write=1, create=1)
@@ -321,6 +338,13 @@ def main():
         ),
         "Missing demo putaway container movement",
     )
+    move_name = frappe.db.get_value("Three PL Container Move", {"operation_reference": "MOVE-ALPHA-001"}, "name")
+    require(move_name, "Missing demo container move operation")
+    move = frappe.get_doc("Three PL Container Move", move_name)
+    require(move.status == "Applied", "Demo container move is not applied")
+    require(move.container_code == "BOX-ALPHA-002", "Demo container move has wrong container")
+    require(move.from_warehouse == "Temporary Receiving - 3" and move.to_warehouse == "Aisle A - 3", "Demo container move has wrong locations")
+    require(move.movement and frappe.db.exists("Three PL Container Movement", move.movement), "Demo container move is not linked to movement history")
 
     notice = frappe.get_doc("Inbound Shipment Notice", notice_name)
     require(

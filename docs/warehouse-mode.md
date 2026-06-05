@@ -115,6 +115,7 @@ Implemented:
 - Containers can reference a parent container and replacement container.
 - Containers have a last moved timestamp field.
 - Container item rows can show what is inside the box.
+- Container move operations are stored in `Three PL Container Move`.
 - Container movement history is stored in `Three PL Container Movement`.
 - Container links exist in receiving, putaway, picking, packing, and inventory snapshot contexts.
 - Reports include container references and movement history where relevant.
@@ -124,6 +125,6 @@ Still pending:
 - repack workflow, for example two small boxes consolidated into one larger box;
 - empty / closed / replaced container lifecycle actions;
 - scanner-first UX for scanning location, then container, then item / quantity;
-- automatic movement creation from every stock/container operation;
+- submit-time automation for move/repack documents;
 - automatic inventory snapshot updates from stock movements and container movements;
 - import or guided creation of the client's real warehouse location tree.

@@ -13,6 +13,7 @@ Use this structure when a process is changed:
 Current process notes:
 
 - [Handling Units](handling-units.md)
+- [Container Move](container-move.md)
 - [Warehouse Locations](warehouse-locations.md)
 
 Client-facing summaries can be drafted from these files and then copied into emails, PDFs, or demo notes.
