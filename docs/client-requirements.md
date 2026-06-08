@@ -40,4 +40,4 @@ Initial reporting scope:
 
 - When moving products between locations, or during put-away/picking, scan both the location and the product.
 - Track which client the products came from. Stock Entry does not include this by default, so this needs a custom field or a custom workflow extension.
-- Allow warehouse managers to edit and rename warehouse locations while the physical location tree is being designed.
+- Keep warehouse location renaming as an administrative/setup operation, not a normal warehouse manager action.

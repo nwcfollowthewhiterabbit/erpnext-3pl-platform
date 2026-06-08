@@ -45,14 +45,15 @@ Latest client feedback:
 
 Decision:
 
-- During warehouse-tree setup, warehouse locations should be renameable by internal manager/owner roles.
+- Warehouse location renaming should stay disabled for normal warehouse roles.
+- Renaming a warehouse location is an administrative/setup operation.
 - Boxes still must not be modeled as warehouse locations.
 - Once real stock transactions are actively running, renaming already-used locations should be handled carefully and documented as an administrative operation.
 
 Implementation note:
 
 - ERPNext `Warehouse` has rename disabled by default.
-- The deployment configuration enables `Warehouse.allow_rename` through a versioned Property Setter.
+- The deployment configuration keeps `Warehouse.allow_rename` disabled through a versioned Property Setter.
 
 ## MVP Flow Scope From Client
 

@@ -1859,7 +1859,7 @@ def configure_scanner_pages():
 
 
 def configure_defaults():
-    ensure_doctype_property("Warehouse", "allow_rename", 1, "Check")
+    ensure_doctype_property("Warehouse", "allow_rename", 0, "Check")
 
     settings = frappe.get_single("Stock Settings")
     settings.item_naming_by = "Item Code"

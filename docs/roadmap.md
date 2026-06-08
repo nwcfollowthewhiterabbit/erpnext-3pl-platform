@@ -51,7 +51,7 @@ Client-confirmed reporting scope:
 
 Immediate fixes from feedback:
 
-- Allow internal manager/owner roles to rename warehouse locations during setup of the physical location tree.
+- Keep warehouse location rename disabled for normal warehouse roles; treat renaming as an administrative/setup operation.
 - Keep invalid container repack/correction drafts from breaking post-deploy processors; mark them as `Needs Review` instead.
 
 ## Phase 3 - Warehouse Locations And Containers
