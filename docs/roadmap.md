@@ -41,7 +41,7 @@ Client-confirmed first working scope:
 - Receiving products: implemented as MVP through client Receiving Notice, scanner receiving for expected items, required inbound receipt context, warehouse receiving/verification, received quantity sync, variance calculation, discrepancy records, and stock/container references. Remaining work: unexpected-item scanner flow, damaged/quality inspection capture, and polished workflow actions.
 - Location moves: implemented for containers through `Three PL Container Move`, movement history, and scanner-first move page. Remaining work: polished scanner UX and stronger operational guards.
 - Sending orders: implemented as MVP through client `Three PL Shipment Request` to draft ERPNext Pick List conversion, scanner picking confirmation, and packing/shipping status sync from submitted Stock Entries. Allocated containers are marked as `Picking`, picked containers become `Picked`, and packed/shipped operations update Shipment Request and container movement history. Scanner pages exist at `/warehouse/picking-confirmation` and `/warehouse/outbound-fulfillment`. Remaining work: carrier labels, shipment tracking, and stronger operational guards.
-- Warehouse corrections: not implemented as a dedicated flow yet. Required for wrong quantity in a box, damaged goods, unexpected goods, and other operational corrections.
+- Warehouse corrections: implemented as MVP through `Three PL Warehouse Correction`, scanner page `/warehouse/correction`, container item updates, and `Adjusted` movement history. Remaining work: automatic ERPNext stock-ledger adjustment Stock Entries for financial/stock posting.
 - Inventory / stocktake: not implemented as a dedicated stocktake flow yet. Current inventory snapshots support visibility, but cycle count / stocktake operations need design and implementation.
 
 Client-confirmed reporting scope:
@@ -83,6 +83,7 @@ Implemented:
 - Minimal scanner-first container move page at `/warehouse/container-move` with immediate apply for warehouse roles.
 - Minimal scanner-first putaway page at `/warehouse/putaway` with immediate apply for warehouse roles and explicit `Putaway` movement history.
 - Minimal scanner-first repack page at `/warehouse/repack` for full consolidation of source containers into one target container.
+- Minimal scanner-first warehouse correction page at `/warehouse/correction` for wrong quantity, unexpected product, damaged product, quality issue, and hold-for-review cases.
 - Container references in receiving, putaway, picking, packing, discrepancy, and inventory reporting contexts.
 
 Remaining:
@@ -91,6 +92,7 @@ Remaining:
 - Add ERPNext form submit-time automation for container move operations.
 - Add partial split/repack scanner UX and stronger guided quantity editing.
 - Add unexpected-item receiving and damaged/quality inspection capture to scanner flow.
+- Add stock-ledger posting automation for warehouse corrections after correction-type rules are agreed.
 - Add UI actions and validation for empty / closed / replaced container lifecycle transitions.
 - Automate inventory snapshot updates from stock and container movements.
 - Decide whether mixed client / mixed SKU storage is allowed in one location.

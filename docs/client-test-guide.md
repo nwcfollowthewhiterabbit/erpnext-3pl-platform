@@ -214,6 +214,32 @@ Expected result:
 
 The standard ERPNext Stock Entry putaway flow is still available for full stock-ledger transfers.
 
+### Warehouse Corrections
+
+Open the scanner-first page:
+
+`/warehouse/correction`
+
+Test:
+
+- Scan or enter a container.
+- Scan or enter an item.
+- Enter the actual quantity found in the box.
+- Select correction type and condition.
+- Apply correction.
+
+Expected result:
+
+- A `Three PL Warehouse Correction` record is created.
+- Container contents are updated to the actual quantity.
+- Damaged, quality, or hold corrections move the container into verification.
+- Movement history shows movement type `Adjusted`.
+
+Current boundary:
+
+- This is an operational Handling Unit correction.
+- ERPNext stock-ledger adjustment Stock Entries are not created automatically yet.
+
 ### Picking
 
 Open `Pick List`.
@@ -254,7 +280,7 @@ Expected result:
 - Shipment requests are implemented as portal MVP records.
 - Structured shipment requests are converted to draft Pick Lists as an MVP.
 - Outbound status updates after packing/dispatch are implemented as MVP through submitted packing/shipping Stock Entries.
-- Box/container handling exists as a first ERPNext custom DocType model. Scanner-first pages exist for receiving, container moves, putaway, full-container repack, picking confirmation, and outbound fulfillment; unexpected-item receiving, damaged/quality capture, and partial split/repack screens still need polish.
+- Box/container handling exists as a first ERPNext custom DocType model. Scanner-first pages exist for receiving, container moves, putaway, warehouse corrections, full-container repack, picking confirmation, and outbound fulfillment; stock-ledger correction posting and partial split/repack screens still need polish.
 - Real email delivery is not configured.
 - A placeholder outgoing email account exists only to prevent ERPNext forms from failing when an outgoing account is required.
 

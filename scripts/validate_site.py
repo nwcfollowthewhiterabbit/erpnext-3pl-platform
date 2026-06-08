@@ -37,6 +37,7 @@ REQUIRED_DOCTYPES = [
     "Three PL Container Repack",
     "Three PL Repack Source",
     "Three PL Repack Item",
+    "Three PL Warehouse Correction",
     "Three PL Inventory Snapshot",
     "Three PL Shipment Request",
     "Three PL Shipment Request Item",
@@ -114,12 +115,28 @@ REQUIRED_CONTAINER_REPACK_FIELDS = {
     "source_containers",
     "items",
 }
+REQUIRED_WAREHOUSE_CORRECTION_FIELDS = {
+    "operation_reference",
+    "operation_datetime",
+    "status",
+    "correction_type",
+    "client",
+    "container_code",
+    "warehouse",
+    "item_code",
+    "expected_qty",
+    "actual_qty",
+    "qty_delta",
+    "condition_status",
+    "movement",
+}
 REQUIRED_REPORTS = [
     "3PL ASN vs Received",
     "3PL Receiving Discrepancies",
     "3PL Containers",
     "3PL Container Moves",
     "3PL Container Repacks",
+    "3PL Warehouse Corrections",
     "3PL Container Movements",
     "3PL Shipment Requests",
     "3PL Client Inventory",
@@ -246,6 +263,9 @@ def main():
     repack_meta = frappe.get_meta("Three PL Container Repack")
     repack_fields = {field.fieldname for field in repack_meta.fields}
     require(repack_fields >= REQUIRED_CONTAINER_REPACK_FIELDS, "Three PL Container Repack misses required fields")
+    correction_meta = frappe.get_meta("Three PL Warehouse Correction")
+    correction_fields = {field.fieldname for field in correction_meta.fields}
+    require(correction_fields >= REQUIRED_WAREHOUSE_CORRECTION_FIELDS, "Three PL Warehouse Correction misses required fields")
 
     for report in REQUIRED_REPORTS:
         require(frappe.db.exists("Report", report), f"Missing Report: {report}")
@@ -255,6 +275,7 @@ def main():
 
     for route, label in (
         ("warehouse/receiving", "receiving"),
+        ("warehouse/correction", "correction"),
         ("warehouse/container-move", "container move"),
         ("warehouse/putaway", "putaway"),
         ("warehouse/repack", "repack"),
@@ -349,7 +370,7 @@ def main():
         "Missing client Contact link",
     )
 
-    for doctype in ("Inbound Shipment Notice", "Three PL Container", "Three PL Container Move", "Three PL Container Movement", "Three PL Container Repack"):
+    for doctype in ("Inbound Shipment Notice", "Three PL Container", "Three PL Container Move", "Three PL Container Movement", "Three PL Container Repack", "Three PL Warehouse Correction"):
         require_role_perm(doctype, "3PL Warehouse User", read=1, write=1, create=1)
         require_role_perm(doctype, "3PL Warehouse Manager", read=1, write=1, create=1, delete=1)
         require_role_perm(doctype, "System Manager", read=1, write=1, create=1, delete=1)
@@ -366,6 +387,7 @@ def main():
     require_role_perm("Three PL Container Move", "3PL Client", read=1)
     require_role_perm("Three PL Container Movement", "3PL Client", read=1)
     require_role_perm("Three PL Container Repack", "3PL Client", read=1)
+    require_role_perm("Three PL Warehouse Correction", "3PL Client", read=1)
     require_role_perm("Three PL Repack Source", "3PL Client", read=1)
     require_role_perm("Three PL Repack Item", "3PL Client", read=1)
     require_role_perm("Three PL Inventory Snapshot", "3PL Client", read=1)
@@ -373,11 +395,11 @@ def main():
     require_role_perm("Three PL Shipment Request Item", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Three PL Client Instruction", "3PL Client", read=1, write=1, create=1)
 
-    for doctype in ("Warehouse", "Item", "Inbound Shipment Notice", "Three PL Container", "Three PL Container Move"):
+    for doctype in ("Warehouse", "Item", "Inbound Shipment Notice", "Three PL Container", "Three PL Container Move", "Three PL Warehouse Correction"):
         require_effective_perm(WAREHOUSE_MANAGER_USER, doctype, "read", "create")
     for doctype in ("Warehouse", "Inbound Shipment Notice", "Three PL Container", "Three PL Container Move"):
         require_effective_perm(WAREHOUSE_OPERATOR_USER, doctype, "read")
-    for doctype in ("Inbound Shipment Notice", "Three PL Container", "Three PL Container Move"):
+    for doctype in ("Inbound Shipment Notice", "Three PL Container", "Three PL Container Move", "Three PL Warehouse Correction"):
         require_effective_perm(WAREHOUSE_OPERATOR_USER, doctype, "create")
     for doctype in ("Warehouse", "Item", "Item Group", "UOM", "Three PL Container", "Inbound Shipment Notice"):
         require_effective_perm(BUSINESS_OWNER_USER, doctype, "read", "create")
@@ -513,6 +535,7 @@ def main():
 
     validate_receiving_sync()
     validate_shipment_sync()
+    validate_warehouse_correction()
     validate_putaway_operation()
     validate_picking_confirmation()
     validate_outbound_fulfillment()
@@ -675,6 +698,125 @@ def validate_shipment_sync():
     )
 
     cleanup_shipment_validation_docs()
+
+
+def cleanup_warehouse_correction_validation_docs():
+    frappe.set_user("Administrator")
+    for movement_name in frappe.get_all(
+        "Three PL Container Movement",
+        filters={"container_code": "BOX-CORRECTION-VALIDATION"},
+        pluck="name",
+    ):
+        frappe.delete_doc("Three PL Container Movement", movement_name, ignore_permissions=True, force=True)
+    for correction_name in frappe.get_all(
+        "Three PL Warehouse Correction",
+        filters={"container_code": "BOX-CORRECTION-VALIDATION"},
+        pluck="name",
+    ):
+        frappe.delete_doc("Three PL Warehouse Correction", correction_name, ignore_permissions=True, force=True)
+    if frappe.db.exists("Three PL Container", "BOX-CORRECTION-VALIDATION"):
+        frappe.delete_doc("Three PL Container", "BOX-CORRECTION-VALIDATION", ignore_permissions=True, force=True)
+
+
+def validate_warehouse_correction():
+    cleanup_warehouse_correction_validation_docs()
+    frappe.set_user("Administrator")
+
+    container = frappe.get_doc(
+        {
+            "doctype": "Three PL Container",
+            "container_code": "BOX-CORRECTION-VALIDATION",
+            "barcode": "BOX-CORRECTION-VALIDATION",
+            "container_type": "Box",
+            "client": "Demo Client Alpha",
+            "current_warehouse": "Aisle B - 3",
+            "status": "Stored",
+            "items": [
+                {
+                    "item_code": "SKU-ALPHA-001",
+                    "client_sku": "ALPHA-001",
+                    "qty": 5,
+                    "uom": "Nos",
+                    "condition_status": "OK",
+                }
+            ],
+        }
+    )
+    container.insert(ignore_permissions=True)
+
+    frappe.set_user(WAREHOUSE_MANAGER_USER)
+    container = frappe.get_doc("Three PL Container", "BOX-CORRECTION-VALIDATION")
+    expected_qty = container.items[0].qty
+    actual_qty = 4
+    operation_time = now_datetime()
+    container.items[0].qty = actual_qty
+    container.items[0].condition_status = "Hold"
+    container.status = "In Verification"
+    container.last_moved_at = operation_time
+    container.save()
+
+    correction = frappe.get_doc(
+        {
+            "doctype": "Three PL Warehouse Correction",
+            "operation_reference": "CORR-VALIDATION-ALPHA",
+            "operation_datetime": operation_time,
+            "status": "Draft",
+            "correction_type": "Quantity Count",
+            "client": container.client,
+            "container_code": container.name,
+            "warehouse": container.current_warehouse,
+            "item_code": "SKU-ALPHA-001",
+            "client_sku": "ALPHA-001",
+            "uom": "Nos",
+            "expected_qty": expected_qty,
+            "actual_qty": actual_qty,
+            "qty_delta": actual_qty - expected_qty,
+            "condition_status": "Hold",
+            "notes": "Validation warehouse correction.",
+        }
+    )
+    correction.insert()
+    movement = frappe.get_doc(
+        {
+            "doctype": "Three PL Container Movement",
+            "movement_datetime": operation_time,
+            "container_code": container.name,
+            "client": container.client,
+            "movement_type": "Adjusted",
+            "from_warehouse": container.current_warehouse,
+            "to_warehouse": container.current_warehouse,
+            "reference_doctype": "Three PL Warehouse Correction",
+            "reference_name": correction.name,
+            "notes": "Validation warehouse correction movement.",
+        }
+    )
+    movement.insert()
+    correction.status = "Applied"
+    correction.movement = movement.name
+    correction.save()
+
+    frappe.set_user("Administrator")
+    container.reload()
+    correction.reload()
+    require(container.status == "In Verification", "Warehouse correction did not hold container")
+    require(container.items[0].qty == actual_qty, "Warehouse correction did not update container quantity")
+    require(correction.status == "Applied", "Warehouse correction was not applied")
+    require(correction.qty_delta == -1, "Warehouse correction has wrong delta")
+    require(correction.movement == movement.name, "Warehouse correction is not linked to movement")
+    require(
+        frappe.db.exists(
+            "Three PL Container Movement",
+            {
+                "container_code": container.name,
+                "movement_type": "Adjusted",
+                "reference_doctype": "Three PL Warehouse Correction",
+                "reference_name": correction.name,
+            },
+        ),
+        "Warehouse correction did not create adjustment movement",
+    )
+
+    cleanup_warehouse_correction_validation_docs()
 
 
 def cleanup_putaway_validation_docs():

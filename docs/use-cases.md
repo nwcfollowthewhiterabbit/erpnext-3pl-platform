@@ -305,8 +305,9 @@ The business owner has broad system rights. The warehouse manager is operational
 | Dynamic storage locations | Implemented as warehouse hierarchy | Locations are modeled as warehouses. |
 | Putaway process | Implemented as MVP | Uses standard ERPNext Stock Entry flow and a scanner-first container putaway page at `/warehouse/putaway`. |
 | Picking from locations | Implemented as MVP | Shipment requests create draft Pick Lists; scanner picking confirmation marks containers as `Picked`. |
-| Containers/boxes | Implemented as first model | `Three PL Container`; scanner-first pages exist for container moves, putaway, repack, picking confirmation, and outbound fulfillment. |
-| Barcode/location scan fields | Partially implemented | Scanner pages exist for receiving, container moves, putaway, repack, picking, and outbound fulfillment. Unexpected-item receiving and partial split/repack still need polish. |
+| Warehouse corrections | Implemented as MVP | Scanner page `/warehouse/correction` updates container contents/condition and writes `Adjusted` movement history. ERPNext stock-ledger adjustment automation remains pending. |
+| Containers/boxes | Implemented as first model | `Three PL Container`; scanner-first pages exist for receiving, container moves, putaway, correction, repack, picking confirmation, and outbound fulfillment. |
+| Barcode/location scan fields | Partially implemented | Scanner pages exist for receiving, container moves, putaway, correction, repack, picking, and outbound fulfillment. Unexpected-item receiving stock-ledger posting and partial split/repack still need polish. |
 | Client inventory visibility | Implemented as MVP | Portal inventory snapshot exists and is customer-filtered by permissions. |
 | Receiving history | Partially implemented | Portal Web Form list exists; dedicated polished history UX is not implemented. |
 | Shipment requests | Implemented as MVP | Client portal Web Form creates shipment requests, Pick Lists, and packing/shipping status sync. |
@@ -316,6 +317,7 @@ The business owner has broad system rights. The warehouse manager is operational
 ## Remaining Gaps After MVP
 
 - Scanner receiving support for unexpected products, damaged products, and quality issue capture.
+- Automatic stock-ledger posting for operational warehouse corrections.
 - Partial split/repack UX for cases where only part of a box is moved into another box.
 - Automatic stock-ledger-based inventory snapshot refresh.
 - Dedicated client-facing discrepancy detail page.
