@@ -1893,6 +1893,307 @@ def configure_scanner_pages():
     page.show_sidebar = 0
     page.save(ignore_permissions=True)
 
+    outbound_html = """
+<section class="container py-4" style="max-width: 820px;">
+  <h1 class="h3 mb-3">Outbound Fulfillment</h1>
+  <div class="row g-3">
+    <div class="col-md-5">
+      <label class="form-label" for="shipment-reference">Shipment Request / Reference</label>
+      <input class="form-control" id="shipment-reference" autocomplete="off" autofocus>
+    </div>
+    <div class="col-md-5">
+      <label class="form-label" for="fulfillment-container">Container / HU</label>
+      <input class="form-control" id="fulfillment-container" autocomplete="off">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label" for="fulfillment-flow">Flow</label>
+      <select class="form-select" id="fulfillment-flow">
+        <option value="Packing">Packing</option>
+        <option value="Shipping">Shipping</option>
+      </select>
+    </div>
+  </div>
+  <div class="d-flex gap-2 align-items-center mt-3">
+    <button class="btn btn-primary" id="submit-fulfillment" type="button">Submit Operation</button>
+    <span class="text-muted small" id="fulfillment-status"></span>
+  </div>
+</section>
+""".strip()
+
+    outbound_script = """
+(function () {
+  var FLOW = {
+    Packing: {
+      stock_entry_type: '3PL Packing',
+      purpose: 'Material Transfer',
+      target_warehouse: 'Packing - 3',
+      request_status: 'Packed',
+      container_status: 'Packed',
+      movement_type: 'Packed'
+    },
+    Shipping: {
+      stock_entry_type: '3PL Shipping',
+      purpose: 'Material Issue',
+      target_warehouse: null,
+      request_status: 'Shipped',
+      container_status: 'Shipped',
+      movement_type: 'Shipped'
+    }
+  };
+
+  function byId(id) { return document.getElementById(id); }
+  function setStatus(message, isError) {
+    var target = byId('fulfillment-status');
+    if (!target) return;
+    target.textContent = message || '';
+    target.className = isError ? 'text-danger small' : 'text-muted small';
+  }
+  function getCsrfToken() {
+    if (frappe.csrf_token && frappe.csrf_token !== 'None') {
+      return Promise.resolve(frappe.csrf_token);
+    }
+    if (window.__threePlCsrfTokenPromise) {
+      return window.__threePlCsrfTokenPromise;
+    }
+    window.__threePlCsrfTokenPromise = fetch('/app', { credentials: 'same-origin' })
+      .then(function (response) { return response.text(); })
+      .then(function (html) {
+        var match = html.match(/frappe\\.csrf_token\\s*=\\s*"([^"]+)"/);
+        if (!match || !match[1] || match[1] === 'None') {
+          throw new Error('Could not initialize session token. Please refresh and try again.');
+        }
+        frappe.csrf_token = match[1];
+        return match[1];
+      });
+    return window.__threePlCsrfTokenPromise;
+  }
+  function parseServerMessage(payload) {
+    if (!payload) return null;
+    if (payload._server_messages) {
+      try {
+        var messages = JSON.parse(payload._server_messages);
+        if (messages.length) {
+          var first = JSON.parse(messages[0]);
+          if (first.message) return first.message.replace(/<[^>]*>/g, '');
+        }
+      } catch (error) {
+        return payload._error_message || payload.exception || null;
+      }
+    }
+    return payload._error_message || payload.exception || null;
+  }
+  function api(method, args) {
+    return getCsrfToken().then(function (csrfToken) {
+      var body = new URLSearchParams();
+      Object.keys(args || {}).forEach(function (key) {
+        var value = args[key];
+        body.set(key, typeof value === 'string' ? value : JSON.stringify(value));
+      });
+      return fetch('/api/method/' + method, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Frappe-CSRF-Token': csrfToken
+        },
+        body: body
+      }).then(function (response) {
+        return response.text().then(function (text) {
+          var payload = text ? JSON.parse(text) : {};
+          if (!response.ok) {
+            throw new Error(parseServerMessage(payload) || ('Request failed: ' + response.status));
+          }
+          return payload;
+        });
+      });
+    });
+  }
+  function hasWarehouseRole() {
+    var roles = (frappe.user_roles || []);
+    return roles.indexOf('3PL Warehouse User') !== -1 || roles.indexOf('3PL Warehouse Manager') !== -1 || roles.indexOf('System Manager') !== -1;
+  }
+  function requireWarehouseRole() {
+    if (frappe.user_roles && !hasWarehouseRole()) {
+      setStatus('This scanner page is only available to warehouse users.', true);
+      var button = byId('submit-fulfillment');
+      if (button) button.disabled = true;
+      return false;
+    }
+    return true;
+  }
+  function getValue(doctype, filters, fieldname) {
+    return api('frappe.client.get_value', { doctype: doctype, filters: filters, fieldname: fieldname });
+  }
+  function getDoc(doctype, name) {
+    return api('frappe.client.get', { doctype: doctype, name: name });
+  }
+  function insertDoc(doc) {
+    return api('frappe.client.insert', { doc: doc });
+  }
+  function submitDoc(doc) {
+    return api('frappe.client.submit', { doc: doc });
+  }
+  function setValue(doctype, name, fieldname, value) {
+    return api('frappe.client.set_value', { doctype: doctype, name: name, fieldname: fieldname, value: value });
+  }
+  function setValues(doctype, name, values) {
+    return Object.keys(values).reduce(function (promise, fieldname) {
+      return promise.then(function () {
+        return setValue(doctype, name, fieldname, values[fieldname]);
+      });
+    }, Promise.resolve());
+  }
+  function findRequest(reference) {
+    return getValue('Three PL Shipment Request', { name: reference }, ['name', 'customer', 'external_reference']).then(function (response) {
+      if (response.message && response.message.name) return response.message;
+      return getValue('Three PL Shipment Request', { external_reference: reference }, ['name', 'customer', 'external_reference']).then(function (byReference) {
+        if (byReference.message && byReference.message.name) return byReference.message;
+        throw new Error('Shipment request not found.');
+      });
+    });
+  }
+  function buildItems(container, config) {
+    if (!container.items || !container.items.length) {
+      throw new Error('Container has no item rows.');
+    }
+    return container.items.map(function (row) {
+      return {
+        item_code: row.item_code,
+        qty: row.qty,
+        s_warehouse: container.current_warehouse,
+        t_warehouse: config.target_warehouse,
+        uom: row.uom,
+        stock_uom: row.uom,
+        conversion_factor: 1,
+        basic_rate: 1,
+        scanned_location: container.current_warehouse,
+        container_code: container.name
+      };
+    });
+  }
+  function createStockEntry(request, container, flow, config) {
+    return insertDoc({
+      doctype: 'Stock Entry',
+      stock_entry_type: config.stock_entry_type,
+      purpose: config.purpose,
+      company: '3pl',
+      posting_date: frappe.datetime.get_today(),
+      client: request.customer,
+      shipment_request: request.name,
+      shipment_reference: request.external_reference,
+      warehouse_flow: flow,
+      scanned_location: container.current_warehouse,
+      container_code: container.name,
+      items: buildItems(container, config)
+    }).then(function (insertResponse) {
+      return submitDoc(insertResponse.message);
+    });
+  }
+  function createMovement(entry, request, container, config) {
+    return insertDoc({
+      doctype: 'Three PL Container Movement',
+      movement_datetime: frappe.datetime.now_datetime(),
+      container_code: container.name,
+      client: container.client,
+      movement_type: config.movement_type,
+      from_warehouse: container.current_warehouse,
+      to_warehouse: config.target_warehouse,
+      reference_doctype: 'Stock Entry',
+      reference_name: entry.name,
+      notes: 'Created from scanner-first outbound fulfillment page for shipment ' + (request.external_reference || request.name) + '.'
+    });
+  }
+  function submitFulfillment() {
+    if (frappe.session && frappe.session.user === 'Guest') {
+      window.location.href = '/login?redirect-to=' + encodeURIComponent('/warehouse/outbound-fulfillment');
+      return;
+    }
+    if (!requireWarehouseRole()) return;
+    var reference = (byId('shipment-reference').value || '').trim();
+    var containerCode = (byId('fulfillment-container').value || '').trim();
+    var flow = byId('fulfillment-flow').value;
+    var config = FLOW[flow];
+    if (!reference || !containerCode || !config) {
+      setStatus('Scan shipment and container first.', true);
+      return;
+    }
+    setStatus('Submitting ' + flow.toLowerCase() + '...', false);
+    var request;
+    var container;
+    findRequest(reference).then(function (foundRequest) {
+      request = foundRequest;
+      return getDoc('Three PL Container', containerCode);
+    }).then(function (containerResponse) {
+      container = containerResponse.message;
+      if (!container || !container.name) throw new Error('Container not found.');
+      if (container.client !== request.customer) throw new Error('Container belongs to another client.');
+      if (!container.current_warehouse) throw new Error('Container has no current warehouse.');
+      return createStockEntry(request, container, flow, config);
+    }).then(function (entryResponse) {
+      var entry = entryResponse.message;
+      return createMovement(entry, request, container, config).then(function () {
+        var values = {
+          status: config.container_status,
+          last_moved_at: frappe.datetime.now_datetime()
+        };
+        if (config.target_warehouse) values.current_warehouse = config.target_warehouse;
+        return setValues('Three PL Container', container.name, values).then(function () {
+          return setValue('Three PL Shipment Request', request.name, 'status', config.request_status);
+        }).then(function () {
+          return entry;
+        });
+      });
+    }).then(function (entry) {
+      setStatus(flow + ' submitted: ' + entry.name + '.', false);
+      byId('fulfillment-container').value = '';
+      byId('fulfillment-container').focus();
+    }).catch(function (error) {
+      setStatus(error.message || 'Could not submit outbound operation.', true);
+    });
+  }
+  frappe.ready(function () {
+    if (frappe.session && frappe.session.user === 'Guest') {
+      window.location.href = '/login?redirect-to=' + encodeURIComponent('/warehouse/outbound-fulfillment');
+      return;
+    }
+    requireWarehouseRole();
+    var button = byId('submit-fulfillment');
+    if (button) button.addEventListener('click', submitFulfillment);
+    ['shipment-reference', 'fulfillment-container'].forEach(function (id) {
+      var input = byId(id);
+      if (input) input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          if (id === 'shipment-reference') byId('fulfillment-container').focus();
+          else submitFulfillment();
+        }
+      });
+    });
+  });
+})();
+""".strip()
+
+    existing_outbound_page = frappe.db.get_value("Web Page", {"route": "warehouse/outbound-fulfillment"}, "name")
+    if existing_outbound_page:
+        outbound_page = frappe.get_doc("Web Page", existing_outbound_page)
+    else:
+        outbound_page = frappe.new_doc("Web Page")
+        outbound_page.name = "warehouse/outbound-fulfillment"
+
+    outbound_page.title = "Outbound Fulfillment"
+    outbound_page.route = "warehouse/outbound-fulfillment"
+    outbound_page.published = 1
+    if outbound_page.meta.has_field("login_required"):
+        outbound_page.login_required = 1
+    outbound_page.content_type = "HTML"
+    outbound_page.main_section = outbound_html
+    if outbound_page.meta.has_field("main_section_html"):
+        outbound_page.main_section_html = outbound_html
+    outbound_page.javascript = outbound_script
+    outbound_page.insert_code = 0
+    outbound_page.show_sidebar = 0
+    outbound_page.save(ignore_permissions=True)
+
 
 def configure_defaults():
     ensure_doctype_property("Warehouse", "allow_rename", 0, "Check")

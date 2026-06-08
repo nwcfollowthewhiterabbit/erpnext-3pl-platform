@@ -78,7 +78,7 @@ Current interpretation:
 - Roles are implemented.
 - Receiving is implemented as an MVP with required inbound receipt context, received quantity sync, variance calculation, and auto-generated discrepancy rows.
 - Location movement is implemented for containers and scanner-first container moves.
-- Shipment requests are implemented as portal MVP records and now create draft Pick Lists for structured item rows. Submitted packing/shipping Stock Entries update request and container statuses. Full scanner-first execution screens, carrier integrations, and shipment tracking remain open.
+- Shipment requests are implemented as portal MVP records and now create draft Pick Lists for structured item rows. Submitted packing/shipping Stock Entries update request and container statuses. A scanner-first outbound fulfillment page exists. Carrier integrations, shipment tracking, and additional scanner screens remain open.
 - Corrections and inventory/stocktake need dedicated process design and implementation.
 - Inventory snapshot reports exist as MVP; date-based balance and period operation turnover reports need to be added.
 
