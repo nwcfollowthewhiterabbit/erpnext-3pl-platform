@@ -38,7 +38,7 @@ Status: in progress.
 Client-confirmed first working scope:
 
 - Roles: implemented.
-- Receiving products: implemented as MVP through client Receiving Notice, warehouse receiving/verification, discrepancy records, and stock/container references. Remaining work: stricter workflow statuses and hard enforcement that every inbound receipt belongs to a notice.
+- Receiving products: implemented as MVP through client Receiving Notice, required inbound receipt context, warehouse receiving/verification, received quantity sync, variance calculation, discrepancy records, and stock/container references. Remaining work: polished workflow actions and submit-time automation beyond the current post-deploy/idempotent processor.
 - Location moves: implemented for containers through `Three PL Container Move`, movement history, and scanner-first move page. Remaining work: polished scanner UX and stronger operational guards.
 - Sending orders: implemented as MVP through client `Three PL Shipment Request`. Remaining work: full pick -> pack -> dispatch workflow, automatic status transitions, and shipment execution screens.
 - Warehouse corrections: not implemented as a dedicated flow yet. Required for wrong quantity in a box, damaged goods, unexpected goods, and other operational corrections.

@@ -6,6 +6,9 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from project_config import CLIENT_PORTAL_FORMS, CLIENT_PORTAL_HOME, COMPANY, COMPANY_ABBR, COUNTRY, CURRENCY, LANGUAGE, PLACEHOLDER_EMAIL, TIME_ZONE
 
 
+CUSTOM_DOCTYPE_MODULE = "Website"
+
+
 def ensure_child_field(doc, field):
     sync_keys = {
         "label",
@@ -17,6 +20,7 @@ def ensure_child_field(doc, field):
         "insert_after",
         "in_list_view",
         "in_standard_filter",
+        "mandatory_depends_on",
         "unique",
         "collapsible",
         "depends_on",
@@ -75,6 +79,9 @@ def ensure_doctype_permission(doc, permission):
 
 
 def ensure_custom_doctype(spec):
+    if spec.get("custom"):
+        spec = {**spec, "module": CUSTOM_DOCTYPE_MODULE}
+
     name = spec["name"]
     if frappe.db.exists("DocType", name):
         doc = frappe.get_doc("DocType", name)
@@ -541,6 +548,8 @@ def configure_custom_doctypes():
                 {"fieldname": "actual_qty", "label": "Actual Qty", "fieldtype": "Float", "in_list_view": 1},
                 {"fieldname": "variance_qty", "label": "Variance Qty", "fieldtype": "Float", "in_list_view": 1},
                 {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Open\nClient Notified\nInstruction Received\nResolved", "default": "Open", "in_list_view": 1},
+                {"fieldname": "auto_generated", "label": "Auto Generated", "fieldtype": "Check", "default": 0, "in_list_view": 1},
+                {"fieldname": "source_stock_entry", "label": "Source Stock Entry", "fieldtype": "Link", "options": "Stock Entry"},
                 {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
             ],
         },
@@ -654,7 +663,7 @@ def configure_custom_doctypes():
                 {"fieldname": "notice_date", "label": "Notice Date", "fieldtype": "Date", "default": "Today", "in_list_view": 1},
                 {"fieldname": "expected_arrival_date", "label": "Expected Arrival Date", "fieldtype": "Date", "in_list_view": 1},
                 {"fieldname": "temporary_warehouse", "label": "Temporary Warehouse", "fieldtype": "Link", "options": "Warehouse", "default": f"Temporary Receiving - {COMPANY_ABBR}"},
-                {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Draft\nPartially Received\nReceived\nClosed", "default": "Draft", "in_list_view": 1},
+                {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Draft\nIn Verification\nPartially Received\nDiscrepancy Review\nReceived\nClosed", "default": "Draft", "in_list_view": 1},
                 {"fieldname": "client_instruction_status", "label": "Client Instruction Status", "fieldtype": "Select", "options": "\nNot Required\nWaiting for Client\nInstruction Received", "default": "Not Required", "insert_after": "status", "in_standard_filter": 1},
                 {"fieldname": "portal_items_description", "label": "Portal Products and Quantities", "fieldtype": "Small Text", "insert_after": "client_instruction_status"},
                 {"fieldname": "items_section", "label": "Expected Products", "fieldtype": "Section Break"},
@@ -1063,6 +1072,7 @@ def configure_custom_fields():
                 "options": "Customer",
                 "insert_after": "client_section",
                 "in_standard_filter": 1,
+                "mandatory_depends_on": "eval:doc.warehouse_flow=='Inbound Receipt'",
             },
             {
                 "fieldname": "inbound_shipment_notice",
@@ -1071,6 +1081,7 @@ def configure_custom_fields():
                 "options": "Inbound Shipment Notice",
                 "insert_after": "client",
                 "depends_on": "eval:doc.client",
+                "mandatory_depends_on": "eval:doc.warehouse_flow=='Inbound Receipt'",
             },
             {
                 "fieldname": "warehouse_flow",
@@ -1086,6 +1097,7 @@ def configure_custom_fields():
                 "fieldtype": "Link",
                 "options": "Warehouse",
                 "insert_after": "warehouse_flow",
+                "mandatory_depends_on": "eval:doc.warehouse_flow=='Inbound Receipt'",
                 "description": "Use this to record the warehouse/location barcode scanned before scanning products.",
             },
             {
@@ -1094,6 +1106,7 @@ def configure_custom_fields():
                 "fieldtype": "Link",
                 "options": "Three PL Container",
                 "insert_after": "scanned_location",
+                "mandatory_depends_on": "eval:doc.warehouse_flow=='Inbound Receipt'",
                 "description": "Container or box scanned during receiving, putaway, picking, packing, or shipping.",
             },
         ],
@@ -1370,7 +1383,7 @@ def configure_portal_web_form(
 
     form.route = route
     form.doc_type = doc_type
-    form.module = "Stock"
+    form.module = "Website"
     form.published = 1
     form.login_required = 1
     form.anonymous = 0

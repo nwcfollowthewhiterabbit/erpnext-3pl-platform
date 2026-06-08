@@ -76,7 +76,7 @@ Requested reports:
 Current interpretation:
 
 - Roles are implemented.
-- Receiving is implemented as an MVP but still needs stronger workflow/status enforcement.
+- Receiving is implemented as an MVP with required inbound receipt context, received quantity sync, variance calculation, and auto-generated discrepancy rows.
 - Location movement is implemented for containers and scanner-first container moves.
 - Shipment requests are implemented as portal MVP records; full picking/packing/dispatch automation remains open.
 - Corrections and inventory/stocktake need dedicated process design and implementation.

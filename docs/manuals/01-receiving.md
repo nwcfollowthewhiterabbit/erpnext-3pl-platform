@@ -30,6 +30,11 @@ Goal: receive products from a client notification into a temporary warehouse.
    - Container / Box: `BOX-ALPHA-001`
 10. Compare expected quantities against actual received quantities.
 11. Submit the Stock Entry when the received quantities are accepted.
+12. The system syncs submitted inbound receipts back to the Receiving Notice:
+   - item `Received Qty`;
+   - item `Variance Qty`;
+   - notice status;
+   - auto-generated discrepancy rows for missing, unexpected, or quantity-difference cases.
 
 ## Required Operating Rule
 
@@ -50,6 +55,8 @@ The current model supports:
 - quality issues.
 
 Record these in the `Discrepancies` table on the Receiving Notice. Status values are used to show whether the issue is still open, the client has been notified, instructions were received, or the discrepancy is resolved.
+
+Quantity discrepancies can be generated automatically from submitted inbound Stock Entries. Manual discrepancy rows should still be used for damaged products, quality issues, photos/notes, and other inspection details that cannot be inferred from quantity alone.
 
 ## Containers / Boxes
 

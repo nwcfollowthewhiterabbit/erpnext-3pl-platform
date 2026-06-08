@@ -1,4 +1,5 @@
 import frappe
+from frappe.utils import nowdate
 
 from project_config import (
     BUSINESS_OWNER_USER,
@@ -113,6 +114,10 @@ REQUIRED_REPORTS = [
     "3PL Client Inventory Summary",
 ]
 REQUIRED_CUSTOM_FIELDS = [
+    "Stock Entry-client",
+    "Stock Entry-inbound_shipment_notice",
+    "Stock Entry-warehouse_flow",
+    "Stock Entry-scanned_location",
     "Item-owner_client",
     "Item-client_sku",
     "Item-client_product_name",
@@ -205,6 +210,7 @@ def main():
 
     for doctype in REQUIRED_DOCTYPES:
         require(frappe.db.exists("DocType", doctype), f"Missing DocType: {doctype}")
+        require(frappe.get_meta(doctype).module == "Website", f"Custom DocType must use Website module for portal list compatibility: {doctype}")
 
     container_meta = frappe.get_meta("Three PL Container")
     container_fields = {field.fieldname for field in container_meta.fields}
@@ -242,6 +248,10 @@ def main():
     for warehouse in REQUIRED_WAREHOUSES:
         require(frappe.db.exists("Warehouse", warehouse), f"Missing Warehouse: {warehouse}")
     require(frappe.get_meta("Warehouse").allow_rename == 0, "Warehouse location rename must stay disabled for normal warehouse roles")
+    stock_entry_meta = frappe.get_meta("Stock Entry")
+    for fieldname in ("client", "inbound_shipment_notice", "scanned_location", "container_code"):
+        field = stock_entry_meta.get_field(fieldname)
+        require(field and field.mandatory_depends_on == "eval:doc.warehouse_flow=='Inbound Receipt'", f"Stock Entry {fieldname} must be mandatory for inbound receipts")
 
     for user, roles in REQUIRED_USERS.items():
         require(frappe.db.exists("User", user), f"Missing User: {user}")
@@ -289,6 +299,7 @@ def main():
         require(web_form_name, f"Missing client Web Form: {title}")
         web_form = frappe.get_doc("Web Form", web_form_name)
         require(web_form.title == title, f"Wrong client Web Form title: {web_form.title}")
+        require(web_form.module == "Website", f"Client Web Form must use Website module to avoid ERPNext transaction list filters: {title}")
         require(web_form.login_required == 1, f"Client Web Form must require login: {title}")
         require(web_form.apply_document_permissions == 0, f"Client Web Form must use owner-based portal permissions: {title}")
         require(web_form.hide_navbar == 1, f"Client Web Form must hide standard navbar: {title}")
@@ -454,9 +465,91 @@ def main():
     require(frappe.db.exists("Three PL Shipment Request", {"customer": "Demo Client Alpha", "external_reference": "SHIP-ALPHA-001"}), "Missing demo shipment request")
     require(frappe.db.exists("Three PL Client Instruction", {"customer": "Demo Client Alpha", "receiving_notice": notice_name}), "Missing demo client discrepancy instruction")
 
+    validate_receiving_sync()
     validate_client_portal_permissions()
 
     print("Site validation passed")
+
+
+def cleanup_receiving_validation_docs():
+    frappe.set_user("Administrator")
+    notice_names = frappe.get_all("Inbound Shipment Notice", filters={"external_reference": ("like", "RECV-VALIDATION-%")}, pluck="name")
+    for entry_name in frappe.get_all("Stock Entry", filters={"inbound_shipment_notice": ("in", notice_names or [""] )}, pluck="name"):
+        entry = frappe.get_doc("Stock Entry", entry_name)
+        if entry.docstatus == 1:
+            entry.cancel()
+        frappe.delete_doc("Stock Entry", entry.name, ignore_permissions=True, force=True)
+    for notice_name in notice_names:
+        frappe.delete_doc("Inbound Shipment Notice", notice_name, ignore_permissions=True, force=True)
+
+
+def validate_receiving_sync():
+    from sync_receiving_notices import sync_notice
+
+    cleanup_receiving_validation_docs()
+    frappe.set_user("Administrator")
+
+    reference = "RECV-VALIDATION-ALPHA"
+    notice = frappe.get_doc(
+        {
+            "doctype": "Inbound Shipment Notice",
+            "customer": "Demo Client Alpha",
+            "external_reference": reference,
+            "expected_arrival_date": nowdate(),
+            "temporary_warehouse": "Temporary Receiving - 3",
+            "items": [
+                {
+                    "item_code": "SKU-ALPHA-001",
+                    "client_sku": "ALPHA-001",
+                    "expected_qty": 5,
+                    "uom": "Nos",
+                }
+            ],
+        }
+    )
+    notice.insert(ignore_permissions=True)
+
+    entry = frappe.get_doc(
+        {
+            "doctype": "Stock Entry",
+            "stock_entry_type": "3PL Inbound Receipt",
+            "purpose": "Material Receipt",
+            "company": "3pl",
+            "posting_date": nowdate(),
+            "client": "Demo Client Alpha",
+            "inbound_shipment_notice": notice.name,
+            "warehouse_flow": "Inbound Receipt",
+            "scanned_location": "Temporary Receiving - 3",
+            "container_code": "BOX-ALPHA-001",
+            "items": [
+                {
+                    "item_code": "SKU-ALPHA-001",
+                    "qty": 4,
+                    "t_warehouse": "Temporary Receiving - 3",
+                    "uom": "Nos",
+                    "stock_uom": "Nos",
+                    "conversion_factor": 1,
+                    "basic_rate": 1,
+                    "scanned_location": "Temporary Receiving - 3",
+                    "container_code": "BOX-ALPHA-001",
+                }
+            ],
+        }
+    )
+    entry.insert(ignore_permissions=True)
+    entry.submit()
+
+    sync_notice(notice.name)
+    notice.reload()
+    require(notice.status == "Discrepancy Review", f"Receiving validation notice has wrong status: {notice.status}")
+    require(notice.items[0].received_qty == 4, "Receiving validation did not update received_qty")
+    require(notice.items[0].variance_qty == -1, "Receiving validation did not update variance_qty")
+    require(
+        any(row.auto_generated and row.discrepancy_type == "Quantity Difference" and row.variance_qty == -1 for row in notice.discrepancies),
+        "Receiving validation did not create auto discrepancy",
+    )
+
+    cleanup_receiving_validation_docs()
 
 
 def validate_client_portal_permissions():

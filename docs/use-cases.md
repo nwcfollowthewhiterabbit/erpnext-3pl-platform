@@ -290,10 +290,10 @@ The business owner has broad system rights. The warehouse manager is operational
 | Client restricted to own Customer | Implemented | Server validation confirms cross-customer creation is blocked. |
 | Product ownership | Implemented | `Item.owner_client`, `Item.client_sku`, `Item.client_product_name`. |
 | Business identity is Client + SKU | Implemented in data model | Not yet enforced by unique DB constraint. |
-| Receiving Notice required workflow | Partially implemented | Model and portal exist; hard enforcement that every inbound Stock Entry must have a notice is not implemented. |
-| Receiving Area before storage | Implemented as configured flow | Warehouses and docs enforce process manually; hard validation is not implemented. |
+| Receiving Notice required workflow | Implemented as MVP | Inbound receipt Stock Entries require client, Receiving Notice, scanned location, and container context. |
+| Receiving Area before storage | Implemented as configured flow | Inbound receipt context is required; final storage is handled by separate putaway movement. |
 | Temporary receiving area | Implemented | `Temporary Receiving - 3`. |
-| Verification/inspection step | Partially implemented | Warehouse and discrepancy model exist; no automated workflow state machine yet. |
+| Verification/inspection step | Implemented as MVP | Submitted inbound receipts sync received quantities, variances, notice status, and auto-generated discrepancies. |
 | Discrepancy types | Implemented | Missing, unexpected, quantity difference, damaged, quality issue. |
 | Client notification for discrepancies | Not implemented | Placeholder email exists only to prevent ERPNext email-account errors. |
 | Client instructions for discrepancies | Implemented as MVP | Portal Web Form creates `Three PL Client Instruction` records linked to a Receiving Notice. |
