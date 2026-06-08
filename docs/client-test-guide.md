@@ -181,6 +181,19 @@ Expected result:
 - Stock is not placed directly into final storage.
 - The container/box reference can be recorded on the stock entry.
 
+Scanner alternative:
+
+- Open `https://erpnext.77.237.244.169.sslip.io/warehouse/receiving`.
+- Scan or enter ASN, container, expected item, quantity, and receiving location.
+- Submit the receipt.
+
+Expected scanner result:
+
+- A submitted inbound receipt Stock Entry is created.
+- The container contents are updated.
+- The Receiving Notice received and variance quantities are updated.
+- Movement history shows movement type `Received`.
+
 ### Putaway
 
 Open the scanner-first page:
@@ -241,7 +254,7 @@ Expected result:
 - Shipment requests are implemented as portal MVP records.
 - Structured shipment requests are converted to draft Pick Lists as an MVP.
 - Outbound status updates after packing/dispatch are implemented as MVP through submitted packing/shipping Stock Entries.
-- Box/container handling exists as a first ERPNext custom DocType model. Scanner-first pages exist for container moves, putaway, full-container repack, picking confirmation, and outbound fulfillment; receiving and partial split/repack screens still need polish.
+- Box/container handling exists as a first ERPNext custom DocType model. Scanner-first pages exist for receiving, container moves, putaway, full-container repack, picking confirmation, and outbound fulfillment; unexpected-item receiving, damaged/quality capture, and partial split/repack screens still need polish.
 - Real email delivery is not configured.
 - A placeholder outgoing email account exists only to prevent ERPNext forms from failing when an outgoing account is required.
 

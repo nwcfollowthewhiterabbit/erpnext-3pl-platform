@@ -254,6 +254,7 @@ def main():
             frappe.db.sql(report_doc.query)
 
     for route, label in (
+        ("warehouse/receiving", "receiving"),
         ("warehouse/container-move", "container move"),
         ("warehouse/putaway", "putaway"),
         ("warehouse/repack", "repack"),

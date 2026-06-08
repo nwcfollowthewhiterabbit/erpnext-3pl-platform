@@ -199,7 +199,7 @@ Expected result:
 
 Implementation status: implemented as MVP.
 
-Submitted inbound receipts update received quantities, variances, notice status, and auto-generated quantity discrepancies. Manual discrepancy rows are still used for damage, quality issues, and inspection notes.
+Submitted inbound receipts update received quantities, variances, notice status, and auto-generated quantity discrepancies. A scanner-first receiving page exists at `/warehouse/receiving` for expected item rows. Manual discrepancy rows are still used for damage, quality issues, and inspection notes.
 
 ### Warehouse Puts Goods Away Into Storage
 
@@ -295,7 +295,7 @@ The business owner has broad system rights. The warehouse manager is operational
 | Client restricted to own Customer | Implemented | Server validation confirms cross-customer creation is blocked. |
 | Product ownership | Implemented | `Item.owner_client`, `Item.client_sku`, `Item.client_product_name`. |
 | Business identity is Client + SKU | Implemented in data model | Not yet enforced by unique DB constraint. |
-| Receiving Notice required workflow | Implemented as MVP | Inbound receipt Stock Entries require client, Receiving Notice, scanned location, and container context. |
+| Receiving Notice required workflow | Implemented as MVP | Inbound receipt Stock Entries require client, Receiving Notice, scanned location, and container context. Scanner receiving exists at `/warehouse/receiving`. |
 | Receiving Area before storage | Implemented as configured flow | Inbound receipt context is required; final storage is handled by separate putaway movement. |
 | Temporary receiving area | Implemented | `Temporary Receiving - 3`. |
 | Verification/inspection step | Implemented as MVP | Submitted inbound receipts sync received quantities, variances, notice status, and auto-generated discrepancies. |
@@ -306,7 +306,7 @@ The business owner has broad system rights. The warehouse manager is operational
 | Putaway process | Implemented as MVP | Uses standard ERPNext Stock Entry flow and a scanner-first container putaway page at `/warehouse/putaway`. |
 | Picking from locations | Implemented as MVP | Shipment requests create draft Pick Lists; scanner picking confirmation marks containers as `Picked`. |
 | Containers/boxes | Implemented as first model | `Three PL Container`; scanner-first pages exist for container moves, putaway, repack, picking confirmation, and outbound fulfillment. |
-| Barcode/location scan fields | Partially implemented | Fields and first scanner pages exist; receiving scanner UX and partial split/repack UX still need polish. |
+| Barcode/location scan fields | Partially implemented | Scanner pages exist for receiving, container moves, putaway, repack, picking, and outbound fulfillment. Unexpected-item receiving and partial split/repack still need polish. |
 | Client inventory visibility | Implemented as MVP | Portal inventory snapshot exists and is customer-filtered by permissions. |
 | Receiving history | Partially implemented | Portal Web Form list exists; dedicated polished history UX is not implemented. |
 | Shipment requests | Implemented as MVP | Client portal Web Form creates shipment requests, Pick Lists, and packing/shipping status sync. |
@@ -315,7 +315,7 @@ The business owner has broad system rights. The warehouse manager is operational
 
 ## Remaining Gaps After MVP
 
-- Scanner-first receiving UX.
+- Scanner receiving support for unexpected products, damaged products, and quality issue capture.
 - Partial split/repack UX for cases where only part of a box is moved into another box.
 - Automatic stock-ledger-based inventory snapshot refresh.
 - Dedicated client-facing discrepancy detail page.

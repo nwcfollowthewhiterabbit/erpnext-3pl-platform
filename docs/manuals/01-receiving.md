@@ -36,6 +36,36 @@ Goal: receive products from a client notification into a temporary warehouse.
    - notice status;
    - auto-generated discrepancy rows for missing, unexpected, or quantity-difference cases.
 
+## Scanner Flow
+
+Warehouse users can use the scanner-first page:
+
+`/warehouse/receiving`
+
+Flow:
+
+1. Scan or enter the Receiving Notice / ASN.
+2. Scan or enter the container / Handling Unit.
+3. Scan or enter the expected item code.
+4. Enter accepted received quantity.
+5. Confirm receiving location, normally `Temporary Receiving - 3`.
+6. Click `Submit Receipt`.
+
+Expected result:
+
+- a submitted `Stock Entry` is created with type `3PL Inbound Receipt`;
+- the receipt is linked to the Receiving Notice, client, container, and receiving location;
+- the container is created or updated as `Received`;
+- the container contents are incremented by the accepted quantity;
+- a `Three PL Container Movement` row is written with movement type `Received`;
+- the Receiving Notice row is updated with received and variance quantities.
+
+Current boundary:
+
+- scanner receiving accepts expected item rows from the notice;
+- damaged products, quality issues, photos, and client decisions still belong in the Receiving Notice discrepancy workflow;
+- unexpected products should be handled by a manager until the unexpected-item scanner flow is designed.
+
 ## Required Operating Rule
 
 Inbound stock must go through this path:

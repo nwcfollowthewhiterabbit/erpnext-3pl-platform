@@ -84,6 +84,12 @@ The client can start preparing the warehouse location scheme now, but the final 
 
 Demo data includes a draft receiving Stock Entry. Submit that receiving entry before creating the putaway transfer, because ERPNext needs posted incoming stock before it can validate an outgoing transfer.
 
+Scanner route for receiving:
+
+`/warehouse/receiving`
+
+The scanner page creates submitted inbound receipt Stock Entries for expected notice items and updates the linked container and notice quantities.
+
 ## Picking and Shipping Flow
 
 1. Client creates a `Three PL Shipment Request`.
@@ -140,6 +146,7 @@ Implemented:
 - Draft container repacks can be applied by `scripts/apply_container_repacks.py`.
 - Inventory snapshots can be synchronized from active containers by `scripts/sync_inventory_snapshots.py`.
 - Aggregated inventory is available through `3PL Client Inventory Summary`.
+- Minimal scanner-first receiving page is available at `/warehouse/receiving` and receives expected items into a container at temporary receiving.
 - Minimal scanner-first container move page is available at `/warehouse/container-move` and applies moves immediately for warehouse roles.
 - Minimal scanner-first putaway page is available at `/warehouse/putaway` and moves ready containers from receiving/verification into storage with `Putaway` movement history.
 - Minimal scanner-first repack page is available at `/warehouse/repack` and consolidates source containers into one target container with `Repacked` movement history.
@@ -152,7 +159,7 @@ Still pending:
 
 - repack workflow, for example two small boxes consolidated into one larger box;
 - empty / closed / replaced container lifecycle actions;
-- scanner-first UX for receiving;
+- scanner UX for unexpected receiving items and damaged/quality inspection details;
 - richer scanner UX for partial repack / split operations;
 - ERPNext form submit-time or scanner-page automation for move/repack documents;
 - automatic inventory snapshot updates from stock movements and container movements;

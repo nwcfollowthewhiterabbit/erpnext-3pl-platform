@@ -1657,6 +1657,333 @@ order by inv.customer asc, inv.item_code asc, inv.status asc
 
 
 def configure_scanner_pages():
+    receiving_html = """
+<section class="container py-4" style="max-width: 820px;">
+  <h1 class="h3 mb-3">Receiving Scan</h1>
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label" for="receiving-notice">Receiving Notice / ASN</label>
+      <input class="form-control" id="receiving-notice" autocomplete="off" autofocus>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label" for="receiving-container">Container / HU</label>
+      <input class="form-control" id="receiving-container" autocomplete="off">
+    </div>
+    <div class="col-md-5">
+      <label class="form-label" for="receiving-item">Item / SKU</label>
+      <input class="form-control" id="receiving-item" autocomplete="off">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="receiving-qty">Qty</label>
+      <input class="form-control" id="receiving-qty" inputmode="decimal" autocomplete="off">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" for="receiving-location">Receiving Location</label>
+      <input class="form-control" id="receiving-location" autocomplete="off" value="Temporary Receiving - 3">
+    </div>
+  </div>
+  <div class="d-flex gap-2 align-items-center mt-3">
+    <button class="btn btn-primary" id="submit-receiving" type="button">Submit Receipt</button>
+    <span class="text-muted small" id="receiving-status"></span>
+  </div>
+</section>
+""".strip()
+    receiving_script = """
+(function () {
+  function byId(id) { return document.getElementById(id); }
+  function setStatus(message, isError) {
+    var target = byId('receiving-status');
+    if (!target) return;
+    target.textContent = message || '';
+    target.className = isError ? 'text-danger small' : 'text-muted small';
+  }
+  function getCsrfToken() {
+    if (frappe.csrf_token && frappe.csrf_token !== 'None') return Promise.resolve(frappe.csrf_token);
+    if (window.__threePlCsrfTokenPromise) return window.__threePlCsrfTokenPromise;
+    window.__threePlCsrfTokenPromise = fetch('/app', { credentials: 'same-origin' })
+      .then(function (response) { return response.text(); })
+      .then(function (html) {
+        var match = html.match(/frappe\\.csrf_token\\s*=\\s*"([^"]+)"/);
+        if (!match || !match[1] || match[1] === 'None') throw new Error('Could not initialize session token. Please refresh and try again.');
+        frappe.csrf_token = match[1];
+        return match[1];
+      });
+    return window.__threePlCsrfTokenPromise;
+  }
+  function parseServerMessage(payload) {
+    if (!payload) return null;
+    if (payload._server_messages) {
+      try {
+        var messages = JSON.parse(payload._server_messages);
+        if (messages.length) {
+          var first = JSON.parse(messages[0]);
+          if (first.message) return first.message.replace(/<[^>]*>/g, '');
+        }
+      } catch (error) {
+        return payload._error_message || payload.exception || null;
+      }
+    }
+    return payload._error_message || payload.exception || null;
+  }
+  function api(method, args) {
+    return getCsrfToken().then(function (csrfToken) {
+      var body = new URLSearchParams();
+      Object.keys(args || {}).forEach(function (key) {
+        var value = args[key];
+        body.set(key, typeof value === 'string' ? value : JSON.stringify(value));
+      });
+      return fetch('/api/method/' + method, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Frappe-CSRF-Token': csrfToken
+        },
+        body: body
+      }).then(function (response) {
+        return response.text().then(function (text) {
+          var payload = text ? JSON.parse(text) : {};
+          if (!response.ok) throw new Error(parseServerMessage(payload) || ('Request failed: ' + response.status));
+          return payload;
+        });
+      });
+    });
+  }
+  function hasWarehouseRole() {
+    var roles = (frappe.user_roles || []);
+    return roles.indexOf('3PL Warehouse User') !== -1 || roles.indexOf('3PL Warehouse Manager') !== -1 || roles.indexOf('System Manager') !== -1;
+  }
+  function requireWarehouseRole() {
+    if (frappe.user_roles && !hasWarehouseRole()) {
+      setStatus('This scanner page is only available to warehouse users.', true);
+      var button = byId('submit-receiving');
+      if (button) button.disabled = true;
+      return false;
+    }
+    return true;
+  }
+  function getDoc(doctype, name) {
+    return api('frappe.client.get', { doctype: doctype, name: name });
+  }
+  function getValue(doctype, filters, fieldname) {
+    return api('frappe.client.get_value', { doctype: doctype, filters: filters, fieldname: fieldname });
+  }
+  function insertDoc(doc) {
+    return api('frappe.client.insert', { doc: doc });
+  }
+  function saveDoc(doc) {
+    return api('frappe.client.save', { doc: doc });
+  }
+  function submitDoc(doc) {
+    return api('frappe.client.submit', { doc: doc });
+  }
+  function findNotice(reference) {
+    return getValue('Inbound Shipment Notice', { name: reference }, ['name', 'customer', 'external_reference']).then(function (response) {
+      if (response.message && response.message.name) return getDoc('Inbound Shipment Notice', response.message.name).then(function (docResponse) { return docResponse.message; });
+      return getValue('Inbound Shipment Notice', { external_reference: reference }, ['name', 'customer', 'external_reference']).then(function (byReference) {
+        if (byReference.message && byReference.message.name) return getDoc('Inbound Shipment Notice', byReference.message.name).then(function (docResponse) { return docResponse.message; });
+        throw new Error('Receiving Notice not found.');
+      });
+    });
+  }
+  function ensureContainer(containerCode, notice, location) {
+    return getValue('Three PL Container', { name: containerCode }, 'name').then(function (response) {
+      if (!response.message || !response.message.name) {
+        return insertDoc({
+          doctype: 'Three PL Container',
+          container_code: containerCode,
+          barcode: containerCode,
+          container_type: 'Box',
+          client: notice.customer,
+          current_warehouse: location,
+          status: 'Received',
+          last_moved_at: frappe.datetime.now_datetime()
+        }).then(function (insertResponse) { return insertResponse.message; });
+      }
+      return getDoc('Three PL Container', containerCode).then(function (containerResponse) {
+        var container = containerResponse.message;
+        if (container.client && container.client !== notice.customer) throw new Error('Container belongs to another client.');
+        if (['Shipped', 'Closed', 'Replaced'].indexOf(container.status) !== -1) throw new Error('Container cannot receive stock from status ' + container.status + '.');
+        container.client = notice.customer;
+        container.current_warehouse = location;
+        container.status = 'Received';
+        container.last_moved_at = frappe.datetime.now_datetime();
+        return saveDoc(container).then(function (saveResponse) { return saveResponse.message || container; });
+      });
+    });
+  }
+  function updateContainerItems(containerCode, itemCode, clientSku, qty, uom) {
+    return getDoc('Three PL Container', containerCode).then(function (containerResponse) {
+      var container = containerResponse.message;
+      var matched = false;
+      container.items = container.items || [];
+      container.items.forEach(function (row) {
+        if (row.item_code === itemCode && row.uom === uom && (row.condition_status || 'OK') === 'OK') {
+          row.qty = Number(row.qty || 0) + qty;
+          matched = true;
+        }
+      });
+      if (!matched) {
+        container.items.push({
+          item_code: itemCode,
+          client_sku: clientSku,
+          qty: qty,
+          uom: uom,
+          condition_status: 'OK',
+          notes: 'Received from scanner-first receiving page.'
+        });
+      }
+      return saveDoc(container);
+    });
+  }
+  function createAndSubmitStockEntry(notice, containerCode, itemCode, qty, uom, location) {
+    return insertDoc({
+      doctype: 'Stock Entry',
+      stock_entry_type: '3PL Inbound Receipt',
+      purpose: 'Material Receipt',
+      company: '3pl',
+      posting_date: frappe.datetime.get_today(),
+      client: notice.customer,
+      inbound_shipment_notice: notice.name,
+      warehouse_flow: 'Inbound Receipt',
+      scanned_location: location,
+      container_code: containerCode,
+      items: [{
+        item_code: itemCode,
+        qty: qty,
+        t_warehouse: location,
+        uom: uom,
+        stock_uom: uom,
+        conversion_factor: 1,
+        basic_rate: 1,
+        scanned_location: location,
+        container_code: containerCode
+      }]
+    }).then(function (insertResponse) {
+      return submitDoc(insertResponse.message);
+    });
+  }
+  function syncNoticeRow(notice, itemCode, qty, uom, containerCode, entryName) {
+    var matched = false;
+    (notice.items || []).forEach(function (row) {
+      if (row.item_code === itemCode && row.uom === uom) {
+        row.received_qty = Number(row.received_qty || 0) + qty;
+        row.container_code = containerCode;
+        matched = true;
+      }
+    });
+    if (!matched) {
+      throw new Error('Received item is not listed on this Receiving Notice.');
+    }
+    (notice.items || []).forEach(function (row) {
+      row.variance_qty = Number(row.received_qty || 0) - Number(row.expected_qty || 0);
+    });
+    var hasVariance = (notice.items || []).some(function (row) { return Number(row.variance_qty || 0) !== 0; });
+    notice.status = hasVariance ? 'Discrepancy Review' : 'Received';
+    return saveDoc(notice).then(function () {
+      return insertDoc({
+        doctype: 'Three PL Container Movement',
+        movement_datetime: frappe.datetime.now_datetime(),
+        container_code: containerCode,
+        client: notice.customer,
+        movement_type: 'Received',
+        to_warehouse: byId('receiving-location').value.trim(),
+        reference_doctype: 'Stock Entry',
+        reference_name: entryName,
+        notes: 'Created from scanner-first receiving page.'
+      });
+    });
+  }
+  function submitReceiving() {
+    if (frappe.session && frappe.session.user === 'Guest') {
+      window.location.href = '/login?redirect-to=' + encodeURIComponent('/warehouse/receiving');
+      return;
+    }
+    if (!requireWarehouseRole()) return;
+    var noticeReference = (byId('receiving-notice').value || '').trim();
+    var containerCode = (byId('receiving-container').value || '').trim();
+    var itemCode = (byId('receiving-item').value || '').trim();
+    var qty = Number((byId('receiving-qty').value || '').trim());
+    var location = (byId('receiving-location').value || '').trim();
+    if (!noticeReference || !containerCode || !itemCode || !qty || !location) {
+      setStatus('Scan ASN, container, item, qty, and receiving location first.', true);
+      return;
+    }
+    setStatus('Submitting receipt...', false);
+    var notice;
+    var itemUom;
+    var clientSku;
+    findNotice(noticeReference).then(function (foundNotice) {
+      notice = foundNotice;
+      var noticeRow = (notice.items || []).find(function (row) { return row.item_code === itemCode; });
+      if (!noticeRow) throw new Error('Item is not listed on this Receiving Notice.');
+      itemUom = noticeRow.uom;
+      clientSku = noticeRow.client_sku;
+      return getValue('Warehouse', { name: location }, 'name');
+    }).then(function (warehouseResponse) {
+      if (!warehouseResponse.message || !warehouseResponse.message.name) throw new Error('Receiving location not found.');
+      return ensureContainer(containerCode, notice, location);
+    }).then(function () {
+      return createAndSubmitStockEntry(notice, containerCode, itemCode, qty, itemUom, location);
+    }).then(function (entryResponse) {
+      var entry = entryResponse.message;
+      return updateContainerItems(containerCode, itemCode, clientSku, qty, itemUom).then(function () {
+        return syncNoticeRow(notice, itemCode, qty, itemUom, containerCode, entry.name).then(function () {
+          return entry;
+        });
+      });
+    }).then(function (entry) {
+      setStatus('Receipt submitted: ' + entry.name + '.', false);
+      byId('receiving-item').value = '';
+      byId('receiving-qty').value = '';
+      byId('receiving-item').focus();
+    }).catch(function (error) {
+      setStatus(error.message || 'Could not submit receipt.', true);
+    });
+  }
+  frappe.ready(function () {
+    if (frappe.session && frappe.session.user === 'Guest') {
+      window.location.href = '/login?redirect-to=' + encodeURIComponent('/warehouse/receiving');
+      return;
+    }
+    requireWarehouseRole();
+    var button = byId('submit-receiving');
+    if (button) button.addEventListener('click', submitReceiving);
+    ['receiving-notice', 'receiving-container', 'receiving-item', 'receiving-qty', 'receiving-location'].forEach(function (id, index, fields) {
+      var input = byId(id);
+      if (input) input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          if (index < fields.length - 1) byId(fields[index + 1]).focus();
+          else submitReceiving();
+        }
+      });
+    });
+  });
+})();
+""".strip()
+
+    existing_receiving_page = frappe.db.get_value("Web Page", {"route": "warehouse/receiving"}, "name")
+    if existing_receiving_page:
+        receiving_page = frappe.get_doc("Web Page", existing_receiving_page)
+    else:
+        receiving_page = frappe.new_doc("Web Page")
+        receiving_page.name = "warehouse/receiving"
+
+    receiving_page.title = "Receiving Scan"
+    receiving_page.route = "warehouse/receiving"
+    receiving_page.published = 1
+    if receiving_page.meta.has_field("login_required"):
+        receiving_page.login_required = 1
+    receiving_page.content_type = "HTML"
+    receiving_page.main_section = receiving_html
+    if receiving_page.meta.has_field("main_section_html"):
+        receiving_page.main_section_html = receiving_html
+    receiving_page.javascript = receiving_script
+    receiving_page.insert_code = 0
+    receiving_page.show_sidebar = 0
+    receiving_page.save(ignore_permissions=True)
+
     html = """
 <section class="container py-4" style="max-width: 760px;">
   <h1 class="h3 mb-3">Container Move</h1>
