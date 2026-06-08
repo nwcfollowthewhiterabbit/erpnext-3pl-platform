@@ -92,12 +92,13 @@ Demo data includes a draft receiving Stock Entry. Submit that receiving entry be
 4. Use the custom `Scanned Location` field when scanning location + product.
 5. Move picked stock to `Packing - 3`.
 6. Ship from `Shipping - 3` using `3PL Shipping`.
+7. Submitted packing/shipping Stock Entries update the Shipment Request and container movement history.
 
 ## Client Tracking
 
 Custom fields were added to:
 
-- `Stock Entry`: `Client`, `Inbound Shipment Notice`, `Warehouse Flow`, `Scanned Location`
+- `Stock Entry`: `Client`, `Inbound Shipment Notice`, `Shipment Request`, `Shipment Reference`, `Warehouse Flow`, `Scanned Location`
 - `Stock Entry Detail`: `Scanned Location`
 - `Pick List`: `Client`, `Shipment Reference`, `Shipment Request`
 - `Pick List Item`: `Scanned Location`

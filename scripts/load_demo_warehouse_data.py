@@ -464,8 +464,8 @@ def ensure_container_repack_operation():
         target.container_type = "Box"
     target.client = "Demo Client Alpha"
     target.current_warehouse = "Aisle A - 3"
-    if target.status != "Stored":
-        target.status = "Expected"
+    if target.status not in {"Stored", "Picking", "Picked", "Packed", "Shipped"}:
+        target.status = "Stored"
     target.notes = "Demo target box for repack/consolidation testing."
     target.save(ignore_permissions=True)
 

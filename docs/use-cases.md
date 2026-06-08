@@ -253,10 +253,12 @@ Main flow:
 Expected result:
 
 - Packing and shipping use standard Stock Entry movements.
+- Shipment Request status is updated from submitted Stock Entries.
+- Container movement history records packed and shipped events.
 
-Implementation status: partially implemented.
+Implementation status: implemented as MVP.
 
-Stock Entry types and warehouses exist. Detailed packing units, carrier labels, shipment tracking, and portal shipment status are not implemented yet.
+Submitted `3PL Packing` and `3PL Shipping` Stock Entries with shipment context update the Shipment Request, referenced containers, and container movement history. Detailed packing units, carrier labels, courier integrations, and polished shipment tracking are not implemented yet.
 
 ## Management Use Cases
 
@@ -307,7 +309,7 @@ The business owner has broad system rights. The warehouse manager is operational
 | Barcode/location scan fields | Partially implemented | Fields exist; no dedicated scanner/mobile UI. |
 | Client inventory visibility | Implemented as MVP | Portal inventory snapshot exists and is customer-filtered by permissions. |
 | Receiving history | Partially implemented | Portal Web Form list exists; dedicated polished history UX is not implemented. |
-| Shipment requests | Implemented as MVP | Client portal Web Form creates shipment requests. |
+| Shipment requests | Implemented as MVP | Client portal Web Form creates shipment requests, Pick Lists, and packing/shipping status sync. |
 | Shipment status tracking | Implemented as MVP | Shipment request has status; automatic outbound status updates are not implemented. |
 | Stay close to standard ERPNext | Implemented | Uses custom fields, custom DocTypes, Web Form, reports, stock entries. |
 

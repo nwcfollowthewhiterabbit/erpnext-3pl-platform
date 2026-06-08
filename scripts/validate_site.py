@@ -128,6 +128,8 @@ REQUIRED_REPORTS = [
 REQUIRED_CUSTOM_FIELDS = [
     "Stock Entry-client",
     "Stock Entry-inbound_shipment_notice",
+    "Stock Entry-shipment_request",
+    "Stock Entry-shipment_reference",
     "Stock Entry-warehouse_flow",
     "Stock Entry-scanned_location",
     "Item-owner_client",
@@ -438,7 +440,7 @@ def main():
         require(source.status == "Replaced", f"Demo source container is not replaced: {source_name}")
         require(source.replaced_by == "BOX-ALPHA-005", f"Demo source container has wrong replacement: {source_name}")
     target = frappe.get_doc("Three PL Container", "BOX-ALPHA-005")
-    require(target.status == "Stored", "Demo repack target is not stored")
+    require(target.status in {"Stored", "Picking"}, "Demo repack target is not stored or allocated for picking")
     require(target.current_warehouse == "Aisle A - 3", "Demo repack target has wrong location")
     require(any(row.item_code == "SKU-ALPHA-003" and row.qty == 18 for row in target.items), "Demo repack target misses expected contents")
 
@@ -504,6 +506,7 @@ def main():
 
     validate_receiving_sync()
     validate_shipment_sync()
+    validate_outbound_fulfillment()
     validate_client_portal_permissions()
 
     print("Site validation passed")
@@ -663,6 +666,171 @@ def validate_shipment_sync():
     )
 
     cleanup_shipment_validation_docs()
+
+
+def cleanup_outbound_fulfillment_validation_docs():
+    frappe.set_user("Administrator")
+    reference = "SHIP-FULFILLMENT-VALIDATION"
+    request_names = frappe.get_all("Three PL Shipment Request", filters={"external_reference": reference}, pluck="name")
+    for entry_name in frappe.get_all("Stock Entry", filters={"shipment_reference": reference}, pluck="name", order_by="creation desc"):
+        entry = frappe.get_doc("Stock Entry", entry_name)
+        if entry.docstatus == 1:
+            entry.cancel()
+        frappe.delete_doc("Stock Entry", entry.name, ignore_permissions=True, force=True)
+    for movement_name in frappe.get_all(
+        "Three PL Container Movement",
+        filters={"container_code": "BOX-FULFILLMENT-VALIDATION"},
+        pluck="name",
+    ):
+        frappe.delete_doc("Three PL Container Movement", movement_name, ignore_permissions=True, force=True)
+    for pick_name in frappe.get_all("Pick List", filters={"shipment_request": ("in", request_names or [""])}, pluck="name"):
+        pick_list = frappe.get_doc("Pick List", pick_name)
+        if pick_list.docstatus == 1:
+            pick_list.cancel()
+        frappe.delete_doc("Pick List", pick_list.name, ignore_permissions=True, force=True)
+    for request_name in request_names:
+        frappe.delete_doc("Three PL Shipment Request", request_name, ignore_permissions=True, force=True)
+    if frappe.db.exists("Three PL Container", "BOX-FULFILLMENT-VALIDATION"):
+        frappe.delete_doc("Three PL Container", "BOX-FULFILLMENT-VALIDATION", ignore_permissions=True, force=True)
+
+
+def make_fulfillment_stock_entry(request, flow, entry_type, purpose, source_warehouse, target_warehouse=None):
+    entry = frappe.get_doc(
+        {
+            "doctype": "Stock Entry",
+            "stock_entry_type": entry_type,
+            "purpose": purpose,
+            "company": "3pl",
+            "posting_date": nowdate(),
+            "client": "Demo Client Alpha",
+            "shipment_request": request.name,
+            "shipment_reference": request.external_reference,
+            "warehouse_flow": flow,
+            "container_code": "BOX-FULFILLMENT-VALIDATION",
+            "items": [
+                {
+                    "item_code": "SKU-ALPHA-001",
+                    "qty": 1,
+                    "s_warehouse": source_warehouse,
+                    "t_warehouse": target_warehouse,
+                    "uom": "Nos",
+                    "stock_uom": "Nos",
+                    "conversion_factor": 1,
+                    "basic_rate": 1,
+                    "container_code": "BOX-FULFILLMENT-VALIDATION",
+                    "scanned_location": source_warehouse,
+                }
+            ],
+        }
+    )
+    entry.insert(ignore_permissions=True)
+    entry.submit()
+    return entry
+
+
+def validate_outbound_fulfillment():
+    from sync_outbound_fulfillment import sync_entry
+
+    cleanup_outbound_fulfillment_validation_docs()
+    frappe.set_user("Administrator")
+
+    request = frappe.get_doc(
+        {
+            "doctype": "Three PL Shipment Request",
+            "customer": "Demo Client Alpha",
+            "external_reference": "SHIP-FULFILLMENT-VALIDATION",
+            "requested_ship_date": nowdate(),
+            "destination_name": "Fulfillment Validation",
+            "destination_address": "Validation Address",
+            "portal_source": 1,
+            "status": "Picking",
+            "items": [
+                {
+                    "item_code": "SKU-ALPHA-001",
+                    "client_sku": "ALPHA-001",
+                    "qty": 1,
+                    "uom": "Nos",
+                }
+            ],
+        }
+    )
+    request.insert(ignore_permissions=True)
+
+    container = frappe.get_doc(
+        {
+            "doctype": "Three PL Container",
+            "container_code": "BOX-FULFILLMENT-VALIDATION",
+            "barcode": "BOX-FULFILLMENT-VALIDATION",
+            "container_type": "Box",
+            "client": "Demo Client Alpha",
+            "current_warehouse": "Temporary Receiving - 3",
+            "status": "Picking",
+            "items": [
+                {
+                    "item_code": "SKU-ALPHA-001",
+                    "client_sku": "ALPHA-001",
+                    "qty": 1,
+                    "uom": "Nos",
+                    "condition_status": "OK",
+                }
+            ],
+        }
+    )
+    container.insert(ignore_permissions=True)
+
+    packing = make_fulfillment_stock_entry(
+        request,
+        flow="Packing",
+        entry_type="3PL Packing",
+        purpose="Material Transfer",
+        source_warehouse="Temporary Receiving - 3",
+        target_warehouse="Packing - 3",
+    )
+    sync_entry(packing.name)
+    request.reload()
+    container.reload()
+    require(request.status == "Packed", f"Outbound validation request was not packed: {request.status}")
+    require(container.status == "Packed", f"Outbound validation container was not packed: {container.status}")
+    require(container.current_warehouse == "Packing - 3", f"Outbound validation container has wrong packing location: {container.current_warehouse}")
+    require(
+        frappe.db.exists(
+            "Three PL Container Movement",
+            {
+                "container_code": container.name,
+                "movement_type": "Packed",
+                "reference_doctype": "Stock Entry",
+                "reference_name": packing.name,
+            },
+        ),
+        "Outbound validation did not create packing movement",
+    )
+
+    shipping = make_fulfillment_stock_entry(
+        request,
+        flow="Shipping",
+        entry_type="3PL Shipping",
+        purpose="Material Issue",
+        source_warehouse="Packing - 3",
+    )
+    sync_entry(shipping.name)
+    request.reload()
+    container.reload()
+    require(request.status == "Shipped", f"Outbound validation request was not shipped: {request.status}")
+    require(container.status == "Shipped", f"Outbound validation container was not shipped: {container.status}")
+    require(
+        frappe.db.exists(
+            "Three PL Container Movement",
+            {
+                "container_code": container.name,
+                "movement_type": "Shipped",
+                "reference_doctype": "Stock Entry",
+                "reference_name": shipping.name,
+            },
+        ),
+        "Outbound validation did not create shipping movement",
+    )
+
+    cleanup_outbound_fulfillment_validation_docs()
 
 
 def validate_client_portal_permissions():

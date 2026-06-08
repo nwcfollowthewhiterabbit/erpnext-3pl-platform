@@ -1084,11 +1084,26 @@ def configure_custom_fields():
                 "mandatory_depends_on": "eval:doc.warehouse_flow=='Inbound Receipt'",
             },
             {
+                "fieldname": "shipment_request",
+                "label": "Shipment Request",
+                "fieldtype": "Link",
+                "options": "Three PL Shipment Request",
+                "insert_after": "inbound_shipment_notice",
+                "depends_on": "eval:doc.client",
+                "in_standard_filter": 1,
+            },
+            {
+                "fieldname": "shipment_reference",
+                "label": "Shipment Reference",
+                "fieldtype": "Data",
+                "insert_after": "shipment_request",
+            },
+            {
                 "fieldname": "warehouse_flow",
                 "label": "Warehouse Flow",
                 "fieldtype": "Select",
                 "options": "\nInbound Receipt\nComparison\nPut Away\nInternal Movement\nPicking Support\nPacking\nShipping",
-                "insert_after": "inbound_shipment_notice",
+                "insert_after": "shipment_reference",
                 "in_standard_filter": 1,
             },
             {

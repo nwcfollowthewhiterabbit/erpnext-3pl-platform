@@ -40,7 +40,7 @@ Client-confirmed first working scope:
 - Roles: implemented.
 - Receiving products: implemented as MVP through client Receiving Notice, required inbound receipt context, warehouse receiving/verification, received quantity sync, variance calculation, discrepancy records, and stock/container references. Remaining work: polished workflow actions and submit-time automation beyond the current post-deploy/idempotent processor.
 - Location moves: implemented for containers through `Three PL Container Move`, movement history, and scanner-first move page. Remaining work: polished scanner UX and stronger operational guards.
-- Sending orders: implemented as MVP through client `Three PL Shipment Request` to draft ERPNext Pick List conversion. Allocated containers are marked as `Picking` and inventory snapshots show them as allocated. Remaining work: polished picking execution, pack -> dispatch workflow, final status transitions, and shipment execution screens.
+- Sending orders: implemented as MVP through client `Three PL Shipment Request` to draft ERPNext Pick List conversion plus packing/shipping status sync from submitted Stock Entries. Allocated containers are marked as `Picking`; packed and shipped Stock Entries update Shipment Request and container movement history. Remaining work: polished scanner-first execution screens, carrier labels, shipment tracking, and stronger operational guards.
 - Warehouse corrections: not implemented as a dedicated flow yet. Required for wrong quantity in a box, damaged goods, unexpected goods, and other operational corrections.
 - Inventory / stocktake: not implemented as a dedicated stocktake flow yet. Current inventory snapshots support visibility, but cycle count / stocktake operations need design and implementation.
 
