@@ -1,3 +1,5 @@
+import importlib.util
+
 import frappe
 from frappe.utils import now_datetime, nowdate
 
@@ -131,6 +133,9 @@ REQUIRED_WAREHOUSE_CORRECTION_FIELDS = {
     "qty_delta",
     "condition_status",
     "movement",
+    "stock_entry",
+    "stock_posting_status",
+    "stock_posting_error",
 }
 REQUIRED_STOCKTAKE_FIELDS = {
     "operation_reference",
@@ -187,6 +192,7 @@ REQUIRED_CUSTOM_FIELDS = [
     "Item-client_sku",
     "Item-client_product_name",
     "Stock Entry-container_code",
+    "Stock Entry-warehouse_correction",
     "Stock Entry Detail-container_code",
     "Pick List-container_code",
     "Pick List-shipment_request",
@@ -232,6 +238,22 @@ def require_effective_perm(user, doctype, *permission_types):
             )
     finally:
         frappe.set_user(current_user)
+
+
+def load_tmp_module(module_name):
+    spec = importlib.util.spec_from_file_location(module_name, f"/tmp/{module_name}.py")
+    require(spec and spec.loader, f"Missing validation helper module: {module_name}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def delete_stock_entries(filters):
+    for entry_name in frappe.get_all("Stock Entry", filters=filters, pluck="name"):
+        entry = frappe.get_doc("Stock Entry", entry_name)
+        if entry.docstatus == 1:
+            entry.cancel()
+        frappe.delete_doc("Stock Entry", entry.name, ignore_permissions=True, force=True)
 
 
 def portal_list_route(route):
@@ -624,6 +646,7 @@ def main():
     validate_receiving_sync()
     validate_shipment_sync()
     validate_warehouse_correction()
+    validate_warehouse_correction_stock_posting()
     validate_stocktake()
     validate_putaway_operation()
     validate_picking_confirmation()
@@ -791,20 +814,28 @@ def validate_shipment_sync():
 
 def cleanup_warehouse_correction_validation_docs():
     frappe.set_user("Administrator")
+    correction_names = frappe.get_all(
+        "Three PL Warehouse Correction",
+        filters={"container_code": ("in", ["BOX-CORRECTION-VALIDATION", "BOX-CORRECTION-POSTING-VALIDATION"])},
+        pluck="name",
+    )
+    for correction_name in correction_names:
+        delete_stock_entries({"warehouse_correction": correction_name})
     for movement_name in frappe.get_all(
         "Three PL Container Movement",
-        filters={"container_code": "BOX-CORRECTION-VALIDATION"},
+        filters={"container_code": ("in", ["BOX-CORRECTION-VALIDATION", "BOX-CORRECTION-POSTING-VALIDATION"])},
         pluck="name",
     ):
         frappe.delete_doc("Three PL Container Movement", movement_name, ignore_permissions=True, force=True)
     for correction_name in frappe.get_all(
         "Three PL Warehouse Correction",
-        filters={"container_code": "BOX-CORRECTION-VALIDATION"},
+        filters={"container_code": ("in", ["BOX-CORRECTION-VALIDATION", "BOX-CORRECTION-POSTING-VALIDATION"])},
         pluck="name",
     ):
         frappe.delete_doc("Three PL Warehouse Correction", correction_name, ignore_permissions=True, force=True)
-    if frappe.db.exists("Three PL Container", "BOX-CORRECTION-VALIDATION"):
-        frappe.delete_doc("Three PL Container", "BOX-CORRECTION-VALIDATION", ignore_permissions=True, force=True)
+    for container_name in ("BOX-CORRECTION-VALIDATION", "BOX-CORRECTION-POSTING-VALIDATION"):
+        if frappe.db.exists("Three PL Container", container_name):
+            frappe.delete_doc("Three PL Container", container_name, ignore_permissions=True, force=True)
 
 
 def validate_warehouse_correction():
@@ -904,6 +935,80 @@ def validate_warehouse_correction():
         ),
         "Warehouse correction did not create adjustment movement",
     )
+
+    cleanup_warehouse_correction_validation_docs()
+
+
+def validate_warehouse_correction_stock_posting():
+    cleanup_warehouse_correction_validation_docs()
+    frappe.set_user("Administrator")
+
+    container = frappe.get_doc(
+        {
+            "doctype": "Three PL Container",
+            "container_code": "BOX-CORRECTION-POSTING-VALIDATION",
+            "barcode": "BOX-CORRECTION-POSTING-VALIDATION",
+            "container_type": "Box",
+            "client": "Demo Client Alpha",
+            "current_warehouse": "Aisle B - 3",
+            "status": "Stored",
+            "items": [
+                {
+                    "item_code": "SKU-ALPHA-001",
+                    "client_sku": "ALPHA-001",
+                    "qty": 2,
+                    "uom": "Nos",
+                    "condition_status": "OK",
+                }
+            ],
+        }
+    )
+    container.insert(ignore_permissions=True)
+
+    operation_time = now_datetime()
+    container.items[0].qty = 3
+    container.last_moved_at = operation_time
+    container.save(ignore_permissions=True)
+
+    correction = frappe.get_doc(
+        {
+            "doctype": "Three PL Warehouse Correction",
+            "operation_reference": "CORR-POSTING-VALIDATION",
+            "operation_datetime": operation_time,
+            "status": "Applied",
+            "correction_type": "Quantity Count",
+            "client": container.client,
+            "container_code": container.name,
+            "warehouse": container.current_warehouse,
+            "item_code": "SKU-ALPHA-001",
+            "client_sku": "ALPHA-001",
+            "uom": "Nos",
+            "expected_qty": 2,
+            "actual_qty": 3,
+            "qty_delta": 1,
+            "condition_status": "OK",
+            "notes": "Validation warehouse correction stock posting.",
+        }
+    )
+    correction.insert(ignore_permissions=True)
+    frappe.db.commit()
+
+    processor = load_tmp_module("apply_warehouse_corrections")
+    entry_name = processor.apply_correction_stock_posting(correction)
+    require(entry_name, "Warehouse correction did not create stock posting")
+
+    correction.reload()
+    entry = frappe.get_doc("Stock Entry", entry_name)
+    require(correction.stock_posting_status == "Posted", "Warehouse correction stock posting status is not Posted")
+    require(correction.stock_entry == entry.name, "Warehouse correction is not linked to Stock Entry")
+    require(entry.docstatus == 1, "Warehouse correction Stock Entry is not submitted")
+    require(entry.stock_entry_type == "3PL Quantity Gain", "Warehouse correction Stock Entry has wrong type")
+    require(entry.purpose == "Material Receipt", "Warehouse correction Stock Entry has wrong purpose")
+    require(entry.warehouse_flow == "Warehouse Correction", "Warehouse correction Stock Entry has wrong flow")
+    require(entry.warehouse_correction == correction.name, "Stock Entry is not linked back to correction")
+    require(entry.items[0].item_code == "SKU-ALPHA-001", "Correction Stock Entry has wrong item")
+    require(entry.items[0].qty == 1, "Correction Stock Entry has wrong qty")
+    require(entry.items[0].t_warehouse == "Aisle B - 3", "Correction Stock Entry has wrong target warehouse")
 
     cleanup_warehouse_correction_validation_docs()
 

@@ -35,20 +35,21 @@ When the user applies the correction, the system:
 - adds the item row if the product was unexpected in that container;
 - sets the container to `In Verification` when condition is not `OK`;
 - creates a `Three PL Container Movement` row with movement type `Adjusted`;
-- links the correction to the movement history row.
+- links the correction to the movement history row;
+- creates an ERPNext Stock Entry for quantity deltas when the posting is unambiguous.
 
 ## Current Boundary
 
 This is an operational container-level correction.
 
-It updates the 3PL Handling Unit model and traceability history. It does not yet create ERPNext stock-ledger adjustment Stock Entries automatically.
+It updates the 3PL Handling Unit model and traceability history. Quantity increases are posted as `3PL Quantity Gain` Material Receipt. Quantity decreases are posted as `3PL Quantity Loss` Material Issue when ERPNext stock ledger allows the issue.
 
-Stock-ledger adjustment automation remains a separate step because the correct ERPNext document depends on the correction type:
+If ERPNext blocks the stock posting, for example because ledger stock is insufficient for a Material Issue, the correction is kept operationally applied but its `Stock Posting Status` becomes `Needs Review`.
 
-- material receipt for positive unexpected quantity;
-- material issue for shrinkage/disposal;
+Still requiring manager review:
+
 - material transfer or hold movement for damaged/quality items;
-- manager review for ambiguous cases.
+- ambiguous correction types where physical and financial stock treatment must be decided.
 
 ## Related Reports
 

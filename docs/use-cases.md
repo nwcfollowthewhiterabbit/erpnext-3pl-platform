@@ -343,7 +343,8 @@ The business owner has broad system rights. The warehouse manager is operational
 | Dynamic storage locations | Implemented as warehouse hierarchy | Locations are modeled as warehouses. |
 | Putaway process | Implemented as MVP | Uses standard ERPNext Stock Entry flow and a scanner-first container putaway page at `/warehouse/putaway`. |
 | Picking from locations | Implemented as MVP | Shipment requests create draft Pick Lists; scanner picking confirmation marks containers as `Picked`. |
-| Warehouse corrections | Implemented as MVP | Scanner page `/warehouse/correction` updates container contents/condition and writes `Adjusted` movement history. ERPNext stock-ledger adjustment automation remains pending. |
+| Warehouse corrections | Implemented as MVP | Scanner page `/warehouse/correction` updates container contents/condition and writes `Adjusted` movement history. Clear quantity deltas are posted to ERPNext Stock Entry. |
+| Warehouse correction stock posting | Implemented as MVP | Clear quantity deltas create `3PL Quantity Gain` or `3PL Quantity Loss` Stock Entries; blocked postings are marked `Needs Review`. |
 | Inventory / stocktake | Implemented as MVP | Scanner page `/warehouse/stocktake` records counted quantity by container/SKU and links deltas to warehouse corrections. |
 | Containers/boxes | Implemented as first model | `Three PL Container`; scanner-first pages exist for receiving, container moves, putaway, correction, repack, picking confirmation, and outbound fulfillment. |
 | Barcode/location scan fields | Partially implemented | Scanner pages exist for receiving, container moves, putaway, correction, stocktake, repack, picking, and outbound fulfillment. Unexpected-item receiving stock-ledger posting and partial split/repack still need polish. |
@@ -358,8 +359,8 @@ The business owner has broad system rights. The warehouse manager is operational
 ## Remaining Gaps After MVP
 
 - Scanner receiving support for unexpected products, damaged products, and quality issue capture.
-- Automatic stock-ledger posting for operational warehouse corrections.
-- Grouped stocktake sessions and stock-ledger posting for count deltas.
+- Manager review workflow for correction stock postings that ERPNext cannot post automatically.
+- Grouped stocktake sessions.
 - Partial split/repack UX for cases where only part of a box is moved into another box.
 - Automatic event-based inventory snapshot refresh after every operation.
 - Backfill of inventory balance history for dates before daily snapshots were enabled.

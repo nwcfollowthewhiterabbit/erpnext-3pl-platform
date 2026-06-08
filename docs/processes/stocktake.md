@@ -30,12 +30,15 @@ When the user applies stocktake, the system:
 - creates a linked `Three PL Warehouse Correction`;
 - creates a `Three PL Container Movement` row with movement type `Adjusted`;
 - links the stocktake to the correction and movement.
+- posts the linked warehouse correction to ERPNext stock ledger when the quantity delta can be posted automatically.
 
 ## Current Boundary
 
 This is an operational Handling Unit stocktake.
 
-It updates container-level inventory and traceability. It does not yet automatically create ERPNext stock-ledger adjustment Stock Entries.
+It updates container-level inventory and traceability. Count deltas flow through `Three PL Warehouse Correction`, so positive deltas become `3PL Quantity Gain` Stock Entries and negative deltas become `3PL Quantity Loss` Stock Entries when ERPNext stock ledger permits the posting.
+
+If ERPNext cannot post the stock movement automatically, the linked correction is marked `Needs Review`.
 
 ## Related Reports
 

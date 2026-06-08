@@ -507,6 +507,8 @@ def configure_stock_entry_types():
         "3PL Comparison": "Material Transfer",
         "3PL Put Away": "Material Transfer",
         "3PL Internal Movement": "Material Transfer",
+        "3PL Quantity Gain": "Material Receipt",
+        "3PL Quantity Loss": "Material Issue",
         "3PL Packing": "Material Transfer",
         "3PL Shipping": "Material Issue",
     }
@@ -855,6 +857,9 @@ def configure_custom_doctypes():
                 {"fieldname": "condition_status", "label": "Condition", "fieldtype": "Select", "options": "OK\nDamaged\nQuality Issue\nHold", "default": "OK", "in_standard_filter": 1, "in_list_view": 1},
                 {"fieldname": "reference_section", "label": "Reference", "fieldtype": "Section Break"},
                 {"fieldname": "movement", "label": "Movement Record", "fieldtype": "Link", "options": "Three PL Container Movement", "read_only": 1},
+                {"fieldname": "stock_entry", "label": "Stock Entry", "fieldtype": "Link", "options": "Stock Entry", "read_only": 1},
+                {"fieldname": "stock_posting_status", "label": "Stock Posting Status", "fieldtype": "Select", "options": "Pending\nPosted\nNot Required\nNeeds Review", "default": "Pending", "read_only": 1, "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "stock_posting_error", "label": "Stock Posting Error", "fieldtype": "Small Text", "read_only": 1},
                 {"fieldname": "source_doctype", "label": "Source DocType", "fieldtype": "Link", "options": "DocType"},
                 {"fieldname": "source_name", "label": "Source Name", "fieldtype": "Dynamic Link", "options": "source_doctype"},
                 {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
@@ -1232,7 +1237,7 @@ def configure_custom_fields():
                 "fieldname": "warehouse_flow",
                 "label": "Warehouse Flow",
                 "fieldtype": "Select",
-                "options": "\nInbound Receipt\nComparison\nPut Away\nInternal Movement\nPicking Support\nPacking\nShipping",
+                "options": "\nInbound Receipt\nComparison\nPut Away\nInternal Movement\nWarehouse Correction\nPicking Support\nPacking\nShipping",
                 "insert_after": "shipment_reference",
                 "in_standard_filter": 1,
             },
@@ -1253,6 +1258,15 @@ def configure_custom_fields():
                 "insert_after": "scanned_location",
                 "mandatory_depends_on": "eval:doc.warehouse_flow=='Inbound Receipt'",
                 "description": "Container or box scanned during receiving, putaway, picking, packing, or shipping.",
+            },
+            {
+                "fieldname": "warehouse_correction",
+                "label": "Warehouse Correction",
+                "fieldtype": "Link",
+                "options": "Three PL Warehouse Correction",
+                "insert_after": "container_code",
+                "depends_on": "eval:doc.warehouse_flow=='Warehouse Correction'",
+                "in_standard_filter": 1,
             },
         ],
         "Stock Entry Detail": [
@@ -1751,6 +1765,9 @@ select
     c.qty_delta as "Delta:Float:90",
     c.condition_status as "Condition:Data:120",
     c.movement as "Movement:Link/Three PL Container Movement:160",
+    c.stock_posting_status as "Stock Posting:Data:130",
+    c.stock_entry as "Stock Entry:Link/Stock Entry:150",
+    c.stock_posting_error as "Stock Posting Error:Small Text:220",
     c.notes as "Notes:Small Text:260"
 from `tabThree PL Warehouse Correction` c
 order by c.operation_datetime desc, c.creation desc

@@ -30,6 +30,7 @@ docker cp scripts/create_demo_users.py "$backend_cid":/tmp/create_demo_users.py
 docker cp scripts/load_demo_warehouse_data.py "$backend_cid":/tmp/load_demo_warehouse_data.py
 docker cp scripts/apply_container_moves.py "$backend_cid":/tmp/apply_container_moves.py
 docker cp scripts/apply_container_repacks.py "$backend_cid":/tmp/apply_container_repacks.py
+docker cp scripts/apply_warehouse_corrections.py "$backend_cid":/tmp/apply_warehouse_corrections.py
 docker cp scripts/sync_receiving_notices.py "$backend_cid":/tmp/sync_receiving_notices.py
 docker cp scripts/sync_shipment_requests.py "$backend_cid":/tmp/sync_shipment_requests.py
 docker cp scripts/sync_picking_confirmations.py "$backend_cid":/tmp/sync_picking_confirmations.py
@@ -58,6 +59,8 @@ docker exec "${project_env[@]}" "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/apply_container_moves.py 0"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/apply_container_repacks.py 0"
+docker exec "${project_env[@]}" "$backend_cid" bash -lc \
+  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/apply_warehouse_corrections.py 1"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_receiving_notices.py 0"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
