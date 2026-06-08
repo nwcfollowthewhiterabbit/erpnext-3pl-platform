@@ -86,11 +86,12 @@ Demo data includes a draft receiving Stock Entry. Submit that receiving entry be
 
 ## Picking and Shipping Flow
 
-1. Create a `Pick List`.
-2. Pick from warehouse locations.
-3. Use the custom `Scanned Location` field when scanning location + product.
-4. Move picked stock to `Packing - 3`.
-5. Ship from `Shipping - 3` using `3PL Shipping`.
+1. Client creates a `Three PL Shipment Request`.
+2. The shipment sync processor creates a draft `Pick List` for structured request item rows.
+3. Warehouse staff pick from the listed warehouse locations and containers.
+4. Use the custom `Scanned Location` field when scanning location + product.
+5. Move picked stock to `Packing - 3`.
+6. Ship from `Shipping - 3` using `3PL Shipping`.
 
 ## Client Tracking
 
@@ -98,7 +99,7 @@ Custom fields were added to:
 
 - `Stock Entry`: `Client`, `Inbound Shipment Notice`, `Warehouse Flow`, `Scanned Location`
 - `Stock Entry Detail`: `Scanned Location`
-- `Pick List`: `Client`, `Shipment Reference`
+- `Pick List`: `Client`, `Shipment Reference`, `Shipment Request`
 - `Pick List Item`: `Scanned Location`
 
 This is intentionally a lightweight starting point. It records client ownership on warehouse documents, but does not yet enforce client-level stock segregation in the stock ledger.

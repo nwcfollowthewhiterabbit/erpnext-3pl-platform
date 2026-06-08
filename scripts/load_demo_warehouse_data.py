@@ -660,8 +660,8 @@ def ensure_shipment_request():
     request.append(
         "items",
         {
-            "item_code": "SKU-ALPHA-001",
-            "client_sku": "ALPHA-001",
+            "item_code": "SKU-ALPHA-003",
+            "client_sku": "ALPHA-003",
             "qty": 1,
             "uom": "Nos",
         },

@@ -121,9 +121,12 @@ Main flow:
 Expected result:
 
 - Shipment request is stored.
-- Warehouse can convert it into picking/packing/shipping work.
+- Warehouse receives an internal Pick List for structured item rows.
+- Allocated containers are marked as picking work.
 
-Implementation status: implemented as portal MVP.
+Implementation status: implemented as MVP.
+
+Submitted shipment requests with structured item rows are converted into draft ERPNext Pick Lists by the post-deploy/idempotent shipment sync processor. Full packing, dispatch, carrier tracking, and client-facing shipment tracking remain future work.
 
 Current route:
 
@@ -194,9 +197,9 @@ Expected result:
 - Quantity differences and quality issues are stored.
 - Discrepancy status can be tracked.
 
-Implementation status: partially implemented.
+Implementation status: implemented as MVP.
 
-Discrepancy records exist. Automated comparison, notification, and client instruction workflow are not implemented yet.
+Submitted inbound receipts update received quantities, variances, notice status, and auto-generated quantity discrepancies. Manual discrepancy rows are still used for damage, quality issues, and inspection notes.
 
 ### Warehouse Puts Goods Away Into Storage
 
@@ -232,9 +235,9 @@ Expected result:
 - Picking uses ERPNext Pick List.
 - Location/container context can be recorded.
 
-Implementation status: partially implemented.
+Implementation status: implemented as MVP.
 
-Pick List, custom fields, and client portal shipment requests exist. Automatic conversion from shipment request to Pick List is not implemented yet.
+Client shipment requests with structured item rows are converted into draft Pick Lists. The Pick List carries client, shipment request, shipment reference, warehouse, scanned location, and container context. Allocated containers move to `Picking` status and inventory snapshots show them as allocated.
 
 ### Warehouse Packs And Ships Goods
 
@@ -299,7 +302,7 @@ The business owner has broad system rights. The warehouse manager is operational
 | Client instructions for discrepancies | Implemented as MVP | Portal Web Form creates `Three PL Client Instruction` records linked to a Receiving Notice. |
 | Dynamic storage locations | Implemented as warehouse hierarchy | Locations are modeled as warehouses. |
 | Putaway process | Implemented as Stock Entry flow | Uses standard ERPNext stock movement. |
-| Picking from locations | Partially implemented | Pick List exists; shipment request source flow not implemented. |
+| Picking from locations | Implemented as MVP | Shipment requests with structured item rows create draft Pick Lists and mark allocated containers as `Picking`. |
 | Containers/boxes | Implemented as first model | `Three PL Container`; scanner-first UX not implemented. |
 | Barcode/location scan fields | Partially implemented | Fields exist; no dedicated scanner/mobile UI. |
 | Client inventory visibility | Implemented as MVP | Portal inventory snapshot exists and is customer-filtered by permissions. |
@@ -310,7 +313,7 @@ The business owner has broad system rights. The warehouse manager is operational
 
 ## Remaining Gaps After MVP
 
-- Automatic conversion from shipment request to Pick List.
+- Polished Pick List execution and scanner-first picking UX.
 - Automatic stock-ledger-based inventory snapshot refresh.
 - Dedicated client-facing discrepancy detail page.
 - Real email notifications after SMTP is configured.

@@ -80,6 +80,18 @@ REQUIRED_CONTAINER_MOVEMENT_FIELDS = {
     "reference_doctype",
     "reference_name",
 }
+REQUIRED_CONTAINER_MOVEMENT_TYPES = {
+    "Expected",
+    "Received",
+    "Moved",
+    "Putaway",
+    "Picking",
+    "Picked",
+    "Packed",
+    "Shipped",
+    "Repacked",
+    "Adjusted",
+}
 REQUIRED_CONTAINER_MOVE_FIELDS = {
     "operation_reference",
     "operation_datetime",
@@ -124,6 +136,7 @@ REQUIRED_CUSTOM_FIELDS = [
     "Stock Entry-container_code",
     "Stock Entry Detail-container_code",
     "Pick List-container_code",
+    "Pick List-shipment_request",
     "Pick List Item-container_code",
 ]
 REQUIRED_WAREHOUSES = [
@@ -222,6 +235,9 @@ def main():
     movement_meta = frappe.get_meta("Three PL Container Movement")
     movement_fields = {field.fieldname for field in movement_meta.fields}
     require(movement_fields >= REQUIRED_CONTAINER_MOVEMENT_FIELDS, "Three PL Container Movement misses required fields")
+    movement_type_field = movement_meta.get_field("movement_type")
+    require(movement_type_field, "Three PL Container Movement misses movement_type field")
+    require(set((movement_type_field.options or "").splitlines()) >= REQUIRED_CONTAINER_MOVEMENT_TYPES, "Three PL Container Movement misses required movement types")
     move_meta = frappe.get_meta("Three PL Container Move")
     move_fields = {field.fieldname for field in move_meta.fields}
     require(move_fields >= REQUIRED_CONTAINER_MOVE_FIELDS, "Three PL Container Move misses required fields")
@@ -410,7 +426,7 @@ def main():
     require(move.movement and frappe.db.exists("Three PL Container Movement", move.movement), "Demo container move is not linked to movement history")
     storage_container = frappe.get_doc("Three PL Container", "BOX-ALPHA-002")
     require(storage_container.current_warehouse == "Aisle A - 3", "Applied container move did not update container location")
-    require(storage_container.status == "Stored", "Applied container move did not update container status")
+    require(storage_container.status in {"Stored", "Picking"}, "Applied container move did not update container status")
     repack_name = frappe.db.get_value("Three PL Container Repack", {"operation_reference": "REPACK-ALPHA-001"}, "name")
     require(repack_name, "Missing demo container repack operation")
     repack = frappe.get_doc("Three PL Container Repack", repack_name)
@@ -455,17 +471,39 @@ def main():
         """,
         as_list=True,
     )
-    require(summary_rows and summary_rows[0][0] == 36, "Wrong Alpha SKU-ALPHA-003 available inventory summary")
+    require(summary_rows and summary_rows[0][0] == 18, "Wrong Alpha SKU-ALPHA-003 available inventory summary")
+    allocated_rows = frappe.db.sql(
+        """
+        select sum(qty)
+        from `tabThree PL Inventory Snapshot`
+        where customer = 'Demo Client Alpha'
+          and item_code = 'SKU-ALPHA-003'
+          and status = 'Allocated'
+        """,
+        as_list=True,
+    )
+    require(allocated_rows and allocated_rows[0][0] == 18, "Wrong Alpha SKU-ALPHA-003 allocated inventory summary")
     require(
         not frappe.db.exists("Three PL Inventory Snapshot", {"container_code": ("in", ["BOX-ALPHA-003", "BOX-ALPHA-004"])}),
         "Stale source container inventory snapshots were not removed",
     )
     require(frappe.db.exists("Three PL Inventory Snapshot", {"customer": "Demo Client Beta", "item_code": "SKU-BETA-001"}), "Missing demo beta inventory snapshot")
     require(frappe.db.exists("Inbound Shipment Notice", {"customer": "Demo Client Beta", "external_reference": "ASN-BETA-001"}), "Missing demo beta ASN")
-    require(frappe.db.exists("Three PL Shipment Request", {"customer": "Demo Client Alpha", "external_reference": "SHIP-ALPHA-001"}), "Missing demo shipment request")
+    demo_shipment_name = frappe.db.get_value("Three PL Shipment Request", {"customer": "Demo Client Alpha", "external_reference": "SHIP-ALPHA-001"}, "name")
+    require(demo_shipment_name, "Missing demo shipment request")
+    demo_pick_list_name = frappe.db.get_value("Pick List", {"shipment_request": demo_shipment_name}, "name")
+    require(demo_pick_list_name, "Demo shipment request did not create a Pick List")
+    demo_pick_list = frappe.get_doc("Pick List", demo_pick_list_name)
+    require(demo_pick_list.client == "Demo Client Alpha", "Demo Pick List has wrong client")
+    require(demo_pick_list.shipment_reference == "SHIP-ALPHA-001", "Demo Pick List has wrong shipment reference")
+    require(
+        any(row.item_code == "SKU-ALPHA-003" and row.qty == 1 and row.container_code for row in demo_pick_list.locations),
+        "Demo Pick List misses allocated item/location row",
+    )
     require(frappe.db.exists("Three PL Client Instruction", {"customer": "Demo Client Alpha", "receiving_notice": notice_name}), "Missing demo client discrepancy instruction")
 
     validate_receiving_sync()
+    validate_shipment_sync()
     validate_client_portal_permissions()
 
     print("Site validation passed")
@@ -550,6 +588,81 @@ def validate_receiving_sync():
     )
 
     cleanup_receiving_validation_docs()
+
+
+def cleanup_shipment_validation_docs():
+    frappe.set_user("Administrator")
+    request_names = frappe.get_all("Three PL Shipment Request", filters={"external_reference": ("like", "SHIP-VALIDATION-%")}, pluck="name")
+    for pick_name in frappe.get_all("Pick List", filters={"shipment_request": ("in", request_names or [""])}, pluck="name"):
+        pick_list = frappe.get_doc("Pick List", pick_name)
+        if pick_list.docstatus == 1:
+            pick_list.cancel()
+        frappe.delete_doc("Pick List", pick_list.name, ignore_permissions=True, force=True)
+    for request_name in request_names:
+        frappe.delete_doc("Three PL Shipment Request", request_name, ignore_permissions=True, force=True)
+
+
+def validate_shipment_sync():
+    from sync_inventory_snapshots import sync_inventory_snapshots
+    from sync_shipment_requests import sync_request
+
+    cleanup_shipment_validation_docs()
+    frappe.set_user("Administrator")
+
+    container = frappe.get_doc("Three PL Container", "BOX-ALPHA-005")
+    container.status = "Stored"
+    container.save(ignore_permissions=True)
+    sync_inventory_snapshots()
+
+    request = frappe.get_doc(
+        {
+            "doctype": "Three PL Shipment Request",
+            "customer": "Demo Client Alpha",
+            "external_reference": "SHIP-VALIDATION-ALPHA",
+            "requested_ship_date": nowdate(),
+            "destination_name": "Shipment Validation",
+            "destination_address": "Validation Address",
+            "portal_source": 1,
+            "items": [
+                {
+                    "item_code": "SKU-ALPHA-003",
+                    "client_sku": "ALPHA-003",
+                    "qty": 2,
+                    "uom": "Nos",
+                }
+            ],
+        }
+    )
+    request.insert(ignore_permissions=True)
+
+    pick_list_name = sync_request(request.name)
+    require(pick_list_name, "Shipment validation did not create Pick List")
+    request.reload()
+    pick_list = frappe.get_doc("Pick List", pick_list_name)
+    require(request.status == "Picking", f"Shipment validation request has wrong status: {request.status}")
+    require(pick_list.purpose == "Delivery", f"Shipment validation Pick List has wrong purpose: {pick_list.purpose}")
+    require(pick_list.client == "Demo Client Alpha", "Shipment validation Pick List has wrong client")
+    require(pick_list.shipment_request == request.name, "Shipment validation Pick List is not linked to request")
+    require(
+        any(row.item_code == "SKU-ALPHA-003" and row.qty == 2 and row.warehouse == "Aisle A - 3" and row.container_code for row in pick_list.locations),
+        "Shipment validation Pick List misses allocated stock row",
+    )
+    container.reload()
+    require(container.status == "Picking", f"Shipment validation container has wrong status: {container.status}")
+    require(
+        frappe.db.exists(
+            "Three PL Container Movement",
+            {
+                "container_code": container.name,
+                "movement_type": "Picking",
+                "reference_doctype": "Pick List",
+                "reference_name": pick_list.name,
+            },
+        ),
+        "Shipment validation did not create picking movement",
+    )
+
+    cleanup_shipment_validation_docs()
 
 
 def validate_client_portal_permissions():

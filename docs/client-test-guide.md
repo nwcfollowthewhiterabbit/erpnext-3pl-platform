@@ -199,19 +199,19 @@ Open `Pick List`.
 
 Test:
 
-- Create a pick list using available demo stock.
+- Open the Pick List generated from `SHIP-ALPHA-001`, or create a manual pick list using available demo stock.
 
 Expected result:
 
-- Picking workflow opens and can reference stock locations.
+- Picking workflow opens and references stock locations and containers.
 
 ## Current Scope Limits
 
 - Client portal MVP is implemented for creating Receiving Notices.
 - Client inventory visibility is implemented as an MVP snapshot.
 - Shipment requests are implemented as portal MVP records.
-- Automatic conversion from shipment request to Pick List is not implemented yet.
-- Automatic outbound status updates are not implemented yet.
+- Structured shipment requests are converted to draft Pick Lists as an MVP.
+- Full outbound status updates after packing/dispatch are not implemented yet.
 - Box/container handling exists as a first ERPNext custom DocType model, but scanner-first mobile screens are not implemented yet.
 - Real email delivery is not configured.
 - A placeholder outgoing email account exists only to prevent ERPNext forms from failing when an outgoing account is required.

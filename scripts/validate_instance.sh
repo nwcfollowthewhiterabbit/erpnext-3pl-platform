@@ -54,6 +54,7 @@ fi
 docker cp scripts/run_project_script.py "$backend_cid":/tmp/run_project_script.py
 docker cp scripts/project_config.py "$backend_cid":/tmp/project_config.py
 docker cp scripts/sync_receiving_notices.py "$backend_cid":/tmp/sync_receiving_notices.py
+docker cp scripts/sync_shipment_requests.py "$backend_cid":/tmp/sync_shipment_requests.py
 docker cp scripts/validate_site.py "$backend_cid":/tmp/validate_site.py
 docker exec \
   -e "WAREHOUSE_OPERATOR_PASSWORD=${warehouse_operator_password}" \
