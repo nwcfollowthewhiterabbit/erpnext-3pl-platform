@@ -1893,6 +1893,246 @@ def configure_scanner_pages():
     page.show_sidebar = 0
     page.save(ignore_permissions=True)
 
+    putaway_html = """
+<section class="container py-4" style="max-width: 760px;">
+  <h1 class="h3 mb-3">Putaway</h1>
+  <div class="mb-3">
+    <label class="form-label" for="putaway-container-code">Container / HU</label>
+    <input class="form-control" id="putaway-container-code" autocomplete="off" autofocus>
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="putaway-target-location">Storage Location</label>
+    <input class="form-control" id="putaway-target-location" autocomplete="off">
+  </div>
+  <div class="d-flex gap-2 align-items-center">
+    <button class="btn btn-primary" id="apply-putaway" type="button">Apply Putaway</button>
+    <span class="text-muted small" id="putaway-status"></span>
+  </div>
+</section>
+""".strip()
+    putaway_script = """
+(function () {
+  var ALLOWED_SOURCE_STATUSES = ['Received', 'In Verification', 'Ready for Putaway'];
+
+  function byId(id) { return document.getElementById(id); }
+  function setStatus(message, isError) {
+    var target = byId('putaway-status');
+    if (!target) return;
+    target.textContent = message || '';
+    target.className = isError ? 'text-danger small' : 'text-muted small';
+  }
+  function getCsrfToken() {
+    if (frappe.csrf_token && frappe.csrf_token !== 'None') {
+      return Promise.resolve(frappe.csrf_token);
+    }
+    if (window.__threePlCsrfTokenPromise) {
+      return window.__threePlCsrfTokenPromise;
+    }
+    window.__threePlCsrfTokenPromise = fetch('/app', { credentials: 'same-origin' })
+      .then(function (response) { return response.text(); })
+      .then(function (html) {
+        var match = html.match(/frappe\\.csrf_token\\s*=\\s*"([^"]+)"/);
+        if (!match || !match[1] || match[1] === 'None') {
+          throw new Error('Could not initialize session token. Please refresh and try again.');
+        }
+        frappe.csrf_token = match[1];
+        return match[1];
+      });
+    return window.__threePlCsrfTokenPromise;
+  }
+  function parseServerMessage(payload) {
+    if (!payload) return null;
+    if (payload._server_messages) {
+      try {
+        var messages = JSON.parse(payload._server_messages);
+        if (messages.length) {
+          var first = JSON.parse(messages[0]);
+          if (first.message) return first.message.replace(/<[^>]*>/g, '');
+        }
+      } catch (error) {
+        return payload._error_message || payload.exception || null;
+      }
+    }
+    return payload._error_message || payload.exception || null;
+  }
+  function api(method, args) {
+    return getCsrfToken().then(function (csrfToken) {
+      var body = new URLSearchParams();
+      Object.keys(args || {}).forEach(function (key) {
+        var value = args[key];
+        body.set(key, typeof value === 'string' ? value : JSON.stringify(value));
+      });
+      return fetch('/api/method/' + method, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Frappe-CSRF-Token': csrfToken
+        },
+        body: body
+      }).then(function (response) {
+        return response.text().then(function (text) {
+          var payload = text ? JSON.parse(text) : {};
+          if (!response.ok) {
+            throw new Error(parseServerMessage(payload) || ('Request failed: ' + response.status));
+          }
+          return payload;
+        });
+      });
+    });
+  }
+  function hasWarehouseRole() {
+    var roles = (frappe.user_roles || []);
+    return roles.indexOf('3PL Warehouse User') !== -1 || roles.indexOf('3PL Warehouse Manager') !== -1 || roles.indexOf('System Manager') !== -1;
+  }
+  function requireWarehouseRole() {
+    if (frappe.user_roles && !hasWarehouseRole()) {
+      setStatus('This scanner page is only available to warehouse users.', true);
+      var button = byId('apply-putaway');
+      if (button) button.disabled = true;
+      return false;
+    }
+    return true;
+  }
+  function getValue(doctype, filters, fieldname) {
+    return api('frappe.client.get_value', { doctype: doctype, filters: filters, fieldname: fieldname });
+  }
+  function insertDoc(doc) {
+    return api('frappe.client.insert', { doc: doc });
+  }
+  function setValue(doctype, name, fieldname, value) {
+    return api('frappe.client.set_value', { doctype: doctype, name: name, fieldname: fieldname, value: value });
+  }
+  function setValues(doctype, name, values) {
+    return Object.keys(values).reduce(function (promise, fieldname) {
+      return promise.then(function () {
+        return setValue(doctype, name, fieldname, values[fieldname]);
+      });
+    }, Promise.resolve());
+  }
+  function createMove(containerCode, container, targetLocation) {
+    return insertDoc({
+      doctype: 'Three PL Container Move',
+      operation_reference: 'PUTAWAY-' + containerCode + '-' + Date.now(),
+      operation_datetime: frappe.datetime.now_datetime(),
+      status: 'Draft',
+      container_code: containerCode,
+      client: container.client,
+      from_warehouse: container.current_warehouse,
+      to_warehouse: targetLocation,
+      notes: 'Created from scanner-first putaway page.'
+    });
+  }
+  function applyMove(moveDoc) {
+    var movementTime = frappe.datetime.now_datetime();
+    return insertDoc({
+      doctype: 'Three PL Container Movement',
+      movement_datetime: movementTime,
+      container_code: moveDoc.container_code,
+      client: moveDoc.client,
+      movement_type: 'Putaway',
+      from_warehouse: moveDoc.from_warehouse,
+      to_warehouse: moveDoc.to_warehouse,
+      reference_doctype: 'Three PL Container Move',
+      reference_name: moveDoc.name,
+      notes: 'Applied immediately from scanner-first putaway page.'
+    }).then(function (movementResponse) {
+      var movement = movementResponse.message;
+      return setValues('Three PL Container', moveDoc.container_code, {
+        current_warehouse: moveDoc.to_warehouse,
+        status: 'Stored',
+        last_moved_at: movementTime
+      }).then(function () {
+        return setValues('Three PL Container Move', moveDoc.name, {
+          status: 'Applied',
+          movement: movement.name
+        }).then(function () {
+          return movement;
+        });
+      });
+    });
+  }
+  function applyPutaway() {
+    if (frappe.session && frappe.session.user === 'Guest') {
+      window.location.href = '/login?redirect-to=' + encodeURIComponent('/warehouse/putaway');
+      return;
+    }
+    if (!requireWarehouseRole()) return;
+    var containerCode = (byId('putaway-container-code').value || '').trim();
+    var targetLocation = (byId('putaway-target-location').value || '').trim();
+    if (!containerCode || !targetLocation) {
+      setStatus('Scan container and storage location first.', true);
+      return;
+    }
+    setStatus('Applying putaway...', false);
+    getValue('Three PL Container', { name: containerCode }, ['client', 'current_warehouse', 'status']).then(function (containerResponse) {
+      var container = containerResponse.message;
+      if (!container || !container.client) throw new Error('Container not found.');
+      if (ALLOWED_SOURCE_STATUSES.indexOf(container.status) === -1) {
+        throw new Error('Container is not ready for putaway. Current status: ' + (container.status || 'unknown') + '.');
+      }
+      if (container.current_warehouse === targetLocation) throw new Error('Storage location is already current location.');
+      return getValue('Warehouse', { name: targetLocation }, 'name').then(function (warehouseResponse) {
+        if (!warehouseResponse.message || !warehouseResponse.message.name) throw new Error('Storage location not found.');
+        return createMove(containerCode, container, targetLocation);
+      });
+    }).then(function (insertResponse) {
+      var move = insertResponse.message;
+      return applyMove(move).then(function (movement) {
+        return { move: move, movement: movement };
+      });
+    }).then(function (result) {
+      setStatus('Putaway applied: ' + result.move.name + ' / ' + result.movement.name + '.', false);
+      byId('putaway-container-code').value = '';
+      byId('putaway-target-location').value = '';
+      byId('putaway-container-code').focus();
+    }).catch(function (error) {
+      setStatus(error.message || 'Could not apply putaway.', true);
+    });
+  }
+  frappe.ready(function () {
+    if (frappe.session && frappe.session.user === 'Guest') {
+      window.location.href = '/login?redirect-to=' + encodeURIComponent('/warehouse/putaway');
+      return;
+    }
+    requireWarehouseRole();
+    var button = byId('apply-putaway');
+    if (button) button.addEventListener('click', applyPutaway);
+    ['putaway-container-code', 'putaway-target-location'].forEach(function (id) {
+      var input = byId(id);
+      if (input) input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          if (id === 'putaway-container-code') byId('putaway-target-location').focus();
+          else applyPutaway();
+        }
+      });
+    });
+  });
+})();
+""".strip()
+
+    existing_putaway_page = frappe.db.get_value("Web Page", {"route": "warehouse/putaway"}, "name")
+    if existing_putaway_page:
+        putaway_page = frappe.get_doc("Web Page", existing_putaway_page)
+    else:
+        putaway_page = frappe.new_doc("Web Page")
+        putaway_page.name = "warehouse/putaway"
+
+    putaway_page.title = "Putaway"
+    putaway_page.route = "warehouse/putaway"
+    putaway_page.published = 1
+    if putaway_page.meta.has_field("login_required"):
+        putaway_page.login_required = 1
+    putaway_page.content_type = "HTML"
+    putaway_page.main_section = putaway_html
+    if putaway_page.meta.has_field("main_section_html"):
+        putaway_page.main_section_html = putaway_html
+    putaway_page.javascript = putaway_script
+    putaway_page.insert_code = 0
+    putaway_page.show_sidebar = 0
+    putaway_page.save(ignore_permissions=True)
+
     outbound_html = """
 <section class="container py-4" style="max-width: 820px;">
   <h1 class="h3 mb-3">Outbound Fulfillment</h1>

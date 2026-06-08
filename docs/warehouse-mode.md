@@ -98,6 +98,10 @@ Scanner route for picking confirmation:
 
 `/warehouse/picking-confirmation`
 
+Scanner route for putaway:
+
+`/warehouse/putaway`
+
 Scanner route for packing/shipping:
 
 `/warehouse/outbound-fulfillment`
@@ -133,6 +137,7 @@ Implemented:
 - Inventory snapshots can be synchronized from active containers by `scripts/sync_inventory_snapshots.py`.
 - Aggregated inventory is available through `3PL Client Inventory Summary`.
 - Minimal scanner-first container move page is available at `/warehouse/container-move` and applies moves immediately for warehouse roles.
+- Minimal scanner-first putaway page is available at `/warehouse/putaway` and moves ready containers from receiving/verification into storage with `Putaway` movement history.
 - Minimal scanner-first picking confirmation page is available at `/warehouse/picking-confirmation` and marks allocated containers as picked.
 - Minimal scanner-first outbound fulfillment page is available at `/warehouse/outbound-fulfillment` and creates submitted packing/shipping Stock Entries for warehouse roles.
 - Container links exist in receiving, putaway, picking, packing, and inventory snapshot contexts.
@@ -142,7 +147,7 @@ Still pending:
 
 - repack workflow, for example two small boxes consolidated into one larger box;
 - empty / closed / replaced container lifecycle actions;
-- scanner-first UX for receiving, putaway, and repack;
+- scanner-first UX for receiving and repack;
 - ERPNext form submit-time or scanner-page automation for move/repack documents;
 - automatic inventory snapshot updates from stock movements and container movements;
 - import or guided creation of the client's real warehouse location tree.

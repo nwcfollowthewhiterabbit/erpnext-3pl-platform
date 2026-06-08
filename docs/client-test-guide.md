@@ -183,15 +183,23 @@ Expected result:
 
 ### Putaway
 
-Open `Stock Entry`.
+Open the scanner-first page:
+
+`/warehouse/putaway`
 
 Test:
 
-- Create a Material Transfer from `Temporary Receiving - 3` to a storage location such as `Aisle A - 3`.
+- Scan or enter a container that is ready for putaway.
+- Scan or enter a storage location such as `Aisle A - 3` or `Aisle B - 3`.
+- Apply putaway.
 
 Expected result:
 
-- Stock can move from receiving into storage.
+- The container moves from receiving/verification into storage.
+- The container status becomes `Stored`.
+- Movement history shows movement type `Putaway`.
+
+The standard ERPNext Stock Entry putaway flow is still available for full stock-ledger transfers.
 
 ### Picking
 
@@ -211,8 +219,8 @@ Expected result:
 - Client inventory visibility is implemented as an MVP snapshot.
 - Shipment requests are implemented as portal MVP records.
 - Structured shipment requests are converted to draft Pick Lists as an MVP.
-- Full outbound status updates after packing/dispatch are not implemented yet.
-- Box/container handling exists as a first ERPNext custom DocType model. Scanner-first pages exist for container moves, picking confirmation, and outbound fulfillment; receiving, putaway, and repack screens still need polish.
+- Outbound status updates after packing/dispatch are implemented as MVP through submitted packing/shipping Stock Entries.
+- Box/container handling exists as a first ERPNext custom DocType model. Scanner-first pages exist for container moves, putaway, picking confirmation, and outbound fulfillment; receiving and repack screens still need polish.
 - Real email delivery is not configured.
 - A placeholder outgoing email account exists only to prevent ERPNext forms from failing when an outgoing account is required.
 

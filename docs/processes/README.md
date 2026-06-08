@@ -14,6 +14,7 @@ Current process notes:
 
 - [Handling Units](handling-units.md)
 - [Container Move](container-move.md)
+- [Putaway](putaway.md)
 - [Container Repack](container-repack.md)
 - [Inventory Snapshot Sync](inventory-snapshot.md)
 - [Warehouse Locations](warehouse-locations.md)

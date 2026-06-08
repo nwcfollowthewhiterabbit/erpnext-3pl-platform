@@ -24,5 +24,21 @@ Submit the receiving Stock Entry first. ERPNext needs posted incoming stock befo
 
 ## Scanner Behavior
 
-At this stage, scanner input is represented by the `Scanned Location` field. A USB/Bluetooth barcode scanner should work as keyboard input in the browser.
+Warehouse users can use the scanner-first page:
 
+`/warehouse/putaway`
+
+Flow:
+
+1. Scan or enter the container / Handling Unit code.
+2. Scan or enter the final storage location.
+3. Click `Apply Putaway`.
+
+Expected result:
+
+- a `Three PL Container Move` operation is created and marked `Applied`;
+- a `Three PL Container Movement` history row is written with movement type `Putaway`;
+- the container status becomes `Stored`;
+- the container current warehouse becomes the scanned storage location.
+
+The page accepts containers in `Received`, `In Verification`, or `Ready for Putaway` status. It is intentionally separate from the generic `/warehouse/container-move` page so the receiving-to-storage step remains visible in history.

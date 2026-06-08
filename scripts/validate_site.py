@@ -1,5 +1,5 @@
 import frappe
-from frappe.utils import nowdate
+from frappe.utils import now_datetime, nowdate
 
 from project_config import (
     BUSINESS_OWNER_USER,
@@ -255,6 +255,7 @@ def main():
 
     for route, label in (
         ("warehouse/container-move", "container move"),
+        ("warehouse/putaway", "putaway"),
         ("warehouse/picking-confirmation", "picking confirmation"),
         ("warehouse/outbound-fulfillment", "outbound fulfillment"),
     ):
@@ -510,6 +511,7 @@ def main():
 
     validate_receiving_sync()
     validate_shipment_sync()
+    validate_putaway_operation()
     validate_picking_confirmation()
     validate_outbound_fulfillment()
     validate_client_portal_permissions()
@@ -671,6 +673,115 @@ def validate_shipment_sync():
     )
 
     cleanup_shipment_validation_docs()
+
+
+def cleanup_putaway_validation_docs():
+    frappe.set_user("Administrator")
+    for movement_name in frappe.get_all(
+        "Three PL Container Movement",
+        filters={"container_code": "BOX-PUTAWAY-VALIDATION"},
+        pluck="name",
+    ):
+        frappe.delete_doc("Three PL Container Movement", movement_name, ignore_permissions=True, force=True)
+    for move_name in frappe.get_all(
+        "Three PL Container Move",
+        filters={"container_code": "BOX-PUTAWAY-VALIDATION"},
+        pluck="name",
+    ):
+        frappe.delete_doc("Three PL Container Move", move_name, ignore_permissions=True, force=True)
+    if frappe.db.exists("Three PL Container", "BOX-PUTAWAY-VALIDATION"):
+        frappe.delete_doc("Three PL Container", "BOX-PUTAWAY-VALIDATION", ignore_permissions=True, force=True)
+
+
+def validate_putaway_operation():
+    cleanup_putaway_validation_docs()
+    frappe.set_user("Administrator")
+
+    container = frappe.get_doc(
+        {
+            "doctype": "Three PL Container",
+            "container_code": "BOX-PUTAWAY-VALIDATION",
+            "barcode": "BOX-PUTAWAY-VALIDATION",
+            "container_type": "Box",
+            "client": "Demo Client Alpha",
+            "current_warehouse": "Temporary Receiving - 3",
+            "status": "Ready for Putaway",
+            "items": [
+                {
+                    "item_code": "SKU-ALPHA-001",
+                    "client_sku": "ALPHA-001",
+                    "qty": 1,
+                    "uom": "Nos",
+                    "condition_status": "OK",
+                }
+            ],
+        }
+    )
+    container.insert(ignore_permissions=True)
+
+    frappe.set_user(WAREHOUSE_MANAGER_USER)
+    container = frappe.get_doc("Three PL Container", "BOX-PUTAWAY-VALIDATION")
+    require(container.status in {"Received", "In Verification", "Ready for Putaway"}, "Putaway validation container is not ready")
+    require(container.current_warehouse != "Aisle B - 3", "Putaway validation target is already current location")
+    operation_time = now_datetime()
+    move = frappe.get_doc(
+        {
+            "doctype": "Three PL Container Move",
+            "operation_reference": "PUTAWAY-VALIDATION-ALPHA",
+            "operation_datetime": operation_time,
+            "status": "Draft",
+            "container_code": container.name,
+            "client": container.client,
+            "from_warehouse": container.current_warehouse,
+            "to_warehouse": "Aisle B - 3",
+            "notes": "Validation putaway operation.",
+        }
+    )
+    move.insert()
+    movement = frappe.get_doc(
+        {
+            "doctype": "Three PL Container Movement",
+            "movement_datetime": operation_time,
+            "container_code": container.name,
+            "client": container.client,
+            "movement_type": "Putaway",
+            "from_warehouse": container.current_warehouse,
+            "to_warehouse": "Aisle B - 3",
+            "reference_doctype": "Three PL Container Move",
+            "reference_name": move.name,
+            "notes": "Validation putaway movement.",
+        }
+    )
+    movement.insert()
+    container.current_warehouse = "Aisle B - 3"
+    container.status = "Stored"
+    container.last_moved_at = operation_time
+    container.save()
+    move.status = "Applied"
+    move.movement = movement.name
+    move.save()
+
+    frappe.set_user("Administrator")
+    container.reload()
+    move.reload()
+    require(container.current_warehouse == "Aisle B - 3", "Putaway validation did not update container location")
+    require(container.status == "Stored", "Putaway validation did not store container")
+    require(move.status == "Applied", "Putaway validation did not apply move")
+    require(move.movement == movement.name, "Putaway validation move is not linked to movement")
+    require(
+        frappe.db.exists(
+            "Three PL Container Movement",
+            {
+                "container_code": container.name,
+                "movement_type": "Putaway",
+                "reference_doctype": "Three PL Container Move",
+                "reference_name": move.name,
+            },
+        ),
+        "Putaway validation did not create movement history",
+    )
+
+    cleanup_putaway_validation_docs()
 
 
 def cleanup_picking_validation_docs():
