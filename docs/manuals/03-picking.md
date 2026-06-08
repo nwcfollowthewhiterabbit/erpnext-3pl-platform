@@ -4,6 +4,21 @@ Goal: create a pick list and collect stock from warehouse locations.
 
 ## Manual Flow
 
+Scanner route:
+
+`/warehouse/picking-confirmation`
+
+Scanner-first flow:
+
+1. Open the scanner route.
+2. Scan or enter the Pick List.
+3. Scan or enter Container / HU.
+4. Confirm Picked.
+
+The page updates picked quantities for the matching Pick List rows, marks the container as `Picked`, and records `Three PL Container Movement` history.
+
+Manual fallback:
+
 1. Open `Stock > Pick List`.
 2. Open the Pick List generated from the client Shipment Request, or create one manually if needed.
 3. Check:

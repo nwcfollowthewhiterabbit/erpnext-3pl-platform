@@ -255,6 +255,7 @@ def main():
 
     for route, label in (
         ("warehouse/container-move", "container move"),
+        ("warehouse/picking-confirmation", "picking confirmation"),
         ("warehouse/outbound-fulfillment", "outbound fulfillment"),
     ):
         scanner_page_name = frappe.db.get_value("Web Page", {"route": route}, "name")
@@ -509,6 +510,7 @@ def main():
 
     validate_receiving_sync()
     validate_shipment_sync()
+    validate_picking_confirmation()
     validate_outbound_fulfillment()
     validate_client_portal_permissions()
 
@@ -669,6 +671,112 @@ def validate_shipment_sync():
     )
 
     cleanup_shipment_validation_docs()
+
+
+def cleanup_picking_validation_docs():
+    frappe.set_user("Administrator")
+    reference = "PICK-VALIDATION-ALPHA"
+    request_names = frappe.get_all("Three PL Shipment Request", filters={"external_reference": reference}, pluck="name")
+    for movement_name in frappe.get_all(
+        "Three PL Container Movement",
+        filters={"container_code": "BOX-PICKING-VALIDATION"},
+        pluck="name",
+    ):
+        frappe.delete_doc("Three PL Container Movement", movement_name, ignore_permissions=True, force=True)
+    for pick_name in frappe.get_all("Pick List", filters={"shipment_request": ("in", request_names or [""])}, pluck="name"):
+        pick_list = frappe.get_doc("Pick List", pick_name)
+        if pick_list.docstatus == 1:
+            pick_list.cancel()
+        frappe.delete_doc("Pick List", pick_list.name, ignore_permissions=True, force=True)
+    for request_name in request_names:
+        frappe.delete_doc("Three PL Shipment Request", request_name, ignore_permissions=True, force=True)
+    for snapshot_name in frappe.get_all("Three PL Inventory Snapshot", filters={"container_code": "BOX-PICKING-VALIDATION"}, pluck="name"):
+        frappe.delete_doc("Three PL Inventory Snapshot", snapshot_name, ignore_permissions=True, force=True)
+    if frappe.db.exists("Three PL Container", "BOX-PICKING-VALIDATION"):
+        frappe.delete_doc("Three PL Container", "BOX-PICKING-VALIDATION", ignore_permissions=True, force=True)
+
+
+def validate_picking_confirmation():
+    from sync_inventory_snapshots import sync_inventory_snapshots
+    from sync_picking_confirmations import sync_pick_list
+    from sync_shipment_requests import sync_request
+
+    cleanup_picking_validation_docs()
+    frappe.set_user("Administrator")
+
+    container = frappe.get_doc(
+        {
+            "doctype": "Three PL Container",
+            "container_code": "BOX-PICKING-VALIDATION",
+            "barcode": "BOX-PICKING-VALIDATION",
+            "container_type": "Box",
+            "client": "Demo Client Alpha",
+            "current_warehouse": "Temporary Receiving - 3",
+            "status": "Stored",
+            "items": [
+                {
+                    "item_code": "SKU-ALPHA-001",
+                    "client_sku": "ALPHA-001",
+                    "qty": 2,
+                    "uom": "Nos",
+                    "condition_status": "OK",
+                }
+            ],
+        }
+    )
+    container.insert(ignore_permissions=True)
+    sync_inventory_snapshots()
+
+    request = frappe.get_doc(
+        {
+            "doctype": "Three PL Shipment Request",
+            "customer": "Demo Client Alpha",
+            "external_reference": "PICK-VALIDATION-ALPHA",
+            "requested_ship_date": nowdate(),
+            "destination_name": "Picking Validation",
+            "destination_address": "Validation Address",
+            "portal_source": 1,
+            "items": [
+                {
+                    "item_code": "SKU-ALPHA-001",
+                    "client_sku": "ALPHA-001",
+                    "qty": 2,
+                    "uom": "Nos",
+                }
+            ],
+        }
+    )
+    request.insert(ignore_permissions=True)
+
+    pick_list_name = sync_request(request.name)
+    require(pick_list_name, "Picking validation did not create Pick List")
+    pick_list = frappe.get_doc("Pick List", pick_list_name)
+    picked = False
+    for row in pick_list.locations:
+        if row.container_code == "BOX-PICKING-VALIDATION":
+            row.picked_qty = row.stock_qty or row.qty
+            picked = True
+    require(picked, "Picking validation Pick List did not allocate validation container")
+    pick_list.save(ignore_permissions=True)
+
+    synced = sync_pick_list(pick_list.name)
+    require("BOX-PICKING-VALIDATION" in synced, "Picking validation did not sync picked container")
+    container.reload()
+    require(container.status == "Picked", f"Picking validation container has wrong status: {container.status}")
+    require(
+        frappe.db.exists(
+            "Three PL Container Movement",
+            {
+                "container_code": container.name,
+                "movement_type": "Picked",
+                "reference_doctype": "Pick List",
+                "reference_name": pick_list.name,
+            },
+        ),
+        "Picking validation did not create picked movement",
+    )
+
+    cleanup_picking_validation_docs()
 
 
 def cleanup_outbound_fulfillment_validation_docs():

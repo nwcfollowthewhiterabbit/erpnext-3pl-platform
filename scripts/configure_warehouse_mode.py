@@ -2194,6 +2194,209 @@ def configure_scanner_pages():
     outbound_page.show_sidebar = 0
     outbound_page.save(ignore_permissions=True)
 
+    picking_html = """
+<section class="container py-4" style="max-width: 760px;">
+  <h1 class="h3 mb-3">Picking Confirmation</h1>
+  <div class="mb-3">
+    <label class="form-label" for="pick-list">Pick List</label>
+    <input class="form-control" id="pick-list" autocomplete="off" autofocus>
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="picked-container">Container / HU</label>
+    <input class="form-control" id="picked-container" autocomplete="off">
+  </div>
+  <div class="d-flex gap-2 align-items-center">
+    <button class="btn btn-primary" id="confirm-pick" type="button">Confirm Picked</button>
+    <span class="text-muted small" id="picking-status"></span>
+  </div>
+</section>
+""".strip()
+
+    picking_script = """
+(function () {
+  function byId(id) { return document.getElementById(id); }
+  function setStatus(message, isError) {
+    var target = byId('picking-status');
+    if (!target) return;
+    target.textContent = message || '';
+    target.className = isError ? 'text-danger small' : 'text-muted small';
+  }
+  function getCsrfToken() {
+    if (frappe.csrf_token && frappe.csrf_token !== 'None') return Promise.resolve(frappe.csrf_token);
+    if (window.__threePlCsrfTokenPromise) return window.__threePlCsrfTokenPromise;
+    window.__threePlCsrfTokenPromise = fetch('/app', { credentials: 'same-origin' })
+      .then(function (response) { return response.text(); })
+      .then(function (html) {
+        var match = html.match(/frappe\\.csrf_token\\s*=\\s*"([^"]+)"/);
+        if (!match || !match[1] || match[1] === 'None') throw new Error('Could not initialize session token. Please refresh and try again.');
+        frappe.csrf_token = match[1];
+        return match[1];
+      });
+    return window.__threePlCsrfTokenPromise;
+  }
+  function parseServerMessage(payload) {
+    if (!payload) return null;
+    if (payload._server_messages) {
+      try {
+        var messages = JSON.parse(payload._server_messages);
+        if (messages.length) {
+          var first = JSON.parse(messages[0]);
+          if (first.message) return first.message.replace(/<[^>]*>/g, '');
+        }
+      } catch (error) {
+        return payload._error_message || payload.exception || null;
+      }
+    }
+    return payload._error_message || payload.exception || null;
+  }
+  function api(method, args) {
+    return getCsrfToken().then(function (csrfToken) {
+      var body = new URLSearchParams();
+      Object.keys(args || {}).forEach(function (key) {
+        var value = args[key];
+        body.set(key, typeof value === 'string' ? value : JSON.stringify(value));
+      });
+      return fetch('/api/method/' + method, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Frappe-CSRF-Token': csrfToken
+        },
+        body: body
+      }).then(function (response) {
+        return response.text().then(function (text) {
+          var payload = text ? JSON.parse(text) : {};
+          if (!response.ok) throw new Error(parseServerMessage(payload) || ('Request failed: ' + response.status));
+          return payload;
+        });
+      });
+    });
+  }
+  function hasWarehouseRole() {
+    var roles = (frappe.user_roles || []);
+    return roles.indexOf('3PL Warehouse User') !== -1 || roles.indexOf('3PL Warehouse Manager') !== -1 || roles.indexOf('System Manager') !== -1;
+  }
+  function requireWarehouseRole() {
+    if (frappe.user_roles && !hasWarehouseRole()) {
+      setStatus('This scanner page is only available to warehouse users.', true);
+      var button = byId('confirm-pick');
+      if (button) button.disabled = true;
+      return false;
+    }
+    return true;
+  }
+  function getDoc(doctype, name) {
+    return api('frappe.client.get', { doctype: doctype, name: name });
+  }
+  function insertDoc(doc) {
+    return api('frappe.client.insert', { doc: doc });
+  }
+  function setValue(doctype, name, fieldname, value) {
+    return api('frappe.client.set_value', { doctype: doctype, name: name, fieldname: fieldname, value: value });
+  }
+  function setValues(doctype, name, values) {
+    return Object.keys(values).reduce(function (promise, fieldname) {
+      return promise.then(function () { return setValue(doctype, name, fieldname, values[fieldname]); });
+    }, Promise.resolve());
+  }
+  function confirmPick() {
+    if (frappe.session && frappe.session.user === 'Guest') {
+      window.location.href = '/login?redirect-to=' + encodeURIComponent('/warehouse/picking-confirmation');
+      return;
+    }
+    if (!requireWarehouseRole()) return;
+    var pickListName = (byId('pick-list').value || '').trim();
+    var containerCode = (byId('picked-container').value || '').trim();
+    if (!pickListName || !containerCode) {
+      setStatus('Scan Pick List and container first.', true);
+      return;
+    }
+    setStatus('Confirming pick...', false);
+    var pickList;
+    var container;
+    var rows;
+    getDoc('Pick List', pickListName).then(function (pickResponse) {
+      pickList = pickResponse.message;
+      rows = (pickList.locations || []).filter(function (row) { return row.container_code === containerCode; });
+      if (!rows.length) throw new Error('Container is not allocated in this Pick List.');
+      return getDoc('Three PL Container', containerCode);
+    }).then(function (containerResponse) {
+      container = containerResponse.message;
+      return rows.reduce(function (promise, row) {
+        return promise.then(function () {
+          return setValue('Pick List Item', row.name, 'picked_qty', row.stock_qty || row.qty || 0);
+        });
+      }, Promise.resolve());
+    }).then(function () {
+      return insertDoc({
+        doctype: 'Three PL Container Movement',
+        movement_datetime: frappe.datetime.now_datetime(),
+        container_code: container.name,
+        client: container.client,
+        movement_type: 'Picked',
+        from_warehouse: container.current_warehouse,
+        to_warehouse: container.current_warehouse,
+        reference_doctype: 'Pick List',
+        reference_name: pickList.name,
+        notes: 'Created from scanner-first picking confirmation page.'
+      });
+    }).then(function () {
+      return setValues('Three PL Container', container.name, {
+        status: 'Picked',
+        last_moved_at: frappe.datetime.now_datetime()
+      });
+    }).then(function () {
+      setStatus('Pick confirmed for ' + containerCode + '.', false);
+      byId('picked-container').value = '';
+      byId('picked-container').focus();
+    }).catch(function (error) {
+      setStatus(error.message || 'Could not confirm pick.', true);
+    });
+  }
+  frappe.ready(function () {
+    if (frappe.session && frappe.session.user === 'Guest') {
+      window.location.href = '/login?redirect-to=' + encodeURIComponent('/warehouse/picking-confirmation');
+      return;
+    }
+    requireWarehouseRole();
+    var button = byId('confirm-pick');
+    if (button) button.addEventListener('click', confirmPick);
+    ['pick-list', 'picked-container'].forEach(function (id) {
+      var input = byId(id);
+      if (input) input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          if (id === 'pick-list') byId('picked-container').focus();
+          else confirmPick();
+        }
+      });
+    });
+  });
+})();
+""".strip()
+
+    existing_picking_page = frappe.db.get_value("Web Page", {"route": "warehouse/picking-confirmation"}, "name")
+    if existing_picking_page:
+        picking_page = frappe.get_doc("Web Page", existing_picking_page)
+    else:
+        picking_page = frappe.new_doc("Web Page")
+        picking_page.name = "warehouse/picking-confirmation"
+
+    picking_page.title = "Picking Confirmation"
+    picking_page.route = "warehouse/picking-confirmation"
+    picking_page.published = 1
+    if picking_page.meta.has_field("login_required"):
+        picking_page.login_required = 1
+    picking_page.content_type = "HTML"
+    picking_page.main_section = picking_html
+    if picking_page.meta.has_field("main_section_html"):
+        picking_page.main_section_html = picking_html
+    picking_page.javascript = picking_script
+    picking_page.insert_code = 0
+    picking_page.show_sidebar = 0
+    picking_page.save(ignore_permissions=True)
+
 
 def configure_defaults():
     ensure_doctype_property("Warehouse", "allow_rename", 0, "Check")

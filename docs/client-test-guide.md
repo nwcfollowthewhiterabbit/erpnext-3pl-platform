@@ -212,7 +212,7 @@ Expected result:
 - Shipment requests are implemented as portal MVP records.
 - Structured shipment requests are converted to draft Pick Lists as an MVP.
 - Full outbound status updates after packing/dispatch are not implemented yet.
-- Box/container handling exists as a first ERPNext custom DocType model. Scanner-first pages exist for container moves and outbound fulfillment; receiving, putaway, repack, and picking screens still need polish.
+- Box/container handling exists as a first ERPNext custom DocType model. Scanner-first pages exist for container moves, picking confirmation, and outbound fulfillment; receiving, putaway, and repack screens still need polish.
 - Real email delivery is not configured.
 - A placeholder outgoing email account exists only to prevent ERPNext forms from failing when an outgoing account is required.
 

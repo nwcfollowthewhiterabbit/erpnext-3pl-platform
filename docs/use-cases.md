@@ -237,7 +237,7 @@ Expected result:
 
 Implementation status: implemented as MVP.
 
-Client shipment requests with structured item rows are converted into draft Pick Lists. The Pick List carries client, shipment request, shipment reference, warehouse, scanned location, and container context. Allocated containers move to `Picking` status and inventory snapshots show them as allocated.
+Client shipment requests with structured item rows are converted into draft Pick Lists. The Pick List carries client, shipment request, shipment reference, warehouse, scanned location, and container context. Allocated containers move to `Picking` status and inventory snapshots show them as allocated. A scanner-first confirmation page exists at `/warehouse/picking-confirmation`.
 
 ### Warehouse Packs And Ships Goods
 
@@ -304,9 +304,9 @@ The business owner has broad system rights. The warehouse manager is operational
 | Client instructions for discrepancies | Implemented as MVP | Portal Web Form creates `Three PL Client Instruction` records linked to a Receiving Notice. |
 | Dynamic storage locations | Implemented as warehouse hierarchy | Locations are modeled as warehouses. |
 | Putaway process | Implemented as Stock Entry flow | Uses standard ERPNext stock movement. |
-| Picking from locations | Implemented as MVP | Shipment requests with structured item rows create draft Pick Lists and mark allocated containers as `Picking`. |
-| Containers/boxes | Implemented as first model | `Three PL Container`; scanner-first pages exist for container moves and outbound fulfillment. |
-| Barcode/location scan fields | Partially implemented | Fields and first scanner pages exist; receiving/putaway/picking scanner UX still needs polish. |
+| Picking from locations | Implemented as MVP | Shipment requests create draft Pick Lists; scanner picking confirmation marks containers as `Picked`. |
+| Containers/boxes | Implemented as first model | `Three PL Container`; scanner-first pages exist for container moves, picking confirmation, and outbound fulfillment. |
+| Barcode/location scan fields | Partially implemented | Fields and first scanner pages exist; receiving, putaway, and repack scanner UX still needs polish. |
 | Client inventory visibility | Implemented as MVP | Portal inventory snapshot exists and is customer-filtered by permissions. |
 | Receiving history | Partially implemented | Portal Web Form list exists; dedicated polished history UX is not implemented. |
 | Shipment requests | Implemented as MVP | Client portal Web Form creates shipment requests, Pick Lists, and packing/shipping status sync. |
@@ -315,7 +315,7 @@ The business owner has broad system rights. The warehouse manager is operational
 
 ## Remaining Gaps After MVP
 
-- Polished Pick List execution and scanner-first receiving/putaway/picking UX.
+- Scanner-first receiving, putaway, and repack UX.
 - Automatic stock-ledger-based inventory snapshot refresh.
 - Dedicated client-facing discrepancy detail page.
 - Real email notifications after SMTP is configured.
