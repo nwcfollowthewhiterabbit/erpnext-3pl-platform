@@ -57,13 +57,36 @@ Demo operation:
 - creates a `Three PL Container Movement` record with type `Repacked`;
 - marks the repack operation as `Applied`.
 
+## Scanner-First Page
+
+Warehouse users can open:
+
+`/warehouse/repack`
+
+The current scanner flow supports full consolidation:
+
+1. scan one or more source containers;
+2. scan or enter the target container;
+3. scan or enter the target location;
+4. apply repack.
+
+The page automatically aggregates all item rows from the source containers into the target container.
+
+Expected result:
+
+- a `Three PL Container Repack` operation is created;
+- a `Three PL Container Movement` row is written with movement type `Repacked`;
+- source containers are marked `Replaced`;
+- source containers point to the target container through `replaced_by`;
+- the target container becomes `Stored` at the target location;
+- target container contents equal the sum of source container contents.
+
 ## Important Boundary
 
 This is a controlled MVP repack flow. It applies the resulting contents entered on the repack operation.
 
 Still pending:
 
-- scanner-first UI for repack;
 - ERPNext form submit-time automation;
 - richer item-level split guidance for partial repacks.
 

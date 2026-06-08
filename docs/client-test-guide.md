@@ -213,6 +213,27 @@ Expected result:
 
 - Picking workflow opens and references stock locations and containers.
 
+### Repack / Box Consolidation
+
+Open the scanner-first page:
+
+`/warehouse/repack`
+
+Test:
+
+- Scan one or more source containers.
+- Enter a new target container code.
+- Enter a storage location such as `Aisle A - 3`.
+- Apply repack.
+
+Expected result:
+
+- Source containers become `Replaced`.
+- Source containers reference the new target container.
+- Target container is created or updated as `Stored`.
+- Target contents equal the sum of source container contents.
+- Movement history shows movement type `Repacked`.
+
 ## Current Scope Limits
 
 - Client portal MVP is implemented for creating Receiving Notices.
@@ -220,7 +241,7 @@ Expected result:
 - Shipment requests are implemented as portal MVP records.
 - Structured shipment requests are converted to draft Pick Lists as an MVP.
 - Outbound status updates after packing/dispatch are implemented as MVP through submitted packing/shipping Stock Entries.
-- Box/container handling exists as a first ERPNext custom DocType model. Scanner-first pages exist for container moves, putaway, picking confirmation, and outbound fulfillment; receiving and repack screens still need polish.
+- Box/container handling exists as a first ERPNext custom DocType model. Scanner-first pages exist for container moves, putaway, full-container repack, picking confirmation, and outbound fulfillment; receiving and partial split/repack screens still need polish.
 - Real email delivery is not configured.
 - A placeholder outgoing email account exists only to prevent ERPNext forms from failing when an outgoing account is required.
 

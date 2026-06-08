@@ -305,8 +305,8 @@ The business owner has broad system rights. The warehouse manager is operational
 | Dynamic storage locations | Implemented as warehouse hierarchy | Locations are modeled as warehouses. |
 | Putaway process | Implemented as MVP | Uses standard ERPNext Stock Entry flow and a scanner-first container putaway page at `/warehouse/putaway`. |
 | Picking from locations | Implemented as MVP | Shipment requests create draft Pick Lists; scanner picking confirmation marks containers as `Picked`. |
-| Containers/boxes | Implemented as first model | `Three PL Container`; scanner-first pages exist for container moves, putaway, picking confirmation, and outbound fulfillment. |
-| Barcode/location scan fields | Partially implemented | Fields and first scanner pages exist; receiving and repack scanner UX still needs polish. |
+| Containers/boxes | Implemented as first model | `Three PL Container`; scanner-first pages exist for container moves, putaway, repack, picking confirmation, and outbound fulfillment. |
+| Barcode/location scan fields | Partially implemented | Fields and first scanner pages exist; receiving scanner UX and partial split/repack UX still need polish. |
 | Client inventory visibility | Implemented as MVP | Portal inventory snapshot exists and is customer-filtered by permissions. |
 | Receiving history | Partially implemented | Portal Web Form list exists; dedicated polished history UX is not implemented. |
 | Shipment requests | Implemented as MVP | Client portal Web Form creates shipment requests, Pick Lists, and packing/shipping status sync. |
@@ -315,7 +315,8 @@ The business owner has broad system rights. The warehouse manager is operational
 
 ## Remaining Gaps After MVP
 
-- Scanner-first receiving and repack UX.
+- Scanner-first receiving UX.
+- Partial split/repack UX for cases where only part of a box is moved into another box.
 - Automatic stock-ledger-based inventory snapshot refresh.
 - Dedicated client-facing discrepancy detail page.
 - Real email notifications after SMTP is configured.

@@ -256,6 +256,7 @@ def main():
     for route, label in (
         ("warehouse/container-move", "container move"),
         ("warehouse/putaway", "putaway"),
+        ("warehouse/repack", "repack"),
         ("warehouse/picking-confirmation", "picking confirmation"),
         ("warehouse/outbound-fulfillment", "outbound fulfillment"),
     ):

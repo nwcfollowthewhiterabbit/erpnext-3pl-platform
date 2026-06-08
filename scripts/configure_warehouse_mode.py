@@ -2133,6 +2133,380 @@ def configure_scanner_pages():
     putaway_page.show_sidebar = 0
     putaway_page.save(ignore_permissions=True)
 
+    repack_html = """
+<section class="container py-4" style="max-width: 820px;">
+  <h1 class="h3 mb-3">Container Repack</h1>
+  <div class="mb-3">
+    <label class="form-label" for="repack-source-container">Source Container / HU</label>
+    <div class="d-flex gap-2">
+      <input class="form-control" id="repack-source-container" autocomplete="off" autofocus>
+      <button class="btn btn-outline-primary" id="add-repack-source" type="button">Add</button>
+    </div>
+  </div>
+  <div class="mb-3">
+    <div class="small text-muted mb-1">Scanned Sources</div>
+    <ul class="list-group" id="repack-source-list"></ul>
+  </div>
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label" for="repack-target-container">Target Container / HU</label>
+      <input class="form-control" id="repack-target-container" autocomplete="off">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label" for="repack-target-location">Target Location</label>
+      <input class="form-control" id="repack-target-location" autocomplete="off">
+    </div>
+  </div>
+  <div class="d-flex gap-2 align-items-center mt-3">
+    <button class="btn btn-primary" id="apply-repack" type="button">Apply Repack</button>
+    <span class="text-muted small" id="repack-status"></span>
+  </div>
+</section>
+""".strip()
+    repack_script = """
+(function () {
+  var sourceContainers = [];
+  var BLOCKED_SOURCE_STATUSES = ['Shipped', 'Closed', 'Replaced'];
+
+  function byId(id) { return document.getElementById(id); }
+  function setStatus(message, isError) {
+    var target = byId('repack-status');
+    if (!target) return;
+    target.textContent = message || '';
+    target.className = isError ? 'text-danger small' : 'text-muted small';
+  }
+  function getCsrfToken() {
+    if (frappe.csrf_token && frappe.csrf_token !== 'None') {
+      return Promise.resolve(frappe.csrf_token);
+    }
+    if (window.__threePlCsrfTokenPromise) {
+      return window.__threePlCsrfTokenPromise;
+    }
+    window.__threePlCsrfTokenPromise = fetch('/app', { credentials: 'same-origin' })
+      .then(function (response) { return response.text(); })
+      .then(function (html) {
+        var match = html.match(/frappe\\.csrf_token\\s*=\\s*"([^"]+)"/);
+        if (!match || !match[1] || match[1] === 'None') {
+          throw new Error('Could not initialize session token. Please refresh and try again.');
+        }
+        frappe.csrf_token = match[1];
+        return match[1];
+      });
+    return window.__threePlCsrfTokenPromise;
+  }
+  function parseServerMessage(payload) {
+    if (!payload) return null;
+    if (payload._server_messages) {
+      try {
+        var messages = JSON.parse(payload._server_messages);
+        if (messages.length) {
+          var first = JSON.parse(messages[0]);
+          if (first.message) return first.message.replace(/<[^>]*>/g, '');
+        }
+      } catch (error) {
+        return payload._error_message || payload.exception || null;
+      }
+    }
+    return payload._error_message || payload.exception || null;
+  }
+  function api(method, args) {
+    return getCsrfToken().then(function (csrfToken) {
+      var body = new URLSearchParams();
+      Object.keys(args || {}).forEach(function (key) {
+        var value = args[key];
+        body.set(key, typeof value === 'string' ? value : JSON.stringify(value));
+      });
+      return fetch('/api/method/' + method, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Frappe-CSRF-Token': csrfToken
+        },
+        body: body
+      }).then(function (response) {
+        return response.text().then(function (text) {
+          var payload = text ? JSON.parse(text) : {};
+          if (!response.ok) {
+            throw new Error(parseServerMessage(payload) || ('Request failed: ' + response.status));
+          }
+          return payload;
+        });
+      });
+    });
+  }
+  function hasWarehouseRole() {
+    var roles = (frappe.user_roles || []);
+    return roles.indexOf('3PL Warehouse User') !== -1 || roles.indexOf('3PL Warehouse Manager') !== -1 || roles.indexOf('System Manager') !== -1;
+  }
+  function requireWarehouseRole() {
+    if (frappe.user_roles && !hasWarehouseRole()) {
+      setStatus('This scanner page is only available to warehouse users.', true);
+      var button = byId('apply-repack');
+      if (button) button.disabled = true;
+      return false;
+    }
+    return true;
+  }
+  function getDoc(doctype, name) {
+    return api('frappe.client.get', { doctype: doctype, name: name });
+  }
+  function getValue(doctype, filters, fieldname) {
+    return api('frappe.client.get_value', { doctype: doctype, filters: filters, fieldname: fieldname });
+  }
+  function insertDoc(doc) {
+    return api('frappe.client.insert', { doc: doc });
+  }
+  function saveDoc(doc) {
+    return api('frappe.client.save', { doc: doc });
+  }
+  function setValue(doctype, name, fieldname, value) {
+    return api('frappe.client.set_value', { doctype: doctype, name: name, fieldname: fieldname, value: value });
+  }
+  function setValues(doctype, name, values) {
+    return Object.keys(values).reduce(function (promise, fieldname) {
+      return promise.then(function () {
+        return setValue(doctype, name, fieldname, values[fieldname]);
+      });
+    }, Promise.resolve());
+  }
+  function renderSources() {
+    var list = byId('repack-source-list');
+    if (!list) return;
+    list.innerHTML = '';
+    sourceContainers.forEach(function (container) {
+      var item = document.createElement('li');
+      item.className = 'list-group-item d-flex justify-content-between align-items-center';
+      item.innerHTML = '<span>' + container.name + ' - ' + (container.current_warehouse || 'no location') + '</span><span class="badge bg-secondary">' + (container.items || []).length + ' rows</span>';
+      list.appendChild(item);
+    });
+  }
+  function addSourceContainer() {
+    if (frappe.session && frappe.session.user === 'Guest') {
+      window.location.href = '/login?redirect-to=' + encodeURIComponent('/warehouse/repack');
+      return;
+    }
+    if (!requireWarehouseRole()) return;
+    var code = (byId('repack-source-container').value || '').trim();
+    if (!code) {
+      setStatus('Scan a source container first.', true);
+      return;
+    }
+    if (sourceContainers.some(function (container) { return container.name === code; })) {
+      setStatus('Source container already added.', true);
+      return;
+    }
+    setStatus('Loading source container...', false);
+    getDoc('Three PL Container', code).then(function (response) {
+      var container = response.message;
+      if (!container || !container.name) throw new Error('Source container not found.');
+      if (BLOCKED_SOURCE_STATUSES.indexOf(container.status) !== -1) {
+        throw new Error('Source container cannot be repacked from status ' + container.status + '.');
+      }
+      if (!container.items || !container.items.length) throw new Error('Source container has no item rows.');
+      if (sourceContainers.length && sourceContainers[0].client !== container.client) {
+        throw new Error('All source containers must belong to the same client.');
+      }
+      sourceContainers.push(container);
+      byId('repack-source-container').value = '';
+      renderSources();
+      setStatus('Source added: ' + container.name + '.', false);
+      byId('repack-source-container').focus();
+    }).catch(function (error) {
+      setStatus(error.message || 'Could not add source container.', true);
+    });
+  }
+  function aggregateItems() {
+    var byKey = {};
+    sourceContainers.forEach(function (container) {
+      (container.items || []).forEach(function (row) {
+        var condition = row.condition_status || 'OK';
+        var key = [row.item_code, row.uom, condition].join('||');
+        if (!byKey[key]) {
+          byKey[key] = {
+            item_code: row.item_code,
+            client_sku: row.client_sku,
+            qty: 0,
+            uom: row.uom,
+            condition_status: condition,
+            notes: 'Aggregated by scanner-first repack page.'
+          };
+        }
+        byKey[key].qty += Number(row.qty || 0);
+      });
+    });
+    return Object.keys(byKey).map(function (key) { return byKey[key]; });
+  }
+  function ensureTargetContainer(targetCode, client, targetLocation, items, movementTime) {
+    return getValue('Three PL Container', { name: targetCode }, 'name').then(function (response) {
+      if (!response.message || !response.message.name) {
+        return insertDoc({
+          doctype: 'Three PL Container',
+          container_code: targetCode,
+          barcode: targetCode,
+          container_type: 'Box',
+          client: client,
+          current_warehouse: targetLocation,
+          status: 'Stored',
+          last_moved_at: movementTime,
+          items: items
+        }).then(function (insertResponse) {
+          return insertResponse.message;
+        });
+      }
+      return getDoc('Three PL Container', targetCode).then(function (targetResponse) {
+        var target = targetResponse.message;
+        if (target.client && target.client !== client) throw new Error('Target container belongs to another client.');
+        if (BLOCKED_SOURCE_STATUSES.indexOf(target.status) !== -1) throw new Error('Target container cannot be reused from status ' + target.status + '.');
+        target.barcode = target.barcode || targetCode;
+        target.container_type = target.container_type || 'Box';
+        target.client = client;
+        target.current_warehouse = targetLocation;
+        target.status = 'Stored';
+        target.last_moved_at = movementTime;
+        target.items = items;
+        return saveDoc(target).then(function (saveResponse) {
+          return saveResponse.message || target;
+        });
+      });
+    });
+  }
+  function applyRepack() {
+    if (frappe.session && frappe.session.user === 'Guest') {
+      window.location.href = '/login?redirect-to=' + encodeURIComponent('/warehouse/repack');
+      return;
+    }
+    if (!requireWarehouseRole()) return;
+    var targetCode = (byId('repack-target-container').value || '').trim();
+    var targetLocation = (byId('repack-target-location').value || '').trim();
+    if (sourceContainers.length < 1 || !targetCode || !targetLocation) {
+      setStatus('Scan sources, target container, and target location first.', true);
+      return;
+    }
+    if (sourceContainers.some(function (container) { return container.name === targetCode; })) {
+      setStatus('Target container cannot be one of the source containers.', true);
+      return;
+    }
+    setStatus('Applying repack...', false);
+    getValue('Warehouse', { name: targetLocation }, 'name').then(function (warehouseResponse) {
+      if (!warehouseResponse.message || !warehouseResponse.message.name) throw new Error('Target location not found.');
+      var movementTime = frappe.datetime.now_datetime();
+      var client = sourceContainers[0].client;
+      var items = aggregateItems();
+      return ensureTargetContainer(targetCode, client, targetLocation, items, movementTime).then(function () {
+        return insertDoc({
+          doctype: 'Three PL Container Repack',
+          operation_reference: 'REPACK-' + targetCode + '-' + Date.now(),
+          operation_datetime: movementTime,
+          status: 'Draft',
+          client: client,
+          target_container: targetCode,
+          target_location: targetLocation,
+          source_containers: sourceContainers.map(function (container) {
+            return { source_container: container.name, source_location: container.current_warehouse };
+          }),
+          items: items,
+          notes: 'Created from scanner-first repack page.'
+        }).then(function (repackResponse) {
+          var repack = repackResponse.message;
+          return insertDoc({
+            doctype: 'Three PL Container Movement',
+            movement_datetime: movementTime,
+            container_code: targetCode,
+            client: client,
+            movement_type: 'Repacked',
+            to_warehouse: targetLocation,
+            from_container: sourceContainers[0].name,
+            to_container: targetCode,
+            reference_doctype: 'Three PL Container Repack',
+            reference_name: repack.name,
+            notes: 'Applied immediately from scanner-first repack page.'
+          }).then(function (movementResponse) {
+            var movement = movementResponse.message;
+            return sourceContainers.reduce(function (promise, container) {
+              return promise.then(function () {
+                return setValues('Three PL Container', container.name, {
+                  status: 'Replaced',
+                  replaced_by: targetCode,
+                  last_moved_at: movementTime
+                });
+              });
+            }, Promise.resolve()).then(function () {
+              return setValues('Three PL Container Repack', repack.name, {
+                status: 'Applied',
+                movement: movement.name
+              });
+            }).then(function () {
+              return { repack: repack, movement: movement };
+            });
+          });
+        });
+      });
+    }).then(function (result) {
+      setStatus('Repack applied: ' + result.repack.name + ' / ' + result.movement.name + '.', false);
+      sourceContainers = [];
+      renderSources();
+      byId('repack-source-container').value = '';
+      byId('repack-target-container').value = '';
+      byId('repack-target-location').value = '';
+      byId('repack-source-container').focus();
+    }).catch(function (error) {
+      setStatus(error.message || 'Could not apply repack.', true);
+    });
+  }
+  frappe.ready(function () {
+    if (frappe.session && frappe.session.user === 'Guest') {
+      window.location.href = '/login?redirect-to=' + encodeURIComponent('/warehouse/repack');
+      return;
+    }
+    requireWarehouseRole();
+    var addButton = byId('add-repack-source');
+    var applyButton = byId('apply-repack');
+    if (addButton) addButton.addEventListener('click', addSourceContainer);
+    if (applyButton) applyButton.addEventListener('click', applyRepack);
+    byId('repack-source-container').addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        addSourceContainer();
+      }
+    });
+    byId('repack-target-container').addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        byId('repack-target-location').focus();
+      }
+    });
+    byId('repack-target-location').addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        applyRepack();
+      }
+    });
+  });
+})();
+""".strip()
+
+    existing_repack_page = frappe.db.get_value("Web Page", {"route": "warehouse/repack"}, "name")
+    if existing_repack_page:
+        repack_page = frappe.get_doc("Web Page", existing_repack_page)
+    else:
+        repack_page = frappe.new_doc("Web Page")
+        repack_page.name = "warehouse/repack"
+
+    repack_page.title = "Container Repack"
+    repack_page.route = "warehouse/repack"
+    repack_page.published = 1
+    if repack_page.meta.has_field("login_required"):
+        repack_page.login_required = 1
+    repack_page.content_type = "HTML"
+    repack_page.main_section = repack_html
+    if repack_page.meta.has_field("main_section_html"):
+        repack_page.main_section_html = repack_html
+    repack_page.javascript = repack_script
+    repack_page.insert_code = 0
+    repack_page.show_sidebar = 0
+    repack_page.save(ignore_permissions=True)
+
     outbound_html = """
 <section class="container py-4" style="max-width: 820px;">
   <h1 class="h3 mb-3">Outbound Fulfillment</h1>
