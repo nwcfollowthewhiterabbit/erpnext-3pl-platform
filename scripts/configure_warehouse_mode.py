@@ -256,6 +256,8 @@ def configure_workspaces():
                 {"type": "Report", "link_to": "3PL Container Movements", "label": "Container Movements", "report_ref_doctype": "Three PL Container Movement"},
                 {"type": "Report", "link_to": "3PL Client Inventory", "label": "Client Inventory", "report_ref_doctype": "Three PL Inventory Snapshot"},
                 {"type": "Report", "link_to": "3PL Client Inventory Summary", "label": "Inventory Summary", "report_ref_doctype": "Three PL Inventory Snapshot"},
+                {"type": "Report", "link_to": "3PL Inventory Balance By Date", "label": "Inventory By Date", "report_ref_doctype": "Three PL Inventory Balance Snapshot"},
+                {"type": "Report", "link_to": "3PL Warehouse Operation Turnover", "label": "Operation Turnover", "report_ref_doctype": "Three PL Container Movement"},
                 {"type": "DocType", "link_to": "Three PL Client Instruction", "doc_view": "List", "label": "Client Instructions"},
                 {"type": "DocType", "link_to": "Item", "doc_view": "List", "label": "Items"},
                 {"type": "DocType", "link_to": "Warehouse", "doc_view": "Tree", "label": "Warehouses"},
@@ -285,6 +287,8 @@ def configure_workspaces():
                 {"type": "Link", "label": "Stocktakes Report", "link_type": "Report", "link_to": "3PL Stocktakes", "is_query_report": 1},
                 {"type": "Link", "label": "Container Movements", "link_type": "Report", "link_to": "3PL Container Movements", "is_query_report": 1},
                 {"type": "Link", "label": "Inventory Summary", "link_type": "Report", "link_to": "3PL Client Inventory Summary", "is_query_report": 1},
+                {"type": "Link", "label": "Inventory By Date", "link_type": "Report", "link_to": "3PL Inventory Balance By Date", "is_query_report": 1},
+                {"type": "Link", "label": "Operation Turnover", "link_type": "Report", "link_to": "3PL Warehouse Operation Turnover", "is_query_report": 1},
                 {"type": "Link", "label": "Stock Balance", "link_type": "Report", "link_to": "Stock Balance", "is_query_report": 1},
                 {"type": "Link", "label": "Stock Ledger", "link_type": "Report", "link_to": "Stock Ledger", "is_query_report": 1},
             ],
@@ -745,6 +749,34 @@ def configure_custom_doctypes():
             ],
         },
         {
+            "name": "Three PL Inventory Balance Snapshot",
+            "module": "Stock",
+            "custom": 1,
+            "track_changes": 1,
+            "title_field": "item_code",
+            "autoname": "prompt",
+            "fields": [
+                {"fieldname": "snapshot_date", "label": "Snapshot Date", "fieldtype": "Date", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "customer", "label": "Client", "fieldtype": "Link", "options": "Customer", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "item_code", "label": "Item", "fieldtype": "Link", "options": "Item", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "client_sku", "label": "Client SKU", "fieldtype": "Data", "in_list_view": 1},
+                {"fieldname": "item_name", "label": "Item Name", "fieldtype": "Data", "in_list_view": 1},
+                {"fieldname": "qty", "label": "Qty", "fieldtype": "Float", "in_list_view": 1},
+                {"fieldname": "uom", "label": "UOM", "fieldtype": "Link", "options": "UOM", "in_list_view": 1},
+                {"fieldname": "warehouse", "label": "Location", "fieldtype": "Link", "options": "Warehouse", "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "container_code", "label": "Container / Box", "fieldtype": "Link", "options": "Three PL Container", "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Available\nReceiving\nHold\nAllocated\nShipped", "default": "Available", "in_list_view": 1},
+                {"fieldname": "source_snapshot", "label": "Source Current Snapshot", "fieldtype": "Link", "options": "Three PL Inventory Snapshot", "read_only": 1},
+                {"fieldname": "captured_at", "label": "Captured At", "fieldtype": "Datetime", "read_only": 1},
+                {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
+            ],
+            "permissions": manager_permissions
+            + [
+                {"role": "3PL Warehouse User", "read": 1, "report": 1},
+                {"role": "3PL Client", "read": 1},
+            ],
+        },
+        {
             "name": "Three PL Container Move",
             "module": "Stock",
             "custom": 1,
@@ -950,6 +982,7 @@ def configure_custom_doctypes():
         "Three PL Repack Source": {"read": 1},
         "Three PL Repack Item": {"read": 1},
         "Three PL Inventory Snapshot": {"read": 1},
+        "Three PL Inventory Balance Snapshot": {"read": 1},
         "Three PL Shipment Request": {"read": 1, "write": 1, "create": 1},
         "Three PL Shipment Request Item": {"read": 1, "write": 1, "create": 1},
         "Three PL Client Instruction": {"read": 1, "write": 1, "create": 1},
@@ -1014,6 +1047,13 @@ def configure_custom_doctypes():
             {"role": "Stock User", "read": 1, "write": 1, "create": 1, "report": 1},
         ],
         "Three PL Inventory Snapshot": [
+            {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+            {"role": "Stock Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+            {"role": "Stock User", "read": 1, "report": 1, "export": 1},
+            {"role": "3PL Warehouse Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+            {"role": "3PL Warehouse User", "read": 1, "report": 1},
+        ],
+        "Three PL Inventory Balance Snapshot": [
             {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
             {"role": "Stock Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
             {"role": "Stock User", "read": 1, "report": 1, "export": 1},
@@ -1775,6 +1815,46 @@ select
 from `tabThree PL Inventory Snapshot` inv
 group by inv.customer, inv.item_code, inv.client_sku, inv.item_name, inv.uom, inv.status
 order by inv.customer asc, inv.item_code asc, inv.status asc
+""".strip(),
+        },
+        "3PL Inventory Balance By Date": {
+            "ref_doctype": "Three PL Inventory Balance Snapshot",
+            "query": """
+select
+    bal.snapshot_date as "Snapshot Date:Date:110",
+    bal.customer as "Client:Link/Customer:170",
+    bal.item_code as "Item:Link/Item:150",
+    bal.client_sku as "Client SKU:Data:120",
+    bal.item_name as "Item Name:Data:180",
+    sum(bal.qty) as "Qty:Float:100",
+    bal.uom as "UOM:Link/UOM:80",
+    bal.status as "Status:Data:120",
+    group_concat(distinct bal.warehouse order by bal.warehouse separator ', ') as "Locations:Data:260",
+    group_concat(distinct bal.container_code order by bal.container_code separator ', ') as "Containers:Data:260",
+    max(bal.captured_at) as "Captured At:Datetime:160"
+from `tabThree PL Inventory Balance Snapshot` bal
+group by bal.snapshot_date, bal.customer, bal.item_code, bal.client_sku, bal.item_name, bal.uom, bal.status
+order by bal.snapshot_date desc, bal.customer asc, bal.item_code asc, bal.status asc
+""".strip(),
+        },
+        "3PL Warehouse Operation Turnover": {
+            "ref_doctype": "Three PL Container Movement",
+            "query": """
+select
+    date(m.movement_datetime) as "Operation Date:Date:110",
+    m.movement_datetime as "Operation Time:Datetime:160",
+    m.client as "Client:Link/Customer:170",
+    m.movement_type as "Operation Type:Data:130",
+    m.container_code as "Container / HU:Link/Three PL Container:150",
+    m.from_warehouse as "From Location:Link/Warehouse:180",
+    m.to_warehouse as "To Location:Link/Warehouse:180",
+    m.from_container as "From Container:Link/Three PL Container:150",
+    m.to_container as "To Container:Link/Three PL Container:150",
+    m.reference_doctype as "Reference Type:Data:140",
+    m.reference_name as "Reference:Dynamic Link/reference_doctype:170",
+    m.notes as "Notes:Small Text:260"
+from `tabThree PL Container Movement` m
+order by m.movement_datetime desc, m.creation desc
 """.strip(),
         },
     }

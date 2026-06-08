@@ -46,8 +46,8 @@ Client-confirmed first working scope:
 
 Client-confirmed reporting scope:
 
-- Product balance on a selected date for the client: partially implemented through current inventory snapshots; date-based historical balance report remains open.
-- Warehouse operation turnover for a selected period for client and warehouse users: open.
+- Product balance on a selected date for the client: implemented as MVP through daily `Three PL Inventory Balance Snapshot` rows and report `3PL Inventory Balance By Date`. History starts from the day snapshots are generated.
+- Warehouse operation turnover for a selected period for client and warehouse users: implemented as MVP through container movement history and report `3PL Warehouse Operation Turnover`.
 
 Immediate fixes from feedback:
 
@@ -78,7 +78,10 @@ Implemented:
 - `scripts/apply_container_repacks.py` processor for applying draft repacks.
 - Strict repack quantity validation between source containers and target contents.
 - `scripts/sync_inventory_snapshots.py` processor for syncing client inventory snapshots from active containers.
+- `scripts/sync_inventory_balance_snapshots.py` processor for storing daily historical inventory balance rows.
 - Aggregated inventory report `3PL Client Inventory Summary`.
+- Date-based inventory report `3PL Inventory Balance By Date`.
+- Warehouse operations turnover report `3PL Warehouse Operation Turnover`.
 - Minimal scanner-first receiving page at `/warehouse/receiving` for expected item receipt into temporary receiving.
 - Minimal scanner-first container move page at `/warehouse/container-move` with immediate apply for warehouse roles.
 - Minimal scanner-first putaway page at `/warehouse/putaway` with immediate apply for warehouse roles and explicit `Putaway` movement history.
@@ -96,7 +99,7 @@ Remaining:
 - Add stock-ledger posting automation for warehouse corrections after correction-type rules are agreed.
 - Add grouped stocktake sessions and stock-ledger posting automation for count deltas.
 - Add UI actions and validation for empty / closed / replaced container lifecycle transitions.
-- Automate inventory snapshot updates from stock and container movements.
+- Automate inventory snapshot updates immediately after every stock and container movement rather than only through processors.
 - Decide whether mixed client / mixed SKU storage is allowed in one location.
 
 ## Phase 4 - Scanner and Mobile Workflow

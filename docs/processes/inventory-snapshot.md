@@ -42,6 +42,24 @@ The repository also provides:
 
 - detailed report: `3PL Client Inventory`;
 - aggregated report: `3PL Client Inventory Summary`.
+- daily historical report: `3PL Inventory Balance By Date`.
+
+## Daily Balance History
+
+`scripts/sync_inventory_balance_snapshots.py` copies current inventory snapshot rows into `Three PL Inventory Balance Snapshot`.
+
+This creates one daily balance history row per:
+
+- date;
+- client;
+- item;
+- warehouse location;
+- container;
+- inventory status.
+
+The report `3PL Inventory Balance By Date` reads this history. It is intended for the MVP requirement "product balance on a selected date". History starts from the first day the processor is run; it does not reconstruct dates before the system started storing daily snapshots.
+
+The processor runs during post-deploy after `sync_inventory_snapshots.py`. It can also be run on a schedule once production operations start.
 
 Still pending:
 

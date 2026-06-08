@@ -107,6 +107,27 @@ Current route:
 
 `/client/inventory`
 
+### Client Reviews Product Balance On A Date
+
+The client wants to see product balance as of a selected calendar day.
+
+Main flow:
+
+1. System synchronizes current inventory snapshots.
+2. System stores daily inventory balance rows.
+3. Warehouse or management user opens `3PL Inventory Balance By Date`.
+4. User filters by date, client, product, status, location, or container.
+
+Expected result:
+
+- Balance rows are stable for the captured day.
+- Client-owned stock remains separated by customer.
+- Historical reporting does not depend on the mutable current snapshot only.
+
+Implementation status: implemented as MVP.
+
+History is stored in `Three PL Inventory Balance Snapshot`. The report starts producing useful historical data from the first day the processor runs; it does not backfill dates before the system started capturing snapshots.
+
 ### Client Creates Shipment Request
 
 The client wants to request outbound shipment of stored goods.
@@ -260,6 +281,23 @@ Implementation status: implemented as MVP.
 
 Submitted `3PL Packing` and `3PL Shipping` Stock Entries with shipment context update the Shipment Request, referenced containers, and container movement history. A scanner-first page exists at `/warehouse/outbound-fulfillment` for warehouse roles. Detailed packing units, carrier labels, courier integrations, and polished shipment tracking are not implemented yet.
 
+### Warehouse Reviews Operation Turnover
+
+The manager wants to review warehouse operations over a period.
+
+Main flow:
+
+1. Warehouse operations create movement history rows.
+2. Manager opens `3PL Warehouse Operation Turnover`.
+3. Manager filters by operation date, client, operation type, location, or container.
+
+Expected result:
+
+- Receiving, putaway, moves, repacks, corrections, stocktakes, picking, packing, and shipping are visible in one operations report.
+- The report is based on `Three PL Container Movement`, not on free-text notes.
+
+Implementation status: implemented as MVP.
+
 ## Management Use Cases
 
 ### Manager Maintains Products And Warehouses
@@ -310,6 +348,8 @@ The business owner has broad system rights. The warehouse manager is operational
 | Containers/boxes | Implemented as first model | `Three PL Container`; scanner-first pages exist for receiving, container moves, putaway, correction, repack, picking confirmation, and outbound fulfillment. |
 | Barcode/location scan fields | Partially implemented | Scanner pages exist for receiving, container moves, putaway, correction, stocktake, repack, picking, and outbound fulfillment. Unexpected-item receiving stock-ledger posting and partial split/repack still need polish. |
 | Client inventory visibility | Implemented as MVP | Portal inventory snapshot exists and is customer-filtered by permissions. |
+| Product balance on date | Implemented as MVP | Daily `Three PL Inventory Balance Snapshot` rows and `3PL Inventory Balance By Date` report. |
+| Warehouse operation turnover | Implemented as MVP | `3PL Warehouse Operation Turnover` report reads movement history. |
 | Receiving history | Partially implemented | Portal Web Form list exists; dedicated polished history UX is not implemented. |
 | Shipment requests | Implemented as MVP | Client portal Web Form creates shipment requests, Pick Lists, and packing/shipping status sync. |
 | Shipment status tracking | Implemented as MVP | Shipment request has status; automatic outbound status updates are not implemented. |
@@ -321,7 +361,8 @@ The business owner has broad system rights. The warehouse manager is operational
 - Automatic stock-ledger posting for operational warehouse corrections.
 - Grouped stocktake sessions and stock-ledger posting for count deltas.
 - Partial split/repack UX for cases where only part of a box is moved into another box.
-- Automatic stock-ledger-based inventory snapshot refresh.
+- Automatic event-based inventory snapshot refresh after every operation.
+- Backfill of inventory balance history for dates before daily snapshots were enabled.
 - Dedicated client-facing discrepancy detail page.
 - Real email notifications after SMTP is configured.
 - Scanner-first/mobile warehouse UI.

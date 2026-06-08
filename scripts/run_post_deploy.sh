@@ -35,6 +35,7 @@ docker cp scripts/sync_shipment_requests.py "$backend_cid":/tmp/sync_shipment_re
 docker cp scripts/sync_picking_confirmations.py "$backend_cid":/tmp/sync_picking_confirmations.py
 docker cp scripts/sync_outbound_fulfillment.py "$backend_cid":/tmp/sync_outbound_fulfillment.py
 docker cp scripts/sync_inventory_snapshots.py "$backend_cid":/tmp/sync_inventory_snapshots.py
+docker cp scripts/sync_inventory_balance_snapshots.py "$backend_cid":/tmp/sync_inventory_balance_snapshots.py
 
 project_env=(
   -e "WAREHOUSE_OPERATOR_PASSWORD=${WAREHOUSE_OPERATOR_PASSWORD:?set WAREHOUSE_OPERATOR_PASSWORD}"
@@ -62,6 +63,8 @@ docker exec "${project_env[@]}" "$backend_cid" bash -lc \
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_inventory_snapshots.py 0"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
+  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_inventory_balance_snapshots.py 0"
+docker exec "${project_env[@]}" "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_shipment_requests.py 0"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_picking_confirmations.py 0"
@@ -69,6 +72,8 @@ docker exec "${project_env[@]}" "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_outbound_fulfillment.py 0"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_inventory_snapshots.py 0"
+docker exec "${project_env[@]}" "$backend_cid" bash -lc \
+  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_inventory_balance_snapshots.py 0"
 docker exec "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && bench --site ${site_name} clear-cache"
 

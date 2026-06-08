@@ -40,6 +40,7 @@ REQUIRED_DOCTYPES = [
     "Three PL Warehouse Correction",
     "Three PL Stocktake",
     "Three PL Inventory Snapshot",
+    "Three PL Inventory Balance Snapshot",
     "Three PL Shipment Request",
     "Three PL Shipment Request Item",
     "Three PL Client Instruction",
@@ -146,6 +147,20 @@ REQUIRED_STOCKTAKE_FIELDS = {
     "correction",
     "movement",
 }
+REQUIRED_INVENTORY_BALANCE_SNAPSHOT_FIELDS = {
+    "snapshot_date",
+    "customer",
+    "item_code",
+    "client_sku",
+    "item_name",
+    "qty",
+    "uom",
+    "warehouse",
+    "container_code",
+    "status",
+    "source_snapshot",
+    "captured_at",
+}
 REQUIRED_REPORTS = [
     "3PL ASN vs Received",
     "3PL Receiving Discrepancies",
@@ -158,6 +173,8 @@ REQUIRED_REPORTS = [
     "3PL Shipment Requests",
     "3PL Client Inventory",
     "3PL Client Inventory Summary",
+    "3PL Inventory Balance By Date",
+    "3PL Warehouse Operation Turnover",
 ]
 REQUIRED_CUSTOM_FIELDS = [
     "Stock Entry-client",
@@ -286,6 +303,12 @@ def main():
     stocktake_meta = frappe.get_meta("Three PL Stocktake")
     stocktake_fields = {field.fieldname for field in stocktake_meta.fields}
     require(stocktake_fields >= REQUIRED_STOCKTAKE_FIELDS, "Three PL Stocktake misses required fields")
+    balance_snapshot_meta = frappe.get_meta("Three PL Inventory Balance Snapshot")
+    balance_snapshot_fields = {field.fieldname for field in balance_snapshot_meta.fields}
+    require(
+        balance_snapshot_fields >= REQUIRED_INVENTORY_BALANCE_SNAPSHOT_FIELDS,
+        "Three PL Inventory Balance Snapshot misses required fields",
+    )
 
     for report in REQUIRED_REPORTS:
         require(frappe.db.exists("Report", report), f"Missing Report: {report}")
@@ -395,6 +418,9 @@ def main():
         require_role_perm(doctype, "3PL Warehouse User", read=1, write=1, create=1)
         require_role_perm(doctype, "3PL Warehouse Manager", read=1, write=1, create=1, delete=1)
         require_role_perm(doctype, "System Manager", read=1, write=1, create=1, delete=1)
+    require_role_perm("Three PL Inventory Balance Snapshot", "3PL Warehouse User", read=1)
+    require_role_perm("Three PL Inventory Balance Snapshot", "3PL Warehouse Manager", read=1, write=1, create=1, delete=1)
+    require_role_perm("Three PL Inventory Balance Snapshot", "System Manager", read=1, write=1, create=1, delete=1)
     require_role_perm("Inbound Shipment Notice", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Inbound Shipment Notice Item", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Inbound Shipment Discrepancy", "3PL Client", read=1)
@@ -413,6 +439,7 @@ def main():
     require_role_perm("Three PL Repack Source", "3PL Client", read=1)
     require_role_perm("Three PL Repack Item", "3PL Client", read=1)
     require_role_perm("Three PL Inventory Snapshot", "3PL Client", read=1)
+    require_role_perm("Three PL Inventory Balance Snapshot", "3PL Client", read=1)
     require_role_perm("Three PL Shipment Request", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Three PL Shipment Request Item", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Three PL Client Instruction", "3PL Client", read=1, write=1, create=1)
@@ -541,6 +568,45 @@ def main():
         "Stale source container inventory snapshots were not removed",
     )
     require(frappe.db.exists("Three PL Inventory Snapshot", {"customer": "Demo Client Beta", "item_code": "SKU-BETA-001"}), "Missing demo beta inventory snapshot")
+    require(
+        frappe.db.exists(
+            "Three PL Inventory Balance Snapshot",
+            {
+                "snapshot_date": nowdate(),
+                "customer": "Demo Client Alpha",
+                "item_code": "SKU-ALPHA-001",
+                "container_code": "BOX-ALPHA-001",
+            },
+        ),
+        "Missing daily Alpha inventory balance snapshot",
+    )
+    require(
+        frappe.db.exists(
+            "Three PL Inventory Balance Snapshot",
+            {
+                "snapshot_date": nowdate(),
+                "customer": "Demo Client Beta",
+                "item_code": "SKU-BETA-001",
+            },
+        ),
+        "Missing daily Beta inventory balance snapshot",
+    )
+    require(
+        frappe.db.count("Three PL Container Movement", {"client": "Demo Client Alpha"}) > 0,
+        "Warehouse operation turnover has no Alpha movement source rows",
+    )
+    daily_summary_rows = frappe.db.sql(
+        """
+        select sum(qty)
+        from `tabThree PL Inventory Balance Snapshot`
+        where snapshot_date = %s
+          and customer = 'Demo Client Alpha'
+          and item_code = 'SKU-ALPHA-003'
+        """,
+        (nowdate(),),
+        as_list=True,
+    )
+    require(daily_summary_rows and daily_summary_rows[0][0] == 36, "Wrong Alpha SKU-ALPHA-003 daily inventory balance")
     require(frappe.db.exists("Inbound Shipment Notice", {"customer": "Demo Client Beta", "external_reference": "ASN-BETA-001"}), "Missing demo beta ASN")
     demo_shipment_name = frappe.db.get_value("Three PL Shipment Request", {"customer": "Demo Client Alpha", "external_reference": "SHIP-ALPHA-001"}, "name")
     require(demo_shipment_name, "Missing demo shipment request")
@@ -1521,11 +1587,17 @@ def validate_client_portal_permissions():
 
     inventory = frappe.get_doc("Three PL Inventory Snapshot", frappe.db.get_value("Three PL Inventory Snapshot", {"customer": CLIENT_PORTAL_CUSTOMER, "item_code": "SKU-ALPHA-001"}))
     require(inventory.customer == CLIENT_PORTAL_CUSTOMER, "Client could not read own inventory snapshot")
+    balance_snapshot = frappe.get_doc(
+        "Three PL Inventory Balance Snapshot",
+        frappe.db.get_value("Three PL Inventory Balance Snapshot", {"customer": CLIENT_PORTAL_CUSTOMER, "item_code": "SKU-ALPHA-001"}),
+    )
+    require(balance_snapshot.customer == CLIENT_PORTAL_CUSTOMER, "Client could not read own inventory balance snapshot")
 
     forbidden_docs = [
         ("Item", frappe.db.get_value("Item", {"item_code": "SKU-BETA-001"})),
         ("Inbound Shipment Notice", frappe.db.get_value("Inbound Shipment Notice", {"customer": "Demo Client Beta", "external_reference": "ASN-BETA-001"})),
         ("Three PL Inventory Snapshot", frappe.db.get_value("Three PL Inventory Snapshot", {"customer": "Demo Client Beta", "item_code": "SKU-BETA-001"})),
+        ("Three PL Inventory Balance Snapshot", frappe.db.get_value("Three PL Inventory Balance Snapshot", {"customer": "Demo Client Beta", "item_code": "SKU-BETA-001"})),
     ]
     for doctype, name in forbidden_docs:
         require(name, f"Missing forbidden demo record for permission validation: {doctype}")
