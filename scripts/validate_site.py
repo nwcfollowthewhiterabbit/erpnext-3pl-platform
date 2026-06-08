@@ -38,6 +38,7 @@ REQUIRED_DOCTYPES = [
     "Three PL Repack Source",
     "Three PL Repack Item",
     "Three PL Warehouse Correction",
+    "Three PL Stocktake",
     "Three PL Inventory Snapshot",
     "Three PL Shipment Request",
     "Three PL Shipment Request Item",
@@ -130,6 +131,21 @@ REQUIRED_WAREHOUSE_CORRECTION_FIELDS = {
     "condition_status",
     "movement",
 }
+REQUIRED_STOCKTAKE_FIELDS = {
+    "operation_reference",
+    "operation_datetime",
+    "status",
+    "client",
+    "warehouse",
+    "container_code",
+    "item_code",
+    "expected_qty",
+    "counted_qty",
+    "qty_delta",
+    "condition_status",
+    "correction",
+    "movement",
+}
 REQUIRED_REPORTS = [
     "3PL ASN vs Received",
     "3PL Receiving Discrepancies",
@@ -137,6 +153,7 @@ REQUIRED_REPORTS = [
     "3PL Container Moves",
     "3PL Container Repacks",
     "3PL Warehouse Corrections",
+    "3PL Stocktakes",
     "3PL Container Movements",
     "3PL Shipment Requests",
     "3PL Client Inventory",
@@ -266,6 +283,9 @@ def main():
     correction_meta = frappe.get_meta("Three PL Warehouse Correction")
     correction_fields = {field.fieldname for field in correction_meta.fields}
     require(correction_fields >= REQUIRED_WAREHOUSE_CORRECTION_FIELDS, "Three PL Warehouse Correction misses required fields")
+    stocktake_meta = frappe.get_meta("Three PL Stocktake")
+    stocktake_fields = {field.fieldname for field in stocktake_meta.fields}
+    require(stocktake_fields >= REQUIRED_STOCKTAKE_FIELDS, "Three PL Stocktake misses required fields")
 
     for report in REQUIRED_REPORTS:
         require(frappe.db.exists("Report", report), f"Missing Report: {report}")
@@ -276,6 +296,7 @@ def main():
     for route, label in (
         ("warehouse/receiving", "receiving"),
         ("warehouse/correction", "correction"),
+        ("warehouse/stocktake", "stocktake"),
         ("warehouse/container-move", "container move"),
         ("warehouse/putaway", "putaway"),
         ("warehouse/repack", "repack"),
@@ -370,7 +391,7 @@ def main():
         "Missing client Contact link",
     )
 
-    for doctype in ("Inbound Shipment Notice", "Three PL Container", "Three PL Container Move", "Three PL Container Movement", "Three PL Container Repack", "Three PL Warehouse Correction"):
+    for doctype in ("Inbound Shipment Notice", "Three PL Container", "Three PL Container Move", "Three PL Container Movement", "Three PL Container Repack", "Three PL Warehouse Correction", "Three PL Stocktake"):
         require_role_perm(doctype, "3PL Warehouse User", read=1, write=1, create=1)
         require_role_perm(doctype, "3PL Warehouse Manager", read=1, write=1, create=1, delete=1)
         require_role_perm(doctype, "System Manager", read=1, write=1, create=1, delete=1)
@@ -388,6 +409,7 @@ def main():
     require_role_perm("Three PL Container Movement", "3PL Client", read=1)
     require_role_perm("Three PL Container Repack", "3PL Client", read=1)
     require_role_perm("Three PL Warehouse Correction", "3PL Client", read=1)
+    require_role_perm("Three PL Stocktake", "3PL Client", read=1)
     require_role_perm("Three PL Repack Source", "3PL Client", read=1)
     require_role_perm("Three PL Repack Item", "3PL Client", read=1)
     require_role_perm("Three PL Inventory Snapshot", "3PL Client", read=1)
@@ -395,11 +417,11 @@ def main():
     require_role_perm("Three PL Shipment Request Item", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Three PL Client Instruction", "3PL Client", read=1, write=1, create=1)
 
-    for doctype in ("Warehouse", "Item", "Inbound Shipment Notice", "Three PL Container", "Three PL Container Move", "Three PL Warehouse Correction"):
+    for doctype in ("Warehouse", "Item", "Inbound Shipment Notice", "Three PL Container", "Three PL Container Move", "Three PL Warehouse Correction", "Three PL Stocktake"):
         require_effective_perm(WAREHOUSE_MANAGER_USER, doctype, "read", "create")
     for doctype in ("Warehouse", "Inbound Shipment Notice", "Three PL Container", "Three PL Container Move"):
         require_effective_perm(WAREHOUSE_OPERATOR_USER, doctype, "read")
-    for doctype in ("Inbound Shipment Notice", "Three PL Container", "Three PL Container Move", "Three PL Warehouse Correction"):
+    for doctype in ("Inbound Shipment Notice", "Three PL Container", "Three PL Container Move", "Three PL Warehouse Correction", "Three PL Stocktake"):
         require_effective_perm(WAREHOUSE_OPERATOR_USER, doctype, "create")
     for doctype in ("Warehouse", "Item", "Item Group", "UOM", "Three PL Container", "Inbound Shipment Notice"):
         require_effective_perm(BUSINESS_OWNER_USER, doctype, "read", "create")
@@ -536,6 +558,7 @@ def main():
     validate_receiving_sync()
     validate_shipment_sync()
     validate_warehouse_correction()
+    validate_stocktake()
     validate_putaway_operation()
     validate_picking_confirmation()
     validate_outbound_fulfillment()
@@ -817,6 +840,178 @@ def validate_warehouse_correction():
     )
 
     cleanup_warehouse_correction_validation_docs()
+
+
+def cleanup_stocktake_validation_docs():
+    frappe.set_user("Administrator")
+    for movement_name in frappe.get_all(
+        "Three PL Container Movement",
+        filters={"container_code": "BOX-STOCKTAKE-VALIDATION"},
+        pluck="name",
+    ):
+        frappe.delete_doc("Three PL Container Movement", movement_name, ignore_permissions=True, force=True)
+    for correction_name in frappe.get_all(
+        "Three PL Warehouse Correction",
+        filters={"container_code": "BOX-STOCKTAKE-VALIDATION"},
+        pluck="name",
+    ):
+        frappe.delete_doc("Three PL Warehouse Correction", correction_name, ignore_permissions=True, force=True)
+    for stocktake_name in frappe.get_all(
+        "Three PL Stocktake",
+        filters={"container_code": "BOX-STOCKTAKE-VALIDATION"},
+        pluck="name",
+    ):
+        frappe.delete_doc("Three PL Stocktake", stocktake_name, ignore_permissions=True, force=True)
+    if frappe.db.exists("Three PL Container", "BOX-STOCKTAKE-VALIDATION"):
+        frappe.delete_doc("Three PL Container", "BOX-STOCKTAKE-VALIDATION", ignore_permissions=True, force=True)
+
+
+def validate_stocktake():
+    cleanup_stocktake_validation_docs()
+    frappe.set_user("Administrator")
+
+    container = frappe.get_doc(
+        {
+            "doctype": "Three PL Container",
+            "container_code": "BOX-STOCKTAKE-VALIDATION",
+            "barcode": "BOX-STOCKTAKE-VALIDATION",
+            "container_type": "Box",
+            "client": "Demo Client Alpha",
+            "current_warehouse": "Aisle B - 3",
+            "status": "Stored",
+            "items": [
+                {
+                    "item_code": "SKU-ALPHA-001",
+                    "client_sku": "ALPHA-001",
+                    "qty": 5,
+                    "uom": "Nos",
+                    "condition_status": "OK",
+                }
+            ],
+        }
+    )
+    container.insert(ignore_permissions=True)
+
+    frappe.set_user(WAREHOUSE_MANAGER_USER)
+    operation_time = now_datetime()
+    stocktake_same = frappe.get_doc(
+        {
+            "doctype": "Three PL Stocktake",
+            "operation_reference": "STOCKTAKE-VALIDATION-SAME",
+            "operation_datetime": operation_time,
+            "status": "No Difference",
+            "client": "Demo Client Alpha",
+            "warehouse": "Aisle B - 3",
+            "container_code": "BOX-STOCKTAKE-VALIDATION",
+            "item_code": "SKU-ALPHA-001",
+            "client_sku": "ALPHA-001",
+            "uom": "Nos",
+            "expected_qty": 5,
+            "counted_qty": 5,
+            "qty_delta": 0,
+            "condition_status": "OK",
+            "notes": "Validation no-difference stocktake.",
+        }
+    )
+    stocktake_same.insert()
+
+    container = frappe.get_doc("Three PL Container", "BOX-STOCKTAKE-VALIDATION")
+    expected_qty = container.items[0].qty
+    counted_qty = 4
+    container.items[0].qty = counted_qty
+    container.last_moved_at = operation_time
+    container.save()
+
+    stocktake_delta = frappe.get_doc(
+        {
+            "doctype": "Three PL Stocktake",
+            "operation_reference": "STOCKTAKE-VALIDATION-DELTA",
+            "operation_datetime": operation_time,
+            "status": "Draft",
+            "client": container.client,
+            "warehouse": container.current_warehouse,
+            "container_code": container.name,
+            "item_code": "SKU-ALPHA-001",
+            "client_sku": "ALPHA-001",
+            "uom": "Nos",
+            "expected_qty": expected_qty,
+            "counted_qty": counted_qty,
+            "qty_delta": counted_qty - expected_qty,
+            "condition_status": "OK",
+            "notes": "Validation delta stocktake.",
+        }
+    )
+    stocktake_delta.insert()
+    correction = frappe.get_doc(
+        {
+            "doctype": "Three PL Warehouse Correction",
+            "operation_reference": "CORR-STOCKTAKE-VALIDATION",
+            "operation_datetime": operation_time,
+            "status": "Draft",
+            "correction_type": "Quantity Count",
+            "client": container.client,
+            "container_code": container.name,
+            "warehouse": container.current_warehouse,
+            "item_code": "SKU-ALPHA-001",
+            "client_sku": "ALPHA-001",
+            "uom": "Nos",
+            "expected_qty": expected_qty,
+            "actual_qty": counted_qty,
+            "qty_delta": counted_qty - expected_qty,
+            "condition_status": "OK",
+            "source_doctype": "Three PL Stocktake",
+            "source_name": stocktake_delta.name,
+            "notes": "Validation stocktake correction.",
+        }
+    )
+    correction.insert()
+    movement = frappe.get_doc(
+        {
+            "doctype": "Three PL Container Movement",
+            "movement_datetime": operation_time,
+            "container_code": container.name,
+            "client": container.client,
+            "movement_type": "Adjusted",
+            "from_warehouse": container.current_warehouse,
+            "to_warehouse": container.current_warehouse,
+            "reference_doctype": "Three PL Stocktake",
+            "reference_name": stocktake_delta.name,
+            "notes": "Validation stocktake adjustment movement.",
+        }
+    )
+    movement.insert()
+    correction.status = "Applied"
+    correction.movement = movement.name
+    correction.save()
+    stocktake_delta.status = "Applied"
+    stocktake_delta.correction = correction.name
+    stocktake_delta.movement = movement.name
+    stocktake_delta.save()
+
+    frappe.set_user("Administrator")
+    container.reload()
+    stocktake_same.reload()
+    stocktake_delta.reload()
+    require(stocktake_same.status == "No Difference", "No-difference stocktake has wrong status")
+    require(container.items[0].qty == counted_qty, "Stocktake did not update container quantity")
+    require(stocktake_delta.status == "Applied", "Delta stocktake was not applied")
+    require(stocktake_delta.qty_delta == -1, "Delta stocktake has wrong delta")
+    require(stocktake_delta.correction == correction.name, "Stocktake is not linked to correction")
+    require(stocktake_delta.movement == movement.name, "Stocktake is not linked to movement")
+    require(
+        frappe.db.exists(
+            "Three PL Container Movement",
+            {
+                "container_code": container.name,
+                "movement_type": "Adjusted",
+                "reference_doctype": "Three PL Stocktake",
+                "reference_name": stocktake_delta.name,
+            },
+        ),
+        "Stocktake did not create adjustment movement",
+    )
+
+    cleanup_stocktake_validation_docs()
 
 
 def cleanup_putaway_validation_docs():

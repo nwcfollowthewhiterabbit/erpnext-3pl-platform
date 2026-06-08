@@ -17,6 +17,7 @@ Current process notes:
 - [Putaway](putaway.md)
 - [Container Repack](container-repack.md)
 - [Warehouse Corrections](warehouse-corrections.md)
+- [Stocktake](stocktake.md)
 - [Inventory Snapshot Sync](inventory-snapshot.md)
 - [Warehouse Locations](warehouse-locations.md)
 

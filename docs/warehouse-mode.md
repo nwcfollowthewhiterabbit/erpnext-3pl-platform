@@ -150,6 +150,7 @@ Implemented:
 - Minimal scanner-first container move page is available at `/warehouse/container-move` and applies moves immediately for warehouse roles.
 - Minimal scanner-first putaway page is available at `/warehouse/putaway` and moves ready containers from receiving/verification into storage with `Putaway` movement history.
 - Minimal scanner-first correction page is available at `/warehouse/correction` and records quantity/condition corrections with `Adjusted` movement history.
+- Minimal scanner-first stocktake page is available at `/warehouse/stocktake` and records counted quantity by container/SKU with linked corrections for deltas.
 - Minimal scanner-first repack page is available at `/warehouse/repack` and consolidates source containers into one target container with `Repacked` movement history.
 - Minimal scanner-first picking confirmation page is available at `/warehouse/picking-confirmation` and marks allocated containers as picked.
 - Minimal scanner-first outbound fulfillment page is available at `/warehouse/outbound-fulfillment` and creates submitted packing/shipping Stock Entries for warehouse roles.
@@ -162,6 +163,7 @@ Still pending:
 - empty / closed / replaced container lifecycle actions;
 - scanner UX for unexpected receiving items and damaged/quality inspection details;
 - stock-ledger posting automation for warehouse corrections;
+- grouped stocktake sessions and stock-ledger posting for count deltas;
 - richer scanner UX for partial repack / split operations;
 - ERPNext form submit-time or scanner-page automation for move/repack documents;
 - automatic inventory snapshot updates from stock movements and container movements;

@@ -242,6 +242,7 @@ def configure_workspaces():
                 {"type": "DocType", "link_to": "Three PL Container Move", "doc_view": "List", "label": "Container Moves"},
                 {"type": "DocType", "link_to": "Three PL Container Repack", "doc_view": "List", "label": "Container Repacks"},
                 {"type": "DocType", "link_to": "Three PL Warehouse Correction", "doc_view": "List", "label": "Warehouse Corrections"},
+                {"type": "DocType", "link_to": "Three PL Stocktake", "doc_view": "List", "label": "Stocktakes"},
                 {"type": "DocType", "link_to": "Stock Entry", "doc_view": "List", "label": "Stock Entries"},
                 {"type": "DocType", "link_to": "Pick List", "doc_view": "List", "label": "Pick Lists"},
                 {"type": "DocType", "link_to": "Three PL Shipment Request", "doc_view": "List", "label": "Shipment Requests"},
@@ -251,6 +252,7 @@ def configure_workspaces():
                 {"type": "Report", "link_to": "3PL Container Moves", "label": "Container Moves Report", "report_ref_doctype": "Three PL Container Move"},
                 {"type": "Report", "link_to": "3PL Container Repacks", "label": "Container Repacks Report", "report_ref_doctype": "Three PL Container Repack"},
                 {"type": "Report", "link_to": "3PL Warehouse Corrections", "label": "Warehouse Corrections Report", "report_ref_doctype": "Three PL Warehouse Correction"},
+                {"type": "Report", "link_to": "3PL Stocktakes", "label": "Stocktakes Report", "report_ref_doctype": "Three PL Stocktake"},
                 {"type": "Report", "link_to": "3PL Container Movements", "label": "Container Movements", "report_ref_doctype": "Three PL Container Movement"},
                 {"type": "Report", "link_to": "3PL Client Inventory", "label": "Client Inventory", "report_ref_doctype": "Three PL Inventory Snapshot"},
                 {"type": "Report", "link_to": "3PL Client Inventory Summary", "label": "Inventory Summary", "report_ref_doctype": "Three PL Inventory Snapshot"},
@@ -266,6 +268,7 @@ def configure_workspaces():
                 {"type": "Link", "label": "Container Moves", "link_type": "DocType", "link_to": "Three PL Container Move"},
                 {"type": "Link", "label": "Container Repacks", "link_type": "DocType", "link_to": "Three PL Container Repack"},
                 {"type": "Link", "label": "Warehouse Corrections", "link_type": "DocType", "link_to": "Three PL Warehouse Correction"},
+                {"type": "Link", "label": "Stocktakes", "link_type": "DocType", "link_to": "Three PL Stocktake"},
                 {"type": "Link", "label": "Stock Entries", "link_type": "DocType", "link_to": "Stock Entry"},
                 {"type": "Link", "label": "ASN vs Received", "link_type": "Report", "link_to": "3PL ASN vs Received", "is_query_report": 1},
                 {"type": "Link", "label": "Receiving Discrepancies", "link_type": "Report", "link_to": "3PL Receiving Discrepancies", "is_query_report": 1},
@@ -279,6 +282,7 @@ def configure_workspaces():
                 {"type": "Link", "label": "Container Moves Report", "link_type": "Report", "link_to": "3PL Container Moves", "is_query_report": 1},
                 {"type": "Link", "label": "Container Repacks Report", "link_type": "Report", "link_to": "3PL Container Repacks", "is_query_report": 1},
                 {"type": "Link", "label": "Warehouse Corrections Report", "link_type": "Report", "link_to": "3PL Warehouse Corrections", "is_query_report": 1},
+                {"type": "Link", "label": "Stocktakes Report", "link_type": "Report", "link_to": "3PL Stocktakes", "is_query_report": 1},
                 {"type": "Link", "label": "Container Movements", "link_type": "Report", "link_to": "3PL Container Movements", "is_query_report": 1},
                 {"type": "Link", "label": "Inventory Summary", "link_type": "Report", "link_to": "3PL Client Inventory Summary", "is_query_report": 1},
                 {"type": "Link", "label": "Stock Balance", "link_type": "Report", "link_to": "Stock Balance", "is_query_report": 1},
@@ -829,6 +833,37 @@ def configure_custom_doctypes():
             ],
         },
         {
+            "name": "Three PL Stocktake",
+            "module": "Stock",
+            "custom": 1,
+            "track_changes": 1,
+            "title_field": "operation_reference",
+            "autoname": "naming_series:",
+            "fields": [
+                {"fieldname": "naming_series", "label": "Series", "fieldtype": "Select", "options": "STOCKTAKE-.YYYY.-.#####", "default": "STOCKTAKE-.YYYY.-.#####", "reqd": 1},
+                {"fieldname": "operation_reference", "label": "Operation Reference", "fieldtype": "Data", "reqd": 1, "unique": 1, "in_list_view": 1},
+                {"fieldname": "operation_datetime", "label": "Operation Time", "fieldtype": "Datetime", "default": "Now", "reqd": 1, "in_list_view": 1},
+                {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Draft\nApplied\nNo Difference\nNeeds Review\nCancelled", "default": "Draft", "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "client", "label": "Client", "fieldtype": "Link", "options": "Customer", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "warehouse", "label": "Location", "fieldtype": "Link", "options": "Warehouse", "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "container_code", "label": "Container / Handling Unit", "fieldtype": "Link", "options": "Three PL Container", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "item_code", "label": "Item", "fieldtype": "Link", "options": "Item", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "client_sku", "label": "Client SKU", "fieldtype": "Data", "in_list_view": 1},
+                {"fieldname": "uom", "label": "UOM", "fieldtype": "Link", "options": "UOM", "in_list_view": 1},
+                {"fieldname": "expected_qty", "label": "System Qty", "fieldtype": "Float", "in_list_view": 1},
+                {"fieldname": "counted_qty", "label": "Counted Qty", "fieldtype": "Float", "reqd": 1, "in_list_view": 1},
+                {"fieldname": "qty_delta", "label": "Qty Delta", "fieldtype": "Float", "read_only": 1, "in_list_view": 1},
+                {"fieldname": "condition_status", "label": "Condition", "fieldtype": "Select", "options": "OK\nDamaged\nQuality Issue\nHold", "default": "OK", "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "correction", "label": "Correction", "fieldtype": "Link", "options": "Three PL Warehouse Correction", "read_only": 1},
+                {"fieldname": "movement", "label": "Movement Record", "fieldtype": "Link", "options": "Three PL Container Movement", "read_only": 1},
+                {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
+            ],
+            "permissions": warehouse_permissions
+            + [
+                {"role": "Stock User", "read": 1, "write": 1, "create": 1, "report": 1},
+            ],
+        },
+        {
             "name": "Three PL Shipment Request",
             "module": "Stock",
             "custom": 1,
@@ -911,6 +946,7 @@ def configure_custom_doctypes():
         "Three PL Container Movement": {"read": 1},
         "Three PL Container Repack": {"read": 1},
         "Three PL Warehouse Correction": {"read": 1},
+        "Three PL Stocktake": {"read": 1},
         "Three PL Repack Source": {"read": 1},
         "Three PL Repack Item": {"read": 1},
         "Three PL Inventory Snapshot": {"read": 1},
@@ -962,6 +998,10 @@ def configure_custom_doctypes():
             {"role": "Stock User", "read": 1, "write": 1, "create": 1, "report": 1},
         ],
         "Three PL Warehouse Correction": warehouse_permissions
+        + [
+            {"role": "Stock User", "read": 1, "write": 1, "create": 1, "report": 1},
+        ],
+        "Three PL Stocktake": warehouse_permissions
         + [
             {"role": "Stock User", "read": 1, "write": 1, "create": 1, "report": 1},
         ],
@@ -1676,6 +1716,30 @@ from `tabThree PL Warehouse Correction` c
 order by c.operation_datetime desc, c.creation desc
 """.strip(),
         },
+        "3PL Stocktakes": {
+            "ref_doctype": "Three PL Stocktake",
+            "query": """
+select
+    s.name as "Stocktake:Link/Three PL Stocktake:170",
+    s.operation_reference as "Operation Ref:Data:160",
+    s.operation_datetime as "Operation Time:Datetime:160",
+    s.status as "Status:Data:120",
+    s.client as "Client:Link/Customer:170",
+    s.warehouse as "Location:Link/Warehouse:180",
+    s.container_code as "Container / HU:Link/Three PL Container:150",
+    s.item_code as "Item:Link/Item:150",
+    s.client_sku as "Client SKU:Data:120",
+    s.expected_qty as "System Qty:Float:110",
+    s.counted_qty as "Counted Qty:Float:110",
+    s.qty_delta as "Delta:Float:90",
+    s.condition_status as "Condition:Data:120",
+    s.correction as "Correction:Link/Three PL Warehouse Correction:170",
+    s.movement as "Movement:Link/Three PL Container Movement:160",
+    s.notes as "Notes:Small Text:260"
+from `tabThree PL Stocktake` s
+order by s.operation_datetime desc, s.creation desc
+""".strip(),
+        },
         "3PL Client Inventory": {
             "ref_doctype": "Three PL Inventory Snapshot",
             "query": """
@@ -2354,6 +2418,312 @@ def configure_scanner_pages():
     correction_page.insert_code = 0
     correction_page.show_sidebar = 0
     correction_page.save(ignore_permissions=True)
+
+    stocktake_html = """
+<section class="container py-4" style="max-width: 820px;">
+  <h1 class="h3 mb-3">Stocktake</h1>
+  <div class="row g-3">
+    <div class="col-md-5">
+      <label class="form-label" for="stocktake-container">Container / HU</label>
+      <input class="form-control" id="stocktake-container" autocomplete="off" autofocus>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" for="stocktake-item">Item / SKU</label>
+      <input class="form-control" id="stocktake-item" autocomplete="off">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="stocktake-counted-qty">Counted Qty</label>
+      <input class="form-control" id="stocktake-counted-qty" inputmode="decimal" autocomplete="off">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" for="stocktake-condition">Condition</label>
+      <select class="form-select" id="stocktake-condition">
+        <option value="OK">OK</option>
+        <option value="Damaged">Damaged</option>
+        <option value="Quality Issue">Quality Issue</option>
+        <option value="Hold">Hold</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="stocktake-uom">UOM</label>
+      <input class="form-control" id="stocktake-uom" autocomplete="off" value="Nos">
+    </div>
+    <div class="col-md-5">
+      <label class="form-label" for="stocktake-notes">Notes</label>
+      <input class="form-control" id="stocktake-notes" autocomplete="off">
+    </div>
+  </div>
+  <div class="d-flex gap-2 align-items-center mt-3">
+    <button class="btn btn-primary" id="apply-stocktake" type="button">Apply Stocktake</button>
+    <span class="text-muted small" id="stocktake-status"></span>
+  </div>
+</section>
+""".strip()
+    stocktake_script = """
+(function () {
+  function byId(id) { return document.getElementById(id); }
+  function setStatus(message, isError) {
+    var target = byId('stocktake-status');
+    if (!target) return;
+    target.textContent = message || '';
+    target.className = isError ? 'text-danger small' : 'text-muted small';
+  }
+  function getCsrfToken() {
+    if (frappe.csrf_token && frappe.csrf_token !== 'None') return Promise.resolve(frappe.csrf_token);
+    if (window.__threePlCsrfTokenPromise) return window.__threePlCsrfTokenPromise;
+    window.__threePlCsrfTokenPromise = fetch('/app', { credentials: 'same-origin' })
+      .then(function (response) { return response.text(); })
+      .then(function (html) {
+        var match = html.match(/frappe\\.csrf_token\\s*=\\s*"([^"]+)"/);
+        if (!match || !match[1] || match[1] === 'None') throw new Error('Could not initialize session token. Please refresh and try again.');
+        frappe.csrf_token = match[1];
+        return match[1];
+      });
+    return window.__threePlCsrfTokenPromise;
+  }
+  function parseServerMessage(payload) {
+    if (!payload) return null;
+    if (payload._server_messages) {
+      try {
+        var messages = JSON.parse(payload._server_messages);
+        if (messages.length) {
+          var first = JSON.parse(messages[0]);
+          if (first.message) return first.message.replace(/<[^>]*>/g, '');
+        }
+      } catch (error) {
+        return payload._error_message || payload.exception || null;
+      }
+    }
+    return payload._error_message || payload.exception || null;
+  }
+  function api(method, args) {
+    return getCsrfToken().then(function (csrfToken) {
+      var body = new URLSearchParams();
+      Object.keys(args || {}).forEach(function (key) {
+        var value = args[key];
+        body.set(key, typeof value === 'string' ? value : JSON.stringify(value));
+      });
+      return fetch('/api/method/' + method, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Frappe-CSRF-Token': csrfToken
+        },
+        body: body
+      }).then(function (response) {
+        return response.text().then(function (text) {
+          var payload = text ? JSON.parse(text) : {};
+          if (!response.ok) throw new Error(parseServerMessage(payload) || ('Request failed: ' + response.status));
+          return payload;
+        });
+      });
+    });
+  }
+  function hasWarehouseRole() {
+    var roles = (frappe.user_roles || []);
+    return roles.indexOf('3PL Warehouse User') !== -1 || roles.indexOf('3PL Warehouse Manager') !== -1 || roles.indexOf('System Manager') !== -1;
+  }
+  function requireWarehouseRole() {
+    if (frappe.user_roles && !hasWarehouseRole()) {
+      setStatus('This scanner page is only available to warehouse users.', true);
+      var button = byId('apply-stocktake');
+      if (button) button.disabled = true;
+      return false;
+    }
+    return true;
+  }
+  function getDoc(doctype, name) {
+    return api('frappe.client.get', { doctype: doctype, name: name });
+  }
+  function insertDoc(doc) {
+    return api('frappe.client.insert', { doc: doc });
+  }
+  function saveDoc(doc) {
+    return api('frappe.client.save', { doc: doc });
+  }
+  function setValue(doctype, name, fieldname, value) {
+    return api('frappe.client.set_value', { doctype: doctype, name: name, fieldname: fieldname, value: value });
+  }
+  function setValues(doctype, name, values) {
+    return Object.keys(values).reduce(function (promise, fieldname) {
+      return promise.then(function () { return setValue(doctype, name, fieldname, values[fieldname]); });
+    }, Promise.resolve());
+  }
+  function findItemRow(container, itemCode, uom) {
+    return (container.items || []).find(function (row) {
+      return row.item_code === itemCode && (row.uom || uom) === uom;
+    });
+  }
+  function updateContainer(container, itemCode, countedQty, uom, condition, notes) {
+    var row = findItemRow(container, itemCode, uom);
+    var expectedQty = row ? Number(row.qty || 0) : 0;
+    if (row) {
+      row.qty = countedQty;
+      row.condition_status = condition;
+      row.notes = notes || row.notes;
+    } else {
+      container.items = container.items || [];
+      container.items.push({
+        item_code: itemCode,
+        qty: countedQty,
+        uom: uom,
+        condition_status: condition,
+        notes: notes || 'Added by stocktake.'
+      });
+    }
+    if (condition !== 'OK') container.status = 'In Verification';
+    container.last_moved_at = frappe.datetime.now_datetime();
+    return saveDoc(container).then(function () {
+      return { expectedQty: expectedQty, delta: countedQty - expectedQty };
+    });
+  }
+  function applyStocktake() {
+    if (frappe.session && frappe.session.user === 'Guest') {
+      window.location.href = '/login?redirect-to=' + encodeURIComponent('/warehouse/stocktake');
+      return;
+    }
+    if (!requireWarehouseRole()) return;
+    var containerCode = (byId('stocktake-container').value || '').trim();
+    var itemCode = (byId('stocktake-item').value || '').trim();
+    var countedQty = Number((byId('stocktake-counted-qty').value || '').trim());
+    var condition = byId('stocktake-condition').value;
+    var uom = (byId('stocktake-uom').value || '').trim() || 'Nos';
+    var notes = (byId('stocktake-notes').value || '').trim();
+    if (!containerCode || !itemCode || Number.isNaN(countedQty) || countedQty < 0) {
+      setStatus('Scan container, item, and a non-negative counted quantity first.', true);
+      return;
+    }
+    setStatus('Applying stocktake...', false);
+    var container;
+    var result;
+    var stocktake;
+    var correction = null;
+    var movement = null;
+    getDoc('Three PL Container', containerCode).then(function (response) {
+      container = response.message;
+      if (!container || !container.name) throw new Error('Container not found.');
+      if (['Shipped', 'Closed', 'Replaced'].indexOf(container.status) !== -1) throw new Error('Container cannot be counted from status ' + container.status + '.');
+      return updateContainer(container, itemCode, countedQty, uom, condition, notes);
+    }).then(function (updateResult) {
+      result = updateResult;
+      var needsCorrection = result.delta !== 0 || condition !== 'OK';
+      return insertDoc({
+        doctype: 'Three PL Stocktake',
+        operation_reference: 'STOCKTAKE-' + containerCode + '-' + itemCode + '-' + Date.now(),
+        operation_datetime: frappe.datetime.now_datetime(),
+        status: needsCorrection ? 'Draft' : 'No Difference',
+        client: container.client,
+        warehouse: container.current_warehouse,
+        container_code: container.name,
+        item_code: itemCode,
+        uom: uom,
+        expected_qty: result.expectedQty,
+        counted_qty: countedQty,
+        qty_delta: result.delta,
+        condition_status: condition,
+        notes: notes || 'Created from scanner-first stocktake page.'
+      });
+    }).then(function (stocktakeResponse) {
+      stocktake = stocktakeResponse.message;
+      if (result.delta === 0 && condition === 'OK') return null;
+      return insertDoc({
+        doctype: 'Three PL Warehouse Correction',
+        operation_reference: 'CORR-STOCKTAKE-' + containerCode + '-' + itemCode + '-' + Date.now(),
+        operation_datetime: frappe.datetime.now_datetime(),
+        status: 'Draft',
+        correction_type: 'Quantity Count',
+        client: container.client,
+        container_code: container.name,
+        warehouse: container.current_warehouse,
+        item_code: itemCode,
+        uom: uom,
+        expected_qty: result.expectedQty,
+        actual_qty: countedQty,
+        qty_delta: result.delta,
+        condition_status: condition,
+        source_doctype: 'Three PL Stocktake',
+        source_name: stocktake.name,
+        notes: notes || 'Created from scanner-first stocktake page.'
+      }).then(function (correctionResponse) {
+        correction = correctionResponse.message;
+        return insertDoc({
+          doctype: 'Three PL Container Movement',
+          movement_datetime: frappe.datetime.now_datetime(),
+          container_code: container.name,
+          client: container.client,
+          movement_type: 'Adjusted',
+          from_warehouse: container.current_warehouse,
+          to_warehouse: container.current_warehouse,
+          reference_doctype: 'Three PL Stocktake',
+          reference_name: stocktake.name,
+          notes: 'Stocktake delta ' + result.delta + '. ' + (notes || '')
+        });
+      }).then(function (movementResponse) {
+        movement = movementResponse.message;
+        return setValues('Three PL Warehouse Correction', correction.name, {
+          status: 'Applied',
+          movement: movement.name
+        });
+      }).then(function () {
+        return setValues('Three PL Stocktake', stocktake.name, {
+          status: 'Applied',
+          correction: correction.name,
+          movement: movement.name
+        });
+      });
+    }).then(function () {
+      setStatus('Stocktake saved: ' + stocktake.name + (correction ? ' / ' + correction.name : ' / no difference') + '.', false);
+      byId('stocktake-item').value = '';
+      byId('stocktake-counted-qty').value = '';
+      byId('stocktake-notes').value = '';
+      byId('stocktake-item').focus();
+    }).catch(function (error) {
+      setStatus(error.message || 'Could not apply stocktake.', true);
+    });
+  }
+  frappe.ready(function () {
+    if (frappe.session && frappe.session.user === 'Guest') {
+      window.location.href = '/login?redirect-to=' + encodeURIComponent('/warehouse/stocktake');
+      return;
+    }
+    requireWarehouseRole();
+    var button = byId('apply-stocktake');
+    if (button) button.addEventListener('click', applyStocktake);
+    ['stocktake-container', 'stocktake-item', 'stocktake-counted-qty', 'stocktake-uom'].forEach(function (id, index, fields) {
+      var input = byId(id);
+      if (input) input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          if (index < fields.length - 1) byId(fields[index + 1]).focus();
+          else applyStocktake();
+        }
+      });
+    });
+  });
+})();
+""".strip()
+
+    existing_stocktake_page = frappe.db.get_value("Web Page", {"route": "warehouse/stocktake"}, "name")
+    if existing_stocktake_page:
+        stocktake_page = frappe.get_doc("Web Page", existing_stocktake_page)
+    else:
+        stocktake_page = frappe.new_doc("Web Page")
+        stocktake_page.name = "warehouse/stocktake"
+
+    stocktake_page.title = "Stocktake"
+    stocktake_page.route = "warehouse/stocktake"
+    stocktake_page.published = 1
+    if stocktake_page.meta.has_field("login_required"):
+        stocktake_page.login_required = 1
+    stocktake_page.content_type = "HTML"
+    stocktake_page.main_section = stocktake_html
+    if stocktake_page.meta.has_field("main_section_html"):
+        stocktake_page.main_section_html = stocktake_html
+    stocktake_page.javascript = stocktake_script
+    stocktake_page.insert_code = 0
+    stocktake_page.show_sidebar = 0
+    stocktake_page.save(ignore_permissions=True)
 
     html = """
 <section class="container py-4" style="max-width: 760px;">

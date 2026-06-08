@@ -306,8 +306,9 @@ The business owner has broad system rights. The warehouse manager is operational
 | Putaway process | Implemented as MVP | Uses standard ERPNext Stock Entry flow and a scanner-first container putaway page at `/warehouse/putaway`. |
 | Picking from locations | Implemented as MVP | Shipment requests create draft Pick Lists; scanner picking confirmation marks containers as `Picked`. |
 | Warehouse corrections | Implemented as MVP | Scanner page `/warehouse/correction` updates container contents/condition and writes `Adjusted` movement history. ERPNext stock-ledger adjustment automation remains pending. |
+| Inventory / stocktake | Implemented as MVP | Scanner page `/warehouse/stocktake` records counted quantity by container/SKU and links deltas to warehouse corrections. |
 | Containers/boxes | Implemented as first model | `Three PL Container`; scanner-first pages exist for receiving, container moves, putaway, correction, repack, picking confirmation, and outbound fulfillment. |
-| Barcode/location scan fields | Partially implemented | Scanner pages exist for receiving, container moves, putaway, correction, repack, picking, and outbound fulfillment. Unexpected-item receiving stock-ledger posting and partial split/repack still need polish. |
+| Barcode/location scan fields | Partially implemented | Scanner pages exist for receiving, container moves, putaway, correction, stocktake, repack, picking, and outbound fulfillment. Unexpected-item receiving stock-ledger posting and partial split/repack still need polish. |
 | Client inventory visibility | Implemented as MVP | Portal inventory snapshot exists and is customer-filtered by permissions. |
 | Receiving history | Partially implemented | Portal Web Form list exists; dedicated polished history UX is not implemented. |
 | Shipment requests | Implemented as MVP | Client portal Web Form creates shipment requests, Pick Lists, and packing/shipping status sync. |
@@ -318,6 +319,7 @@ The business owner has broad system rights. The warehouse manager is operational
 
 - Scanner receiving support for unexpected products, damaged products, and quality issue capture.
 - Automatic stock-ledger posting for operational warehouse corrections.
+- Grouped stocktake sessions and stock-ledger posting for count deltas.
 - Partial split/repack UX for cases where only part of a box is moved into another box.
 - Automatic stock-ledger-based inventory snapshot refresh.
 - Dedicated client-facing discrepancy detail page.
