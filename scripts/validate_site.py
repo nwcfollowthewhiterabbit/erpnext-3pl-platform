@@ -241,6 +241,7 @@ def main():
 
     for warehouse in REQUIRED_WAREHOUSES:
         require(frappe.db.exists("Warehouse", warehouse), f"Missing Warehouse: {warehouse}")
+    require(frappe.get_meta("Warehouse").allow_rename == 1, "Warehouse locations must be renameable during location-tree setup")
 
     for user, roles in REQUIRED_USERS.items():
         require(frappe.db.exists("User", user), f"Missing User: {user}")

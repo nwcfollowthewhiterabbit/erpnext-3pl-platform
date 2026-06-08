@@ -14,6 +14,22 @@
 3. Compare the notification against the actual received products.
 4. Put products away into warehouse locations.
 
+## Minimum Working Flows Confirmed By Client
+
+The client confirmed that the first useful version should focus on these flows:
+
+1. User roles.
+2. Receiving products: client enters the notice, warehouse receives, compares, and confirms.
+3. Moving products by warehouse locations.
+4. Sending orders: client enters an order, warehouse picks, prepares, and dispatches.
+5. Warehouse corrections: wrong quantity in a box, damaged/mismatched goods, or similar operational corrections.
+6. Inventory / stocktake.
+
+Initial reporting scope:
+
+1. Client product balance on a selected date.
+2. Warehouse operation turnover for a selected period, visible for both client and warehouse users.
+
 ## Picking and Shipping
 
 1. Create a Pick List.
@@ -24,4 +40,4 @@
 
 - When moving products between locations, or during put-away/picking, scan both the location and the product.
 - Track which client the products came from. Stock Entry does not include this by default, so this needs a custom field or a custom workflow extension.
-
+- Allow warehouse managers to edit and rename warehouse locations while the physical location tree is being designed.

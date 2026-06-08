@@ -110,18 +110,29 @@ def apply_repack(repack):
 
 def apply_pending_repacks():
     applied = []
+    skipped = []
     for repack_name in frappe.get_all("Three PL Container Repack", filters={"status": "Draft"}, pluck="name"):
         repack = frappe.get_doc("Three PL Container Repack", repack_name)
-        applied.append(apply_repack(repack).name)
-    return applied
+        try:
+            applied.append(apply_repack(repack).name)
+        except Exception as exc:
+            repack.status = "Needs Review"
+            message = f"Automatic repack apply failed: {exc}"
+            repack.notes = f"{repack.notes}\n{message}".strip() if repack.notes else message
+            repack.save(ignore_permissions=True)
+            skipped.append((repack.name, message))
+    return applied, skipped
 
 
 def main():
-    applied = apply_pending_repacks()
+    applied, skipped = apply_pending_repacks()
     frappe.db.commit()
     print(f"Applied container repacks: {len(applied)}")
     for movement_name in applied:
         print(movement_name)
+    print(f"Skipped container repacks needing review: {len(skipped)}")
+    for repack_name, message in skipped:
+        print(f"{repack_name}: {message}")
 
 
 main()

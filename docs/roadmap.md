@@ -31,6 +31,29 @@ Status: in progress.
 - Validate Business Owner access to products, warehouses, and UOMs.
 - Capture client feedback on missing fields, screen friction, and scanner needs.
 
+## Phase 2.1 - Client-Confirmed MVP Flow Scope
+
+Status: in progress.
+
+Client-confirmed first working scope:
+
+- Roles: implemented.
+- Receiving products: implemented as MVP through client Receiving Notice, warehouse receiving/verification, discrepancy records, and stock/container references. Remaining work: stricter workflow statuses and hard enforcement that every inbound receipt belongs to a notice.
+- Location moves: implemented for containers through `Three PL Container Move`, movement history, and scanner-first move page. Remaining work: polished scanner UX and stronger operational guards.
+- Sending orders: implemented as MVP through client `Three PL Shipment Request`. Remaining work: full pick -> pack -> dispatch workflow, automatic status transitions, and shipment execution screens.
+- Warehouse corrections: not implemented as a dedicated flow yet. Required for wrong quantity in a box, damaged goods, unexpected goods, and other operational corrections.
+- Inventory / stocktake: not implemented as a dedicated stocktake flow yet. Current inventory snapshots support visibility, but cycle count / stocktake operations need design and implementation.
+
+Client-confirmed reporting scope:
+
+- Product balance on a selected date for the client: partially implemented through current inventory snapshots; date-based historical balance report remains open.
+- Warehouse operation turnover for a selected period for client and warehouse users: open.
+
+Immediate fixes from feedback:
+
+- Allow internal manager/owner roles to rename warehouse locations during setup of the physical location tree.
+- Keep invalid container repack/correction drafts from breaking post-deploy processors; mark them as `Needs Review` instead.
+
 ## Phase 3 - Warehouse Locations And Containers
 
 Status: in progress.

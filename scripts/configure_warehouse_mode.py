@@ -764,7 +764,7 @@ def configure_custom_doctypes():
                 {"fieldname": "naming_series", "label": "Series", "fieldtype": "Select", "options": "HU-REPACK-.YYYY.-.#####", "default": "HU-REPACK-.YYYY.-.#####", "reqd": 1},
                 {"fieldname": "operation_reference", "label": "Operation Reference", "fieldtype": "Data", "reqd": 1, "unique": 1, "in_list_view": 1},
                 {"fieldname": "operation_datetime", "label": "Operation Time", "fieldtype": "Datetime", "default": "Now", "reqd": 1, "in_list_view": 1},
-                {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Draft\nApplied\nCancelled", "default": "Draft", "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Draft\nNeeds Review\nApplied\nCancelled", "default": "Draft", "in_standard_filter": 1, "in_list_view": 1},
                 {"fieldname": "client", "label": "Client", "fieldtype": "Link", "options": "Customer", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
                 {"fieldname": "target_container", "label": "Target Container", "fieldtype": "Link", "options": "Three PL Container", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
                 {"fieldname": "target_location", "label": "Target Location", "fieldtype": "Link", "options": "Warehouse", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
@@ -996,6 +996,23 @@ def ensure_docperm(doctype, role, **permissions):
             row.insert(ignore_permissions=True)
         else:
             row.save(ignore_permissions=True)
+
+
+def ensure_doctype_property(doctype, property_name, value, property_type):
+    filters = {"doc_type": doctype, "property": property_name, "field_name": None}
+    if frappe.db.exists("Property Setter", filters):
+        setter = frappe.get_doc("Property Setter", filters)
+    else:
+        setter = frappe.new_doc("Property Setter")
+        setter.doc_type = doctype
+        setter.doctype_or_field = "DocType"
+        setter.property = property_name
+        setter.property_type = property_type
+
+    if setter.value != str(value) or setter.property_type != property_type:
+        setter.value = str(value)
+        setter.property_type = property_type
+        setter.save(ignore_permissions=True)
 
 
 def configure_custom_fields():
@@ -1842,6 +1859,8 @@ def configure_scanner_pages():
 
 
 def configure_defaults():
+    ensure_doctype_property("Warehouse", "allow_rename", 1, "Check")
+
     settings = frappe.get_single("Stock Settings")
     settings.item_naming_by = "Item Code"
     settings.save(ignore_permissions=True)

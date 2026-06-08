@@ -37,6 +37,56 @@ Open:
 - scanner/mobile UX;
 - automatic inventory snapshot updates.
 
+Latest client feedback:
+
+- The client started entering the warehouse location structure.
+- The client could not rename warehouse locations.
+- This is a setup-phase blocker because the location naming scheme is still being refined.
+
+Decision:
+
+- During warehouse-tree setup, warehouse locations should be renameable by internal manager/owner roles.
+- Boxes still must not be modeled as warehouse locations.
+- Once real stock transactions are actively running, renaming already-used locations should be handled carefully and documented as an administrative operation.
+
+Implementation note:
+
+- ERPNext `Warehouse` has rename disabled by default.
+- The deployment configuration enables `Warehouse.allow_rename` through a versioned Property Setter.
+
+## MVP Flow Scope From Client
+
+Status: captured for roadmap.
+
+Client requested these first working flows:
+
+- user roles;
+- receiving products: client enters, warehouse receives, compares, and confirms;
+- moving products between warehouse locations;
+- sending orders: client enters an order, warehouse picks, prepares, and sends;
+- warehouse corrections for wrong quantities in boxes or similar issues;
+- inventory / stocktake.
+
+Requested reports:
+
+- product balance on a selected day for the client;
+- warehouse operation turnover for a selected period for client and warehouse users.
+
+Current interpretation:
+
+- Roles are implemented.
+- Receiving is implemented as an MVP but still needs stronger workflow/status enforcement.
+- Location movement is implemented for containers and scanner-first container moves.
+- Shipment requests are implemented as portal MVP records; full picking/packing/dispatch automation remains open.
+- Corrections and inventory/stocktake need dedicated process design and implementation.
+- Inventory snapshot reports exist as MVP; date-based balance and period operation turnover reports need to be added.
+
+Implementation note:
+
+- Invalid container repack drafts are treated as correction records that need manual review.
+- The automatic repack processor must not stop deployment because of user-entered quantity mismatches.
+- Such repacks are moved to `Needs Review` with the validation message in notes.
+
 ## Handling Units
 
 Status: base model implemented.
