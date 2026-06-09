@@ -174,4 +174,5 @@ def main():
         print(pick_list_name)
 
 
-main()
+if __name__ == "__main__":
+    main()

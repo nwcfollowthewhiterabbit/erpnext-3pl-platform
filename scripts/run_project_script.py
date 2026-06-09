@@ -21,7 +21,12 @@ def main():
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         if call_main and hasattr(module, "main"):
-            module.main()
+            original_argv = sys.argv[:]
+            sys.argv = [path, *original_argv[4:]]
+            try:
+                module.main()
+            finally:
+                sys.argv = original_argv
         frappe.db.commit()
     finally:
         frappe.destroy()

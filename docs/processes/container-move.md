@@ -67,7 +67,7 @@ Run pending moves inside the ERPNext backend through the project runner:
 
 ```bash
 cd /home/frappe/frappe-bench
-./env/bin/python /tmp/run_project_script.py SITE_NAME /tmp/apply_container_moves.py 0
+./env/bin/python /tmp/run_project_script.py SITE_NAME /tmp/apply_container_moves.py 1
 ```
 
 The post-deploy script already copies and runs this processor.

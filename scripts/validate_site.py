@@ -1918,4 +1918,5 @@ def validate_client_portal_permissions():
     frappe.db.rollback()
 
 
-main()
+if __name__ == "__main__":
+    main()

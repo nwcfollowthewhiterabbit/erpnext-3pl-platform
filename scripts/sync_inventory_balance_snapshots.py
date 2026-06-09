@@ -71,4 +71,5 @@ def main():
     print(f"Synced inventory balance snapshots: {len(synced)}")
 
 
-main()
+if __name__ == "__main__":
+    main()

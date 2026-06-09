@@ -50,33 +50,33 @@ docker exec -u root "$backend_cid" bash -lc \
   "mkdir -p /home/frappe/logs /home/frappe/frappe-bench/sites/${site_name}/logs && chown -R frappe:frappe /home/frappe/logs /home/frappe/frappe-bench/sites/${site_name}/logs"
 
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/configure_warehouse_mode.py 0"
+  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/configure_warehouse_mode.py 1"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/create_demo_users.py 1"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/load_demo_warehouse_data.py 1"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/apply_container_moves.py 0"
+  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/apply_container_moves.py 1"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/apply_container_repacks.py 1"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/apply_warehouse_corrections.py 1"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_receiving_notices.py 0"
+  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_receiving_notices.py 1"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_inventory_snapshots.py 0"
+  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_inventory_snapshots.py 1"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_inventory_balance_snapshots.py 0"
+  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_inventory_balance_snapshots.py 1"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_shipment_requests.py 0"
+  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_shipment_requests.py 1"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_picking_confirmations.py 0"
+  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_picking_confirmations.py 1"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_outbound_fulfillment.py 0"
+  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_outbound_fulfillment.py 1"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_inventory_snapshots.py 0"
+  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_inventory_snapshots.py 1"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_inventory_balance_snapshots.py 0"
+  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_inventory_balance_snapshots.py 1"
 docker exec "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && bench --site ${site_name} clear-cache"
 

@@ -1,4 +1,5 @@
 import csv
+import os
 import sys
 from pathlib import Path
 
@@ -45,7 +46,7 @@ def ensure_warehouse(row):
 
 
 def main():
-    csv_path = Path(sys.argv[4] if len(sys.argv) > 4 else "/tmp/warehouse-locations.csv")
+    csv_path = Path(sys.argv[1] if len(sys.argv) > 1 else os.environ.get("WAREHOUSE_LOCATIONS_CSV", "/tmp/warehouse-locations.csv"))
     if not csv_path.exists():
         raise RuntimeError(f"CSV file not found: {csv_path}")
 

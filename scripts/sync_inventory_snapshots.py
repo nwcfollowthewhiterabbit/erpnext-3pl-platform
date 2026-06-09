@@ -73,4 +73,5 @@ def main():
     print(f"Deleted stale inventory snapshots: {len(deleted)}")
 
 
-main()
+if __name__ == "__main__":
+    main()

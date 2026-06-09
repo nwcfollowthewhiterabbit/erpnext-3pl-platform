@@ -5447,4 +5447,5 @@ def main():
     frappe.clear_cache()
 
 
-main()
+if __name__ == "__main__":
+    main()

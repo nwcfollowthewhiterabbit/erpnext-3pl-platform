@@ -67,7 +67,7 @@ docker exec \
   -e "BUSINESS_OWNER_PASSWORD=${business_owner_password}" \
   -e "CLIENT_PORTAL_PASSWORD=${client_portal_password}" \
   "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/validate_site.py 0"
+  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/validate_site.py 1"
 
 check_login() {
   user="$1"
