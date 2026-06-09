@@ -35,6 +35,8 @@ Status: in progress.
 
 Status: in progress.
 
+Focused readiness table: `docs/client-mvp-scope-status.md`.
+
 Client-confirmed first working scope:
 
 - Roles: implemented.

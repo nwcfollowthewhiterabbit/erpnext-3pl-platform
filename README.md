@@ -46,6 +46,7 @@ For a quick HTTPS endpoint without managing DNS first, use an `sslip.io` hostnam
 - Deployment: `docs/deployment.md`
 - Repository policy: `docs/repository-policy.md`
 - Roadmap: `docs/roadmap.md`
+- Client-confirmed MVP scope status: `docs/client-mvp-scope-status.md`
 - Warehouse mode overview: `docs/warehouse-mode.md`
 - Use cases and coverage: `docs/use-cases.md`
 - Demo access: `docs/manuals/00-demo-access.md`
