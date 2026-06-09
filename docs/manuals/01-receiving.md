@@ -46,10 +46,12 @@ Flow:
 
 1. Scan or enter the Receiving Notice / ASN.
 2. Scan or enter the container / Handling Unit.
-3. Scan or enter the expected item code.
+3. Scan or enter the item code. The item can be expected on the notice or unexpected.
 4. Enter accepted received quantity.
 5. Confirm receiving location, normally `Temporary Receiving - 3`.
-6. Click `Submit Receipt`.
+6. Select condition: `OK`, `Damaged`, `Quality Issue`, or `Hold`.
+7. Add inspection notes when needed.
+8. Click `Submit Receipt`.
 
 Expected result:
 
@@ -58,13 +60,14 @@ Expected result:
 - the container is created or updated as `Received`;
 - the container contents are incremented by the accepted quantity;
 - a `Three PL Container Movement` row is written with movement type `Received`;
-- the Receiving Notice row is updated with received and variance quantities.
+- the Receiving Notice row is updated with received and variance quantities for expected items;
+- unexpected items create a discrepancy row;
+- damaged and quality issue receipts create discrepancy rows and keep the notice in review.
 
 Current boundary:
 
-- scanner receiving accepts expected item rows from the notice;
-- damaged products, quality issues, photos, and client decisions still belong in the Receiving Notice discrepancy workflow;
-- unexpected products should be handled by a manager until the unexpected-item scanner flow is designed.
+- photos and final client decisions still belong in the Receiving Notice discrepancy / client instruction workflow;
+- richer guided actions after a discrepancy is found are still future work.
 
 ## Required Operating Rule
 

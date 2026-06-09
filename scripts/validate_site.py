@@ -719,7 +719,18 @@ def validate_receiving_sync():
                     "basic_rate": 1,
                     "scanned_location": "Temporary Receiving - 3",
                     "container_code": "BOX-ALPHA-001",
-                }
+                },
+                {
+                    "item_code": "SKU-ALPHA-002",
+                    "qty": 3,
+                    "t_warehouse": "Temporary Receiving - 3",
+                    "uom": "Nos",
+                    "stock_uom": "Nos",
+                    "conversion_factor": 1,
+                    "basic_rate": 1,
+                    "scanned_location": "Temporary Receiving - 3",
+                    "container_code": "BOX-ALPHA-001",
+                },
             ],
         }
     )
@@ -734,6 +745,10 @@ def validate_receiving_sync():
     require(
         any(row.auto_generated and row.discrepancy_type == "Quantity Difference" and row.variance_qty == -1 for row in notice.discrepancies),
         "Receiving validation did not create auto discrepancy",
+    )
+    require(
+        any(row.auto_generated and row.discrepancy_type == "Unexpected Product" and row.item_code == "SKU-ALPHA-002" and row.actual_qty == 3 for row in notice.discrepancies),
+        "Receiving validation did not create unexpected product discrepancy",
     )
 
     cleanup_receiving_validation_docs()

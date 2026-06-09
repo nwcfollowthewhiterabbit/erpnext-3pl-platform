@@ -220,7 +220,7 @@ Expected result:
 
 Implementation status: implemented as MVP.
 
-Submitted inbound receipts update received quantities, variances, notice status, and auto-generated quantity discrepancies. A scanner-first receiving page exists at `/warehouse/receiving` for expected item rows. Manual discrepancy rows are still used for damage, quality issues, and inspection notes.
+Submitted inbound receipts update received quantities, variances, notice status, and auto-generated discrepancies. A scanner-first receiving page exists at `/warehouse/receiving` for expected items, unexpected items, and damaged/quality issue capture.
 
 ### Warehouse Puts Goods Away Into Storage
 
@@ -348,7 +348,7 @@ The business owner has broad system rights. The warehouse manager is operational
 | Warehouse correction review | Implemented as MVP | Managers can review `Needs Review` corrections at `/warehouse/correction-review` and report `3PL Corrections Needing Review`. |
 | Inventory / stocktake | Implemented as MVP | Scanner page `/warehouse/stocktake` records counted quantity by container/SKU and links deltas to warehouse corrections. |
 | Containers/boxes | Implemented as first model | `Three PL Container`; scanner-first pages exist for receiving, container moves, putaway, correction, repack, picking confirmation, and outbound fulfillment. |
-| Barcode/location scan fields | Partially implemented | Scanner pages exist for receiving, container moves, putaway, correction, stocktake, repack, picking, and outbound fulfillment. Unexpected-item receiving stock-ledger posting and partial split/repack still need polish. |
+| Barcode/location scan fields | Partially implemented | Scanner pages exist for receiving, container moves, putaway, correction, stocktake, repack, picking, and outbound fulfillment. Partial split/repack still needs polish. |
 | Client inventory visibility | Implemented as MVP | Portal inventory snapshot exists and is customer-filtered by permissions. |
 | Product balance on date | Implemented as MVP | Daily `Three PL Inventory Balance Snapshot` rows and `3PL Inventory Balance By Date` report. |
 | Warehouse operation turnover | Implemented as MVP | `3PL Warehouse Operation Turnover` report reads movement history. |
@@ -359,7 +359,6 @@ The business owner has broad system rights. The warehouse manager is operational
 
 ## Remaining Gaps After MVP
 
-- Scanner receiving support for unexpected products, damaged products, and quality issue capture.
 - Richer approval workflow and audit trail for correction stock postings that ERPNext cannot post automatically.
 - Grouped stocktake sessions.
 - Partial split/repack UX for cases where only part of a box is moved into another box.

@@ -1940,6 +1940,19 @@ def configure_scanner_pages():
       <label class="form-label" for="receiving-location">Receiving Location</label>
       <input class="form-control" id="receiving-location" autocomplete="off" value="Temporary Receiving - 3">
     </div>
+    <div class="col-md-4">
+      <label class="form-label" for="receiving-condition">Condition</label>
+      <select class="form-select" id="receiving-condition">
+        <option value="OK">OK</option>
+        <option value="Damaged">Damaged</option>
+        <option value="Quality Issue">Quality Issue</option>
+        <option value="Hold">Hold</option>
+      </select>
+    </div>
+    <div class="col-md-8">
+      <label class="form-label" for="receiving-notes">Inspection Notes</label>
+      <input class="form-control" id="receiving-notes" autocomplete="off">
+    </div>
   </div>
   <div class="d-flex gap-2 align-items-center mt-3">
     <button class="btn btn-primary" id="submit-receiving" type="button">Submit Receipt</button>
@@ -2056,6 +2069,7 @@ def configure_scanner_pages():
           client: notice.customer,
           current_warehouse: location,
           status: 'Received',
+          inbound_shipment_notice: notice.name,
           last_moved_at: frappe.datetime.now_datetime()
         }).then(function (insertResponse) { return insertResponse.message; });
       }
@@ -2066,19 +2080,21 @@ def configure_scanner_pages():
         container.client = notice.customer;
         container.current_warehouse = location;
         container.status = 'Received';
+        container.inbound_shipment_notice = notice.name;
         container.last_moved_at = frappe.datetime.now_datetime();
         return saveDoc(container).then(function (saveResponse) { return saveResponse.message || container; });
       });
     });
   }
-  function updateContainerItems(containerCode, itemCode, clientSku, qty, uom) {
+  function updateContainerItems(containerCode, itemCode, clientSku, qty, uom, condition, notes) {
     return getDoc('Three PL Container', containerCode).then(function (containerResponse) {
       var container = containerResponse.message;
       var matched = false;
       container.items = container.items || [];
       container.items.forEach(function (row) {
-        if (row.item_code === itemCode && row.uom === uom && (row.condition_status || 'OK') === 'OK') {
+        if (row.item_code === itemCode && row.uom === uom && (row.condition_status || 'OK') === condition) {
           row.qty = Number(row.qty || 0) + qty;
+          if (notes) row.notes = notes;
           matched = true;
         }
       });
@@ -2088,9 +2104,12 @@ def configure_scanner_pages():
           client_sku: clientSku,
           qty: qty,
           uom: uom,
-          condition_status: 'OK',
-          notes: 'Received from scanner-first receiving page.'
+          condition_status: condition,
+          notes: notes || 'Received from scanner-first receiving page.'
         });
+      }
+      if (condition !== 'OK') {
+        container.status = 'In Verification';
       }
       return saveDoc(container);
     });
@@ -2115,6 +2134,7 @@ def configure_scanner_pages():
         stock_uom: uom,
         conversion_factor: 1,
         basic_rate: 1,
+        allow_zero_valuation_rate: 1,
         scanned_location: location,
         container_code: containerCode
       }]
@@ -2122,23 +2142,53 @@ def configure_scanner_pages():
       return submitDoc(insertResponse.message);
     });
   }
-  function syncNoticeRow(notice, itemCode, qty, uom, containerCode, entryName) {
+  function syncNoticeRow(notice, itemCode, clientSku, qty, uom, containerCode, entryName, condition, notes) {
     var matched = false;
     (notice.items || []).forEach(function (row) {
       if (row.item_code === itemCode && row.uom === uom) {
         row.received_qty = Number(row.received_qty || 0) + qty;
         row.container_code = containerCode;
+        row.condition_status = condition;
         matched = true;
       }
     });
     if (!matched) {
-      throw new Error('Received item is not listed on this Receiving Notice.');
+      notice.discrepancies = notice.discrepancies || [];
+      notice.discrepancies.push({
+        discrepancy_type: 'Unexpected Product',
+        item_code: itemCode,
+        client_sku: clientSku,
+        expected_qty: 0,
+        actual_qty: qty,
+        variance_qty: qty,
+        status: 'Open',
+        auto_generated: 0,
+        source_stock_entry: entryName,
+        container_code: containerCode,
+        notes: notes || 'Unexpected product received from scanner-first receiving page.'
+      });
     }
     (notice.items || []).forEach(function (row) {
       row.variance_qty = Number(row.received_qty || 0) - Number(row.expected_qty || 0);
     });
+    if (matched && condition !== 'OK') {
+      notice.discrepancies = notice.discrepancies || [];
+      notice.discrepancies.push({
+        discrepancy_type: condition === 'Damaged' ? 'Damaged Product' : 'Quality Issue',
+        item_code: itemCode,
+        client_sku: clientSku,
+        expected_qty: qty,
+        actual_qty: qty,
+        variance_qty: 0,
+        status: 'Open',
+        auto_generated: 0,
+        source_stock_entry: entryName,
+        container_code: containerCode,
+        notes: notes || condition + ' recorded from scanner-first receiving page.'
+      });
+    }
     var hasVariance = (notice.items || []).some(function (row) { return Number(row.variance_qty || 0) !== 0; });
-    notice.status = hasVariance ? 'Discrepancy Review' : 'Received';
+    notice.status = (hasVariance || !matched || condition !== 'OK') ? 'Discrepancy Review' : 'Received';
     return saveDoc(notice).then(function () {
       return insertDoc({
         doctype: 'Three PL Container Movement',
@@ -2149,7 +2199,7 @@ def configure_scanner_pages():
         to_warehouse: byId('receiving-location').value.trim(),
         reference_doctype: 'Stock Entry',
         reference_name: entryName,
-        notes: 'Created from scanner-first receiving page.'
+        notes: 'Created from scanner-first receiving page. Condition: ' + condition + '. ' + (notes || '')
       });
     });
   }
@@ -2164,6 +2214,8 @@ def configure_scanner_pages():
     var itemCode = (byId('receiving-item').value || '').trim();
     var qty = Number((byId('receiving-qty').value || '').trim());
     var location = (byId('receiving-location').value || '').trim();
+    var condition = byId('receiving-condition').value || 'OK';
+    var notes = (byId('receiving-notes').value || '').trim();
     if (!noticeReference || !containerCode || !itemCode || !qty || !location) {
       setStatus('Scan ASN, container, item, qty, and receiving location first.', true);
       return;
@@ -2175,10 +2227,13 @@ def configure_scanner_pages():
     findNotice(noticeReference).then(function (foundNotice) {
       notice = foundNotice;
       var noticeRow = (notice.items || []).find(function (row) { return row.item_code === itemCode; });
-      if (!noticeRow) throw new Error('Item is not listed on this Receiving Notice.');
-      itemUom = noticeRow.uom;
-      clientSku = noticeRow.client_sku;
-      return getValue('Warehouse', { name: location }, 'name');
+      return getValue('Item', { name: itemCode }, ['name', 'stock_uom', 'client_sku', 'owner_client']).then(function (itemResponse) {
+        if (!itemResponse.message || !itemResponse.message.name) throw new Error('Item not found.');
+        if (itemResponse.message.owner_client && itemResponse.message.owner_client !== notice.customer) throw new Error('Item belongs to another client.');
+        itemUom = noticeRow ? noticeRow.uom : (itemResponse.message.stock_uom || 'Nos');
+        clientSku = noticeRow ? noticeRow.client_sku : (itemResponse.message.client_sku || '');
+        return getValue('Warehouse', { name: location }, 'name');
+      });
     }).then(function (warehouseResponse) {
       if (!warehouseResponse.message || !warehouseResponse.message.name) throw new Error('Receiving location not found.');
       return ensureContainer(containerCode, notice, location);
@@ -2186,8 +2241,8 @@ def configure_scanner_pages():
       return createAndSubmitStockEntry(notice, containerCode, itemCode, qty, itemUom, location);
     }).then(function (entryResponse) {
       var entry = entryResponse.message;
-      return updateContainerItems(containerCode, itemCode, clientSku, qty, itemUom).then(function () {
-        return syncNoticeRow(notice, itemCode, qty, itemUom, containerCode, entry.name).then(function () {
+      return updateContainerItems(containerCode, itemCode, clientSku, qty, itemUom, condition, notes).then(function () {
+        return syncNoticeRow(notice, itemCode, clientSku, qty, itemUom, containerCode, entry.name, condition, notes).then(function () {
           return entry;
         });
       });
@@ -2195,6 +2250,8 @@ def configure_scanner_pages():
       setStatus('Receipt submitted: ' + entry.name + '.', false);
       byId('receiving-item').value = '';
       byId('receiving-qty').value = '';
+      byId('receiving-notes').value = '';
+      byId('receiving-condition').value = 'OK';
       byId('receiving-item').focus();
     }).catch(function (error) {
       setStatus(error.message || 'Could not submit receipt.', true);
@@ -2208,7 +2265,7 @@ def configure_scanner_pages():
     requireWarehouseRole();
     var button = byId('submit-receiving');
     if (button) button.addEventListener('click', submitReceiving);
-    ['receiving-notice', 'receiving-container', 'receiving-item', 'receiving-qty', 'receiving-location'].forEach(function (id, index, fields) {
+    ['receiving-notice', 'receiving-container', 'receiving-item', 'receiving-qty', 'receiving-location', 'receiving-condition', 'receiving-notes'].forEach(function (id, index, fields) {
       var input = byId(id);
       if (input) input.addEventListener('keydown', function (event) {
         if (event.key === 'Enter') {
