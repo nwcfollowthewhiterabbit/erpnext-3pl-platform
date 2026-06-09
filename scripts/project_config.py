@@ -21,6 +21,7 @@ CLIENT_PORTAL_PASSWORD = required_env("CLIENT_PORTAL_PASSWORD")
 CLIENT_PORTAL_CUSTOMER = "Demo Client Alpha"
 CLIENT_PORTAL_RECEIVING_ROUTE = "client/receiving-notice"
 CLIENT_PORTAL_HOME = f"{CLIENT_PORTAL_RECEIVING_ROUTE}/list"
+CLIENT_PORTAL_RECEIVING_REF_PREFIX = "ALPHA-IN"
 
 WAREHOUSE_OPERATOR_USER = "warehouse.demo@example.test"
 WAREHOUSE_OPERATOR_PASSWORD = required_env("WAREHOUSE_OPERATOR_PASSWORD")
@@ -77,9 +78,109 @@ CLIENT_PORTAL_FORMS = [
         "introduction_text": "Create and review receiving notices for inbound warehouse shipments.",
         "success_title": "Receiving Notice Submitted",
         "success_message": "The warehouse team can now review the expected inbound shipment.",
+        "client_script": """
+(function () {
+  var FALLBACK_CUSTOMER = "__CLIENT_PORTAL_CUSTOMER__";
+  var REF_PREFIX = "__CLIENT_PORTAL_RECEIVING_REF_PREFIX__";
+
+  function pad(value, width) {
+    return String(value).padStart(width, '0');
+  }
+
+  function todayStamp() {
+    var now = new Date();
+    return String(now.getFullYear()) + pad(now.getMonth() + 1, 2) + pad(now.getDate(), 2);
+  }
+
+  function getFieldValue(fieldname) {
+    if (window.frappe && frappe.web_form && frappe.web_form.get_value) {
+      return frappe.web_form.get_value(fieldname);
+    }
+    var input = document.querySelector('[data-fieldname="' + fieldname + '"] input, [name="' + fieldname + '"], input[data-fieldname="' + fieldname + '"]');
+    return input ? input.value : '';
+  }
+
+  function setFieldValue(fieldname, value) {
+    if (window.frappe && frappe.web_form && frappe.web_form.set_value) {
+      frappe.web_form.set_value(fieldname, value);
+      return;
+    }
+    var input = document.querySelector('[data-fieldname="' + fieldname + '"] input, [name="' + fieldname + '"], input[data-fieldname="' + fieldname + '"]');
+    if (input) {
+      input.value = value;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  }
+
+  function api(method, args) {
+    var body = new URLSearchParams();
+    Object.keys(args || {}).forEach(function (key) {
+      var value = args[key];
+      body.set(key, typeof value === 'string' ? value : JSON.stringify(value));
+    });
+    return fetch('/api/method/' + method, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body
+    }).then(function (response) {
+      return response.json().then(function (payload) {
+        if (!response.ok) throw new Error(payload.exception || payload._error_message || ('Request failed: ' + response.status));
+        return payload;
+      });
+    });
+  }
+
+  function nextReference(existingRows, basePrefix) {
+    var maxNumber = 0;
+    (existingRows || []).forEach(function (row) {
+      var ref = row.external_reference || '';
+      if (ref.indexOf(basePrefix + '-') !== 0) return;
+      var suffix = ref.slice(basePrefix.length + 1);
+      var parsed = parseInt(suffix, 10);
+      if (!Number.isNaN(parsed)) maxNumber = Math.max(maxNumber, parsed);
+    });
+    return basePrefix + '-' + pad(maxNumber + 1, 3);
+  }
+
+  function installAutoReference() {
+    if (getFieldValue('external_reference')) return;
+
+    var datePart = todayStamp();
+    var basePrefix = REF_PREFIX + '-' + datePart;
+    var customer = getFieldValue('customer') || FALLBACK_CUSTOMER;
+
+    api('frappe.client.get_list', {
+      doctype: 'Inbound Shipment Notice',
+      filters: {
+        customer: customer,
+        external_reference: ['like', basePrefix + '-%']
+      },
+      fields: ['external_reference'],
+      limit_page_length: 100,
+      order_by: 'external_reference desc'
+    }).then(function (response) {
+      if (getFieldValue('external_reference')) return;
+      setFieldValue('external_reference', nextReference(response.message || [], basePrefix));
+    }).catch(function () {
+      if (!getFieldValue('external_reference')) {
+        setFieldValue('external_reference', basePrefix + '-001');
+      }
+    });
+  }
+
+  if (window.frappe && frappe.ready) {
+    frappe.ready(function () { setTimeout(installAutoReference, 250); });
+  } else {
+    document.addEventListener('DOMContentLoaded', function () { setTimeout(installAutoReference, 250); });
+  }
+})();
+"""
+        .replace("__CLIENT_PORTAL_CUSTOMER__", CLIENT_PORTAL_CUSTOMER)
+        .replace("__CLIENT_PORTAL_RECEIVING_REF_PREFIX__", CLIENT_PORTAL_RECEIVING_REF_PREFIX),
         "fields": [
             {"fieldname": "customer", "fieldtype": "Link", "label": "Client", "options": "Customer", "reqd": 1, "hidden": 1, "default": CLIENT_PORTAL_CUSTOMER, "allow_read_on_all_link_options": 1},
-            {"fieldname": "external_reference", "fieldtype": "Data", "label": "Client Notice Ref", "reqd": 1, "show_in_filter": 1},
+            {"fieldname": "external_reference", "fieldtype": "Data", "label": "Client Notice Ref", "reqd": 1, "show_in_filter": 1, "description": "Auto-filled as CLIENT-IN-YYYYMMDD-###. You may replace it with your own PO, ASN, invoice, or shipment reference."},
             {"fieldname": "expected_arrival_date", "fieldtype": "Date", "label": "Expected Arrival Date", "reqd": 1},
             {"fieldname": "portal_items_description", "fieldtype": "Small Text", "label": "Products and Quantities", "reqd": 1},
             {"fieldname": "notes", "fieldtype": "Small Text", "label": "Notes"},

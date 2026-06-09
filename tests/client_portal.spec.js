@@ -148,3 +148,24 @@ test("client portal browser login persists across portal pages", async ({ browse
   await context.close();
   expect(problems).toEqual([]);
 });
+
+test("receiving notice form auto-fills client reference", async ({ page }) => {
+  const problems = [];
+  await collectPortalProblems(page, problems);
+
+  const loginResponse = await page.context().request.post(`${baseURL}/api/method/login`, {
+    form: { usr: clientUser, pwd: clientPassword },
+  });
+  expect(loginResponse.ok()).toBeTruthy();
+
+  await page.goto(`${baseURL}/client/receiving-notice/new`);
+  await page.waitForLoadState("networkidle");
+
+  const referenceInput = page
+    .locator('input[data-fieldname="external_reference"], input[name="external_reference"], [data-fieldname="external_reference"] input')
+    .first();
+  await expect(referenceInput).toBeVisible();
+  await expect(referenceInput).toHaveValue(/^ALPHA-IN-\d{8}-\d{3}$/, { timeout: 10000 });
+
+  expect(problems).toEqual([]);
+});

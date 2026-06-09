@@ -3,7 +3,7 @@ import json
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
-from project_config import CLIENT_PORTAL_CUSTOMER, CLIENT_PORTAL_FORMS, CLIENT_PORTAL_HOME, COMPANY, COMPANY_ABBR, COUNTRY, CURRENCY, LANGUAGE, PLACEHOLDER_EMAIL, TIME_ZONE
+from project_config import CLIENT_PORTAL_CUSTOMER, CLIENT_PORTAL_FORMS, CLIENT_PORTAL_HOME, CLIENT_PORTAL_RECEIVING_REF_PREFIX, COMPANY, COMPANY_ABBR, COUNTRY, CURRENCY, LANGUAGE, PLACEHOLDER_EMAIL, TIME_ZONE
 
 
 CUSTOM_DOCTYPE_MODULE = "Website"
@@ -1398,6 +1398,7 @@ def configure_client_portal():
             fields=form["fields"],
             allow_edit=form.get("allow_edit", 1),
             allow_multiple=form.get("allow_multiple", 1),
+            client_script=form.get("client_script"),
         )
 
     configure_client_status_pages()
@@ -1536,16 +1537,93 @@ def configure_client_portal_website_script():
       }});
   }}
 
+  function getWebFormValue(fieldname) {{
+    if (window.frappe && frappe.web_form && frappe.web_form.get_value) {{
+      return frappe.web_form.get_value(fieldname);
+    }}
+    var input = document.querySelector('[data-fieldname="' + fieldname + '"] input, [name="' + fieldname + '"], input[data-fieldname="' + fieldname + '"]');
+    return input ? input.value : '';
+  }}
+
+  function setWebFormValue(fieldname, value) {{
+    if (window.frappe && frappe.web_form && frappe.web_form.set_value) {{
+      frappe.web_form.set_value(fieldname, value);
+      return;
+    }}
+    var input = document.querySelector('[data-fieldname="' + fieldname + '"] input, [name="' + fieldname + '"], input[data-fieldname="' + fieldname + '"]');
+    if (input) {{
+      input.value = value;
+      input.dispatchEvent(new Event('change', {{ bubbles: true }}));
+    }}
+  }}
+
+  function padReferencePart(value, width) {{
+    return String(value).padStart(width, '0');
+  }}
+
+  function todayReferenceStamp() {{
+    var now = new Date();
+    return String(now.getFullYear()) + padReferencePart(now.getMonth() + 1, 2) + padReferencePart(now.getDate(), 2);
+  }}
+
+  function nextReceivingReference(rows, basePrefix) {{
+    var maxNumber = 0;
+    (rows || []).forEach(function (row) {{
+      var ref = row.external_reference || '';
+      if (ref.indexOf(basePrefix + '-') !== 0) return;
+      var parsed = parseInt(ref.slice(basePrefix.length + 1), 10);
+      if (!Number.isNaN(parsed)) maxNumber = Math.max(maxNumber, parsed);
+    }});
+    return basePrefix + '-' + padReferencePart(maxNumber + 1, 3);
+  }}
+
+  function autoFillReceivingNoticeReference() {{
+    if (window.location.pathname !== '/client/receiving-notice/new') return;
+    if (getWebFormValue('external_reference')) return;
+
+    var basePrefix = '{CLIENT_PORTAL_RECEIVING_REF_PREFIX}-' + todayReferenceStamp();
+    var customer = getWebFormValue('customer') || '{CLIENT_PORTAL_CUSTOMER}';
+    var payload = new URLSearchParams();
+    payload.set('doctype', 'Inbound Shipment Notice');
+    payload.set('filters', JSON.stringify({{
+      customer: customer,
+      external_reference: ['like', basePrefix + '-%']
+    }}));
+    payload.set('fields', JSON.stringify(['external_reference']));
+    payload.set('limit_page_length', '100');
+    payload.set('order_by', 'external_reference desc');
+
+    fetch('/api/method/frappe.client.get_list', {{
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {{'Content-Type': 'application/x-www-form-urlencoded'}},
+      body: payload.toString()
+    }})
+      .then(function (response) {{ return response.json(); }})
+      .then(function (response) {{
+        if (getWebFormValue('external_reference')) return;
+        setWebFormValue('external_reference', nextReceivingReference(response.message || [], basePrefix));
+      }})
+      .catch(function () {{
+        if (!getWebFormValue('external_reference')) {{
+          setWebFormValue('external_reference', basePrefix + '-001');
+        }}
+      }});
+  }}
+
   if (window.frappe && frappe.ready) {{
     tuneClientPortalBoot();
     frappe.ready(function () {{
       tuneClientPortalBoot();
       installClientPortalNav();
       renderClientPortalList();
+      autoFillReceivingNoticeReference();
       removeDeskPermissionNoise();
       setTimeout(renderClientPortalList, 250);
+      setTimeout(autoFillReceivingNoticeReference, 250);
       setTimeout(removeDeskPermissionNoise, 250);
       setTimeout(renderClientPortalList, 1000);
+      setTimeout(autoFillReceivingNoticeReference, 1000);
       setTimeout(removeDeskPermissionNoise, 1000);
     }});
   }} else {{
@@ -1553,6 +1631,7 @@ def configure_client_portal_website_script():
       tuneClientPortalBoot();
       installClientPortalNav();
       renderClientPortalList();
+      autoFillReceivingNoticeReference();
       removeDeskPermissionNoise();
     }});
   }}
@@ -1822,6 +1901,7 @@ def configure_portal_web_form(
     fields,
     allow_edit=1,
     allow_multiple=1,
+    client_script=None,
 ):
     existing_form = frappe.db.get_value("Web Form", {"route": route}, "name") or frappe.db.get_value("Web Form", {"title": form_name}, "name")
     if existing_form:
@@ -1851,6 +1931,11 @@ def configure_portal_web_form(
     form.success_url = f"/{portal_list_route(route)}"
     form.hide_navbar = 1
     form.hide_footer = 1
+    if client_script:
+        if form.meta.has_field("client_script"):
+            form.client_script = client_script
+        elif form.meta.has_field("script"):
+            form.script = client_script
 
     for field in fields:
         form.append("web_form_fields", field)
