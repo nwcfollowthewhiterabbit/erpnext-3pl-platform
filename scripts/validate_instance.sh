@@ -206,10 +206,21 @@ expect_redirect() {
   fi
 }
 
+expect_cookie_redirect() {
+  path="$1"
+  cookie="$2"
+  expected="$3"
+  redirect="$(curl -sS -o /dev/null -w "%{redirect_url}" --max-time 30 -H "Cookie: ${cookie}" "${base_url%/}${path}")"
+  if [ "$redirect" != "${base_url%/}${expected}" ]; then
+    echo "Unexpected cookie redirect for ${path}: ${redirect}" >&2
+    exit 1
+  fi
+}
+
 case "$base_url" in
   http://127.0.0.1:*|http://localhost:*) ;;
   *)
-    expect_redirect "/" "/app/3pl-warehouse"
+    expect_redirect "/" "/login"
     expect_redirect "/app" "/desk/3pl-warehouse"
     expect_redirect "/app/" "/desk/3pl-warehouse"
     expect_redirect "/desk" "/desk/3pl-warehouse"
@@ -218,6 +229,8 @@ case "$base_url" in
     expect_redirect "/login?redirect-to=%2Fapp%2Fsetup-wizard" "/login?redirect-to=%2Fapp%2F3pl-warehouse"
     expect_redirect "/app/home" "/desk/3pl-warehouse"
     expect_redirect "/apps" "/desk/3pl-warehouse"
+    expect_cookie_redirect "/desk/3pl-warehouse" "user_id=Guest; system_user=no" "/login"
+    expect_cookie_redirect "/desk/3pl-warehouse" "user_id=alpha.client@example.test; system_user=no" "/client/receiving-notice/list"
     ;;
 esac
 

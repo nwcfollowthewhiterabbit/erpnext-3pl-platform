@@ -28,7 +28,7 @@ server {
     }
 
     location = / {
-        return 302 /app/3pl-warehouse;
+        return 302 /login;
     }
 
     location = /app {
@@ -73,8 +73,12 @@ server {
     proxy_set_header X-Forwarded-Port \$server_port;
 
     location ~ ^/(app|desk)(/|$) {
+        if (\$http_cookie ~* "user_id=Guest") {
+            return 302 /login;
+        }
+
         if (\$http_cookie ~* "system_user=no") {
-            return 200 "";
+            return 302 /client/receiving-notice/list;
         }
 
         proxy_read_timeout 120;

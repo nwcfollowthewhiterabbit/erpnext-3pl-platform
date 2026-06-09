@@ -63,7 +63,7 @@ The script installs nginx/certbot, proxies to the ERPNext frontend on port `8080
 
 It also redirects stale setup wizard links to `/app/3pl-warehouse`. This includes both direct `/app/setup-wizard` requests and `/login?redirect-to=%2Fapp%2Fsetup-wizard`, because Frappe's login page honors the `redirect-to` query parameter after successful browser login.
 
-On ERPNext v16, the ERPNext app route is `/app/home` by default. This warehouse-first instance redirects `/app/home` to `/app/3pl-warehouse` at the public nginx layer so browser login lands in the 3PL workspace without forking the upstream Docker image.
+On ERPNext v16, the ERPNext app route is `/app/home` by default. This warehouse-first instance redirects `/app/home` to `/app/3pl-warehouse` at the public nginx layer so browser login lands in the 3PL workspace without forking the upstream Docker image. The public root `/` redirects to `/login` without a forced `redirect-to`, so Frappe can send each role to its configured home page: client users to the portal and warehouse users to the 3PL workspace.
 
 ## Validation
 
@@ -81,7 +81,7 @@ Validation checks:
 - placeholder default outgoing Email Account exists
 - custom DocTypes, report, warehouses, workspaces, demo users, and demo data exist
 - demo users have `Warehouse Only` module profile and default workspace `3PL Warehouse`
-- demo login redirects to `/app/3pl-warehouse`
+- public root redirects to `/login`, while demo login returns the configured role home page
 - `/app/3pl-warehouse` is reachable for both demo users
 - stale `/app/setup-wizard`, login `redirect-to` setup wizard URLs, and public `/app/home` redirect to the warehouse workspace
 
