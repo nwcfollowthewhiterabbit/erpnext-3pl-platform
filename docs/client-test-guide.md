@@ -80,12 +80,16 @@ Additional client portal routes:
 
 - Inventory: `https://erpnext.77.237.244.169.sslip.io/client/inventory`
 - Shipment Requests: `https://erpnext.77.237.244.169.sslip.io/client/shipment-request`
+- Shipment Tracking: `https://erpnext.77.237.244.169.sslip.io/client/shipment-tracking`
+- Discrepancies: `https://erpnext.77.237.244.169.sslip.io/client/discrepancies`
 - Discrepancy Instructions: `https://erpnext.77.237.244.169.sslip.io/client/discrepancy-instruction`
 
 Expected result:
 
 - Client can view customer-restricted inventory snapshots.
 - Client can create shipment requests.
+- Client can track shipment request status.
+- Client can review receiving discrepancies.
 - Client can send instructions for receiving discrepancies.
 
 ### Warehouse Landing
@@ -300,6 +304,8 @@ Expected result:
 - Client portal MVP is implemented for creating Receiving Notices.
 - Client inventory visibility is implemented as an MVP snapshot.
 - Shipment requests are implemented as portal MVP records.
+- Client shipment tracking is implemented as a portal MVP page.
+- Client discrepancy review is implemented as a portal MVP page.
 - Structured shipment requests are converted to draft Pick Lists as an MVP.
 - Outbound status updates after packing/dispatch are implemented as MVP through submitted packing/shipping Stock Entries.
 - Box/container handling exists as a first ERPNext custom DocType model. Scanner-first pages exist for receiving, container moves, putaway, warehouse corrections, stocktake, full-container repack, partial split, picking confirmation, and outbound fulfillment; grouped stocktake sessions and richer multi-item split guidance still need polish.

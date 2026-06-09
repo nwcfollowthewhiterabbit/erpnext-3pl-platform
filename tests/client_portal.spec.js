@@ -12,20 +12,26 @@ const portalPages = [
   "/client/receiving-notice/list",
   "/client/inventory/list",
   "/client/shipment-request/list",
+  "/client/shipment-tracking",
+  "/client/discrepancies",
   "/client/discrepancy-instruction/list",
 ];
 
-const navLabels = ["Receiving Notices", "Inventory", "Shipment Requests", "Discrepancy Instructions"];
+const navLabels = ["Receiving Notices", "Inventory", "Shipment Requests", "Discrepancies", "Shipment Tracking", "Discrepancy Instructions"];
 const navTargets = {
   "Receiving Notices": "/client/receiving-notice/list",
   Inventory: "/client/inventory/list",
   "Shipment Requests": "/client/shipment-request/list",
+  Discrepancies: "/client/discrepancies",
+  "Shipment Tracking": "/client/shipment-tracking",
   "Discrepancy Instructions": "/client/discrepancy-instruction/list",
 };
 const expectedPageText = {
   "/client/receiving-notice/list": ["ASN-ALPHA-001", "ASN-ALPHA-002", "ASN-ALPHA-003"],
   "/client/inventory/list": ["ALPHA-001", "ALPHA-002", "ALPHA-003"],
   "/client/shipment-request/list": ["SHIP-ALPHA-001", "SHIP-ALPHA-002"],
+  "/client/shipment-tracking": ["SHIP-ALPHA-001", "SHIP-ALPHA-002"],
+  "/client/discrepancies": ["ASN-ALPHA-001", "ALPHA-002", "Quantity Difference"],
   "/client/discrepancy-instruction/list": ["ALPHA-002"],
 };
 

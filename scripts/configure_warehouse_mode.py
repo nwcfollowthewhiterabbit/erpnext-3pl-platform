@@ -3,7 +3,7 @@ import json
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
-from project_config import CLIENT_PORTAL_FORMS, CLIENT_PORTAL_HOME, COMPANY, COMPANY_ABBR, COUNTRY, CURRENCY, LANGUAGE, PLACEHOLDER_EMAIL, TIME_ZONE
+from project_config import CLIENT_PORTAL_CUSTOMER, CLIENT_PORTAL_FORMS, CLIENT_PORTAL_HOME, COMPANY, COMPANY_ABBR, COUNTRY, CURRENCY, LANGUAGE, PLACEHOLDER_EMAIL, TIME_ZONE
 
 
 CUSTOM_DOCTYPE_MODULE = "Website"
@@ -1400,6 +1400,7 @@ def configure_client_portal():
             allow_multiple=form.get("allow_multiple", 1),
         )
 
+    configure_client_status_pages()
     configure_portal_menu()
     configure_client_portal_website_script()
 
@@ -1409,6 +1410,8 @@ def build_client_portal_nav():
     for form in CLIENT_PORTAL_FORMS:
         label = frappe.utils.escape_html(form["menu_title"])
         links.append(f'<a class="btn btn-sm btn-default" href="/{portal_list_route(form["route"])}">{label}</a>')
+    links.append('<a class="btn btn-sm btn-default" href="/client/discrepancies">Discrepancies</a>')
+    links.append('<a class="btn btn-sm btn-default" href="/client/shipment-tracking">Shipment Tracking</a>')
     return f'<div class="mb-4 d-flex flex-wrap gap-2">{" ".join(links)}</div>'
 
 
@@ -1562,6 +1565,251 @@ def configure_client_portal_website_script():
         settings.save(ignore_permissions=True)
 
 
+def configure_client_status_pages():
+    portal_nav = build_client_portal_nav()
+    pages = [
+        {
+            "route": "client/discrepancies",
+            "title": "Discrepancies",
+            "html": f"""
+<section class="container py-4">
+  {portal_nav}
+  <h1 class="h3 mb-3">Discrepancies</h1>
+  <div class="text-muted small mb-3">Review receiving discrepancies recorded by the warehouse and submit instructions when needed.</div>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th>Receiving Notice</th>
+          <th>Client Ref</th>
+          <th>Type</th>
+          <th>Item</th>
+          <th>Expected</th>
+          <th>Actual</th>
+          <th>Variance</th>
+          <th>Status</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody id="client-discrepancy-body">
+        <tr><td colspan="9" class="text-muted">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="small text-muted" id="client-discrepancy-status"></div>
+</section>
+""".strip(),
+            "javascript": f"""
+(function () {{
+  function byId(id) {{ return document.getElementById(id); }}
+  function setStatus(message, isError) {{
+    var target = byId('client-discrepancy-status');
+    if (!target) return;
+    target.textContent = message || '';
+    target.className = isError ? 'small text-danger' : 'small text-muted';
+  }}
+  function escapeHtml(value) {{
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {{
+      return ({{'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}})[ch];
+    }});
+  }}
+  function api(method, args) {{
+    var body = new URLSearchParams();
+    Object.keys(args || {{}}).forEach(function (key) {{
+      var value = args[key];
+      body.set(key, typeof value === 'string' ? value : JSON.stringify(value));
+    }});
+    return fetch('/api/method/' + method, {{
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {{'Content-Type': 'application/x-www-form-urlencoded'}},
+      body: body
+    }}).then(function (response) {{
+      return response.json().then(function (payload) {{
+        if (!response.ok) throw new Error(payload.exception || payload._error_message || ('Request failed: ' + response.status));
+        return payload;
+      }});
+    }});
+  }}
+  function loadRows() {{
+    if (frappe.session && frappe.session.user === 'Guest') {{
+      window.location.href = '/login?redirect-to=' + encodeURIComponent('/client/discrepancies');
+      return;
+    }}
+    setStatus('Loading discrepancies...', false);
+    api('frappe.client.get_list', {{
+      doctype: 'Inbound Shipment Notice',
+      filters: {{ customer: '{CLIENT_PORTAL_CUSTOMER}' }},
+      fields: ['name', 'external_reference', 'status', 'client_instruction_status'],
+      order_by: 'modified desc',
+      limit_page_length: 50
+    }}).then(function (response) {{
+      var notices = response.message || [];
+      return Promise.all(notices.map(function (notice) {{
+        return api('frappe.client.get', {{ doctype: 'Inbound Shipment Notice', name: notice.name }}).then(function (docResponse) {{
+          var doc = docResponse.message || {{}};
+          return (doc.discrepancies || []).map(function (row) {{
+            row.notice = doc.name;
+            row.external_reference = doc.external_reference;
+            row.notice_status = doc.status;
+            row.client_instruction_status = doc.client_instruction_status;
+            return row;
+          }});
+        }});
+      }}));
+    }}).then(function (groups) {{
+      var rows = [].concat.apply([], groups || []);
+      if (!rows.length) {{
+        byId('client-discrepancy-body').innerHTML = '<tr><td colspan="9" class="text-muted">No discrepancies recorded.</td></tr>';
+        setStatus('', false);
+        return;
+      }}
+      byId('client-discrepancy-body').innerHTML = rows.map(function (row) {{
+        return '<tr>' +
+          '<td>' + escapeHtml(row.notice) + '</td>' +
+          '<td>' + escapeHtml(row.external_reference) + '</td>' +
+          '<td>' + escapeHtml(row.discrepancy_type) + '</td>' +
+          '<td>' + escapeHtml(row.client_sku || row.item_code) + '</td>' +
+          '<td>' + escapeHtml(row.expected_qty) + '</td>' +
+          '<td>' + escapeHtml(row.actual_qty) + '</td>' +
+          '<td>' + escapeHtml(row.variance_qty) + '</td>' +
+          '<td>' + escapeHtml(row.status) + '</td>' +
+          '<td class="small text-muted">' + escapeHtml(row.notes) + '</td>' +
+        '</tr>';
+      }}).join('');
+      setStatus(rows.length + ' discrepancy row(s). Use Discrepancy Instructions to send a decision to the warehouse.', false);
+    }}).catch(function (error) {{
+      setStatus(error.message || 'Could not load discrepancies.', true);
+    }});
+  }}
+  frappe.ready(loadRows);
+}})();
+""".strip(),
+        },
+        {
+            "route": "client/shipment-tracking",
+            "title": "Shipment Tracking",
+            "html": f"""
+<section class="container py-4">
+  {portal_nav}
+  <h1 class="h3 mb-3">Shipment Tracking</h1>
+  <div class="text-muted small mb-3">Track client shipment request status from submission through warehouse processing.</div>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th>Request</th>
+          <th>Client Ref</th>
+          <th>Status</th>
+          <th>Requested Ship Date</th>
+          <th>Destination</th>
+          <th>Items</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody id="client-shipment-tracking-body">
+        <tr><td colspan="7" class="text-muted">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="small text-muted" id="client-shipment-tracking-status"></div>
+</section>
+""".strip(),
+            "javascript": f"""
+(function () {{
+  function byId(id) {{ return document.getElementById(id); }}
+  function setStatus(message, isError) {{
+    var target = byId('client-shipment-tracking-status');
+    if (!target) return;
+    target.textContent = message || '';
+    target.className = isError ? 'small text-danger' : 'small text-muted';
+  }}
+  function escapeHtml(value) {{
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {{
+      return ({{'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}})[ch];
+    }});
+  }}
+  function api(method, args) {{
+    var body = new URLSearchParams();
+    Object.keys(args || {{}}).forEach(function (key) {{
+      var value = args[key];
+      body.set(key, typeof value === 'string' ? value : JSON.stringify(value));
+    }});
+    return fetch('/api/method/' + method, {{
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {{'Content-Type': 'application/x-www-form-urlencoded'}},
+      body: body
+    }}).then(function (response) {{
+      return response.json().then(function (payload) {{
+        if (!response.ok) throw new Error(payload.exception || payload._error_message || ('Request failed: ' + response.status));
+        return payload;
+      }});
+    }});
+  }}
+  function loadRows() {{
+    if (frappe.session && frappe.session.user === 'Guest') {{
+      window.location.href = '/login?redirect-to=' + encodeURIComponent('/client/shipment-tracking');
+      return;
+    }}
+    setStatus('Loading shipment requests...', false);
+    api('frappe.client.get_list', {{
+      doctype: 'Three PL Shipment Request',
+      filters: {{ customer: '{CLIENT_PORTAL_CUSTOMER}' }},
+      fields: ['name', 'external_reference', 'status', 'requested_ship_date', 'destination_name', 'portal_items_description', 'notes'],
+      order_by: 'modified desc',
+      limit_page_length: 50
+    }}).then(function (response) {{
+      var rows = response.message || [];
+      if (!rows.length) {{
+        byId('client-shipment-tracking-body').innerHTML = '<tr><td colspan="7" class="text-muted">No shipment requests yet.</td></tr>';
+        setStatus('', false);
+        return;
+      }}
+      byId('client-shipment-tracking-body').innerHTML = rows.map(function (row) {{
+        return '<tr>' +
+          '<td>' + escapeHtml(row.name) + '</td>' +
+          '<td>' + escapeHtml(row.external_reference) + '</td>' +
+          '<td>' + escapeHtml(row.status) + '</td>' +
+          '<td>' + escapeHtml(row.requested_ship_date) + '</td>' +
+          '<td>' + escapeHtml(row.destination_name) + '</td>' +
+          '<td class="small">' + escapeHtml(row.portal_items_description) + '</td>' +
+          '<td class="small text-muted">' + escapeHtml(row.notes) + '</td>' +
+        '</tr>';
+      }}).join('');
+      setStatus(rows.length + ' shipment request(s).', false);
+    }}).catch(function (error) {{
+      setStatus(error.message || 'Could not load shipment tracking.', true);
+    }});
+  }}
+  frappe.ready(loadRows);
+}})();
+""".strip(),
+        },
+    ]
+
+    for page_data in pages:
+        existing_page = frappe.db.get_value("Web Page", {"route": page_data["route"]}, "name")
+        if existing_page:
+            page = frappe.get_doc("Web Page", existing_page)
+        else:
+            page = frappe.new_doc("Web Page")
+            page.name = page_data["route"]
+        page.title = page_data["title"]
+        page.route = page_data["route"]
+        page.published = 1
+        if page.meta.has_field("login_required"):
+            page.login_required = 1
+        page.content_type = "HTML"
+        page.main_section = page_data["html"]
+        if page.meta.has_field("main_section_html"):
+            page.main_section_html = page_data["html"]
+        page.javascript = page_data["javascript"]
+        page.insert_code = 0
+        page.show_sidebar = 0
+        page.save(ignore_permissions=True)
+
+
 def configure_portal_web_form(
     form_name,
     route,
@@ -1612,19 +1860,30 @@ def configure_portal_web_form(
 
 def configure_portal_menu():
     portal_settings = frappe.get_single("Portal Settings")
-    for form in CLIENT_PORTAL_FORMS:
+    menu_items = [
+        {
+            "title": form["menu_title"],
+            "route": portal_list_route(form["route"]),
+            "reference_doctype": form["doc_type"],
+        }
+        for form in CLIENT_PORTAL_FORMS
+    ] + [
+        {"title": "Discrepancies", "route": "client/discrepancies", "reference_doctype": "Inbound Shipment Notice"},
+        {"title": "Shipment Tracking", "route": "client/shipment-tracking", "reference_doctype": "Three PL Shipment Request"},
+    ]
+    for menu_item in menu_items:
         item = None
         for row in portal_settings.menu:
-            if row.title == form["menu_title"] or row.route in {form["route"], portal_list_route(form["route"])}:
+            if row.title == menu_item["title"] or row.route == menu_item["route"]:
                 item = row
                 break
         if item is None:
             item = portal_settings.append("menu", {})
 
-        item.title = form["menu_title"]
+        item.title = menu_item["title"]
         item.enabled = 1
-        item.route = portal_list_route(form["route"])
-        item.reference_doctype = form["doc_type"]
+        item.route = menu_item["route"]
+        item.reference_doctype = menu_item["reference_doctype"]
         item.role = "3PL Client"
         item.target = ""
 

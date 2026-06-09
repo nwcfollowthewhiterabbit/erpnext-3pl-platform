@@ -22,15 +22,15 @@ The client asked for:
 | Area | MVP readiness | Current status |
 | --- | ---: | --- |
 | User roles | 90% | Implemented and tested for client, warehouse operator, warehouse manager, and business owner. Remaining work is role polish after customer feedback. |
-| Receiving products | 85% | Implemented as MVP. Client can create Receiving Notice; warehouse can receive into temporary area; expected vs actual quantities are synced; discrepancies are stored. Warehouse review actions now exist for confirming received, waiting for client, and closing active notices. |
+| Receiving products | 90% | Implemented as MVP. Client can create Receiving Notice; warehouse can receive into temporary area; expected vs actual quantities are synced; discrepancies are stored. Warehouse review actions now exist for confirming received, waiting for client, and closing active notices. Client discrepancy review page exists. |
 | Location movement | 75% | Implemented through container/HU moves and movement history. Good enough for MVP testing. Remaining work is stronger operational validation and real warehouse location naming import. |
-| Sending orders | 80% | Implemented as MVP. Client can create Shipment Request; system creates Pick Lists; warehouse can confirm picking and outbound packing/shipping. Warehouse review actions now exist for accept, close, and cancel. Remaining work is labels, carrier/tracking integrations, and customer-facing tracking polish. |
+| Sending orders | 85% | Implemented as MVP. Client can create Shipment Request; system creates Pick Lists; warehouse can confirm picking and outbound packing/shipping. Warehouse review actions now exist for accept, close, and cancel. Client shipment tracking page exists. Remaining work is labels and carrier/tracking integrations. |
 | Warehouse corrections | 85% | Implemented as MVP. Corrections can adjust container contents, record movement history, and post clear quantity deltas to ERPNext Stock Entry. Ambiguous cases go to Needs Review with manager review actions and review metadata. |
 | Inventory / stocktake | 85% | Implemented as MVP. Stocktake records counted vs system quantity, links deltas to corrections, and now supports grouped stocktake sessions. Remaining work is richer assignment/review UX for large physical counts. |
 | Product balance on selected day | 70% | Implemented through daily inventory balance snapshots and `3PL Inventory Balance By Date`. Limitation: history starts from the day snapshots are generated, not before. |
 | Warehouse operation turnover | 75% | Implemented through container movement history and `3PL Warehouse Operation Turnover`. Remaining work is report filtering/presentation polish for client-facing usage. |
 
-Overall MVP readiness for the client's described scope: approximately 82-87%.
+Overall MVP readiness for the client's described scope: approximately 87-90%.
 
 ## What Is Ready For Customer Testing
 
@@ -61,10 +61,10 @@ Ready:
 - Discrepancy rows for missing, unexpected, damaged, and quality issue cases.
 - Client instructions for discrepancies as separate portal records.
 - Warehouse review page at `/warehouse/receiving-review` for confirming received notices, marking notices as waiting for client, and closing notices.
+- Client discrepancy review page at `/client/discrepancies`.
 
 Not fully polished yet:
 
-- Rich discrepancy detail page for the client.
 - More formal approval history for client discrepancy decisions.
 
 ### Moving Products Between Locations
@@ -93,12 +93,12 @@ Ready:
 - Packing and shipping operation pages.
 - Shipment/container status updates from outbound stock entries.
 - Warehouse review page at `/warehouse/shipment-review` for accepting, closing, or cancelling active shipment requests.
+- Client shipment tracking page at `/client/shipment-tracking`.
 
 Not fully polished yet:
 
 - Carrier labels.
 - Tracking numbers and courier integrations.
-- More customer-friendly shipment tracking screen.
 
 ### Warehouse Corrections
 
@@ -151,10 +151,9 @@ Not fully polished yet:
 
 These are the remaining gaps specifically for the client's described MVP:
 
-1. Add a dedicated client-facing discrepancy detail page.
-2. Import or create the real warehouse location hierarchy after naming convention is agreed.
+1. Import or create the real warehouse location hierarchy after naming convention is agreed.
 3. Add stronger guards around location/container moves.
-4. Polish outbound shipment tracking/status screen for the client.
+4. Add carrier labels / tracking integrations if required.
 5. Add richer count assignments/review states for large stocktakes.
 6. Add multi-step correction approval if the client wants more than manager decision metadata.
 7. Improve client-facing report filters and presentation.
@@ -163,7 +162,7 @@ These are the remaining gaps specifically for the client's described MVP:
 
 Finish the "customer-testable MVP" layer:
 
-1. Add customer-friendly filters to the two required reports.
-2. Add a dedicated client-facing discrepancy detail page.
-3. Improve outbound shipment tracking/status screen for clients.
-4. Import the real location hierarchy after the naming convention is agreed.
+1. Agree warehouse location naming convention with the client and import the real location hierarchy.
+2. Add customer-friendly filters to the two required reports if the current portal pages are not enough.
+3. Add carrier labels / tracking integrations if required.
+4. Add richer count assignments/review states for large stocktakes.

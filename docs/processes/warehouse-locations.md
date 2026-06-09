@@ -58,6 +58,27 @@ Seed locations:
 
 These are enough for demo and MVP flow validation. They are not intended to be the final physical warehouse map.
 
+## Import Template
+
+The repository contains a CSV template for the real warehouse tree:
+
+`docs/templates/warehouse-locations-template.csv`
+
+Columns:
+
+- `warehouse_name`: short location name without company suffix;
+- `parent_warehouse`: full parent ERPNext warehouse name, including company suffix;
+- `is_group`: `1` for grouping nodes such as zone/aisle/rack, `0` for usable stock locations;
+- `description`: optional human-readable note.
+
+After the client confirms the naming convention, the CSV can be copied to the server and imported with:
+
+```bash
+docker cp warehouse-locations.csv <backend-container>:/tmp/warehouse-locations.csv
+docker cp scripts/import_warehouse_locations.py <backend-container>:/tmp/import_warehouse_locations.py
+docker exec <backend-container> bash -lc "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py erpnext-3pl.local /tmp/import_warehouse_locations.py 0 /tmp/warehouse-locations.csv"
+```
+
 ## Remaining Decisions
 
 - Exact hierarchy depth: zone -> aisle -> rack -> shelf -> bin.
@@ -65,7 +86,7 @@ These are enough for demo and MVP flow validation. They are not intended to be t
 - Whether one bin may contain multiple SKUs.
 - Whether fixed locations or dynamic putaway will be used.
 - Label format for locations and containers.
-- Import format for the real warehouse tree.
+- Final CSV values for the real warehouse tree.
 
 ## Client Feedback Wording
 

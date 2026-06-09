@@ -380,6 +380,8 @@ def main():
         ("warehouse/picking-confirmation", "picking confirmation"),
         ("warehouse/shipment-review", "shipment review"),
         ("warehouse/outbound-fulfillment", "outbound fulfillment"),
+        ("client/discrepancies", "client discrepancies"),
+        ("client/shipment-tracking", "client shipment tracking"),
     ):
         scanner_page_name = frappe.db.get_value("Web Page", {"route": route}, "name")
         require(scanner_page_name, f"Missing scanner {label} Web Page")

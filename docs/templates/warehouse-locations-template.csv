@@ -1,0 +1,6 @@
+warehouse_name,parent_warehouse,is_group,description
+Receiving Area,All Warehouses - 3,1,Receiving root area
+Temporary Receiving,Receiving Area - 3,0,Temporary receiving location
+Storage Locations,All Warehouses - 3,1,Storage root area
+Aisle A,Storage Locations - 3,1,Example aisle
+A-A01-R01-S01,Aisle A - 3,0,Example shelf/bin location
