@@ -67,7 +67,8 @@ Expected result:
 Current boundary:
 
 - photos and final client decisions still belong in the Receiving Notice discrepancy / client instruction workflow;
-- richer guided actions after a discrepancy is found are still future work.
+- warehouse status actions are available at `/warehouse/receiving-review`;
+- a dedicated client-facing discrepancy detail page is still future work.
 
 ## Required Operating Rule
 

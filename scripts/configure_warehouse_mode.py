@@ -242,6 +242,7 @@ def configure_workspaces():
                 {"type": "DocType", "link_to": "Three PL Container Move", "doc_view": "List", "label": "Container Moves"},
                 {"type": "DocType", "link_to": "Three PL Container Repack", "doc_view": "List", "label": "Container Repacks"},
                 {"type": "DocType", "link_to": "Three PL Warehouse Correction", "doc_view": "List", "label": "Warehouse Corrections"},
+                {"type": "DocType", "link_to": "Three PL Stocktake Session", "doc_view": "List", "label": "Stocktake Sessions"},
                 {"type": "DocType", "link_to": "Three PL Stocktake", "doc_view": "List", "label": "Stocktakes"},
                 {"type": "DocType", "link_to": "Stock Entry", "doc_view": "List", "label": "Stock Entries"},
                 {"type": "Report", "link_to": "3PL Corrections Needing Review", "label": "Corrections Review", "report_ref_doctype": "Three PL Warehouse Correction"},
@@ -253,6 +254,7 @@ def configure_workspaces():
                 {"type": "Report", "link_to": "3PL Container Moves", "label": "Container Moves Report", "report_ref_doctype": "Three PL Container Move"},
                 {"type": "Report", "link_to": "3PL Container Repacks", "label": "Container Repacks Report", "report_ref_doctype": "Three PL Container Repack"},
                 {"type": "Report", "link_to": "3PL Warehouse Corrections", "label": "Warehouse Corrections Report", "report_ref_doctype": "Three PL Warehouse Correction"},
+                {"type": "Report", "link_to": "3PL Stocktake Sessions", "label": "Stocktake Sessions Report", "report_ref_doctype": "Three PL Stocktake Session"},
                 {"type": "Report", "link_to": "3PL Stocktakes", "label": "Stocktakes Report", "report_ref_doctype": "Three PL Stocktake"},
                 {"type": "Report", "link_to": "3PL Container Movements", "label": "Container Movements", "report_ref_doctype": "Three PL Container Movement"},
                 {"type": "Report", "link_to": "3PL Client Inventory", "label": "Client Inventory", "report_ref_doctype": "Three PL Inventory Snapshot"},
@@ -271,6 +273,7 @@ def configure_workspaces():
                 {"type": "Link", "label": "Container Moves", "link_type": "DocType", "link_to": "Three PL Container Move"},
                 {"type": "Link", "label": "Container Repacks", "link_type": "DocType", "link_to": "Three PL Container Repack"},
                 {"type": "Link", "label": "Warehouse Corrections", "link_type": "DocType", "link_to": "Three PL Warehouse Correction"},
+                {"type": "Link", "label": "Stocktake Sessions", "link_type": "DocType", "link_to": "Three PL Stocktake Session"},
                 {"type": "Link", "label": "Stocktakes", "link_type": "DocType", "link_to": "Three PL Stocktake"},
                 {"type": "Link", "label": "Stock Entries", "link_type": "DocType", "link_to": "Stock Entry"},
                 {"type": "Link", "label": "Corrections Needing Review", "link_type": "Report", "link_to": "3PL Corrections Needing Review", "is_query_report": 1},
@@ -286,6 +289,7 @@ def configure_workspaces():
                 {"type": "Link", "label": "Container Moves Report", "link_type": "Report", "link_to": "3PL Container Moves", "is_query_report": 1},
                 {"type": "Link", "label": "Container Repacks Report", "link_type": "Report", "link_to": "3PL Container Repacks", "is_query_report": 1},
                 {"type": "Link", "label": "Warehouse Corrections Report", "link_type": "Report", "link_to": "3PL Warehouse Corrections", "is_query_report": 1},
+                {"type": "Link", "label": "Stocktake Sessions Report", "link_type": "Report", "link_to": "3PL Stocktake Sessions", "is_query_report": 1},
                 {"type": "Link", "label": "Stocktakes Report", "link_type": "Report", "link_to": "3PL Stocktakes", "is_query_report": 1},
                 {"type": "Link", "label": "Container Movements", "link_type": "Report", "link_to": "3PL Container Movements", "is_query_report": 1},
                 {"type": "Link", "label": "Inventory Summary", "link_type": "Report", "link_to": "3PL Client Inventory Summary", "is_query_report": 1},
@@ -863,8 +867,35 @@ def configure_custom_doctypes():
                 {"fieldname": "stock_entry", "label": "Stock Entry", "fieldtype": "Link", "options": "Stock Entry", "read_only": 1},
                 {"fieldname": "stock_posting_status", "label": "Stock Posting Status", "fieldtype": "Select", "options": "Pending\nPosted\nNot Required\nNeeds Review", "default": "Pending", "in_standard_filter": 1, "in_list_view": 1, "description": "Managers can reset Needs Review corrections to Pending for retry, or mark them Not Required when no ERPNext stock posting is needed."},
                 {"fieldname": "stock_posting_error", "label": "Stock Posting Error", "fieldtype": "Small Text", "read_only": 1},
+                {"fieldname": "review_section", "label": "Manager Review", "fieldtype": "Section Break"},
+                {"fieldname": "review_decision", "label": "Review Decision", "fieldtype": "Select", "options": "\nRetry Posting\nNo Stock Posting Required\nCancelled", "read_only": 1, "in_list_view": 1},
+                {"fieldname": "reviewed_by", "label": "Reviewed By", "fieldtype": "Link", "options": "User", "read_only": 1},
+                {"fieldname": "reviewed_at", "label": "Reviewed At", "fieldtype": "Datetime", "read_only": 1},
+                {"fieldname": "review_notes", "label": "Review Notes", "fieldtype": "Small Text"},
                 {"fieldname": "source_doctype", "label": "Source DocType", "fieldtype": "Link", "options": "DocType"},
                 {"fieldname": "source_name", "label": "Source Name", "fieldtype": "Dynamic Link", "options": "source_doctype"},
+                {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
+            ],
+            "permissions": warehouse_permissions
+            + [
+                {"role": "Stock User", "read": 1, "write": 1, "create": 1, "report": 1},
+            ],
+        },
+        {
+            "name": "Three PL Stocktake Session",
+            "module": "Stock",
+            "custom": 1,
+            "track_changes": 1,
+            "title_field": "session_reference",
+            "autoname": "naming_series:",
+            "fields": [
+                {"fieldname": "naming_series", "label": "Series", "fieldtype": "Select", "options": "STOCKTAKE-SESSION-.YYYY.-.#####", "default": "STOCKTAKE-SESSION-.YYYY.-.#####", "reqd": 1},
+                {"fieldname": "session_reference", "label": "Session Reference", "fieldtype": "Data", "reqd": 1, "unique": 1, "in_list_view": 1},
+                {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Open\nIn Progress\nCompleted\nCancelled", "default": "Open", "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "client", "label": "Client", "fieldtype": "Link", "options": "Customer", "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "warehouse", "label": "Location Scope", "fieldtype": "Link", "options": "Warehouse", "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "started_at", "label": "Started At", "fieldtype": "Datetime", "default": "Now", "in_list_view": 1},
+                {"fieldname": "completed_at", "label": "Completed At", "fieldtype": "Datetime", "read_only": 1},
                 {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
             ],
             "permissions": warehouse_permissions
@@ -884,6 +915,7 @@ def configure_custom_doctypes():
                 {"fieldname": "operation_reference", "label": "Operation Reference", "fieldtype": "Data", "reqd": 1, "unique": 1, "in_list_view": 1},
                 {"fieldname": "operation_datetime", "label": "Operation Time", "fieldtype": "Datetime", "default": "Now", "reqd": 1, "in_list_view": 1},
                 {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Draft\nApplied\nNo Difference\nNeeds Review\nCancelled", "default": "Draft", "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "stocktake_session", "label": "Stocktake Session", "fieldtype": "Link", "options": "Three PL Stocktake Session", "in_standard_filter": 1, "in_list_view": 1},
                 {"fieldname": "client", "label": "Client", "fieldtype": "Link", "options": "Customer", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
                 {"fieldname": "warehouse", "label": "Location", "fieldtype": "Link", "options": "Warehouse", "in_standard_filter": 1, "in_list_view": 1},
                 {"fieldname": "container_code", "label": "Container / Handling Unit", "fieldtype": "Link", "options": "Three PL Container", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
@@ -1779,6 +1811,10 @@ select
     c.stock_posting_status as "Stock Posting:Data:130",
     c.stock_entry as "Stock Entry:Link/Stock Entry:150",
     c.stock_posting_error as "Stock Posting Error:Small Text:220",
+    c.review_decision as "Review Decision:Data:170",
+    c.reviewed_by as "Reviewed By:Link/User:160",
+    c.reviewed_at as "Reviewed At:Datetime:160",
+    c.review_notes as "Review Notes:Small Text:220",
     c.notes as "Notes:Small Text:260"
 from `tabThree PL Warehouse Correction` c
 order by c.operation_datetime desc, c.creation desc
@@ -1800,6 +1836,7 @@ select
     c.condition_status as "Condition:Data:120",
     c.stock_posting_status as "Stock Posting:Data:130",
     c.stock_posting_error as "Stock Posting Error:Small Text:320",
+    c.review_notes as "Review Notes:Small Text:220",
     c.notes as "Notes:Small Text:240"
 from `tabThree PL Warehouse Correction` c
 where c.stock_posting_status = 'Needs Review'
@@ -1811,6 +1848,7 @@ order by c.modified desc
             "query": """
 select
     s.name as "Stocktake:Link/Three PL Stocktake:170",
+    s.stocktake_session as "Session:Link/Three PL Stocktake Session:180",
     s.operation_reference as "Operation Ref:Data:160",
     s.operation_datetime as "Operation Time:Datetime:160",
     s.status as "Status:Data:120",
@@ -1828,6 +1866,27 @@ select
     s.notes as "Notes:Small Text:260"
 from `tabThree PL Stocktake` s
 order by s.operation_datetime desc, s.creation desc
+""".strip(),
+        },
+        "3PL Stocktake Sessions": {
+            "ref_doctype": "Three PL Stocktake Session",
+            "query": """
+select
+    session.name as "Session:Link/Three PL Stocktake Session:180",
+    session.session_reference as "Session Ref:Data:180",
+    session.status as "Status:Data:120",
+    session.client as "Client:Link/Customer:170",
+    session.warehouse as "Location Scope:Link/Warehouse:180",
+    session.started_at as "Started At:Datetime:160",
+    session.completed_at as "Completed At:Datetime:160",
+    count(stocktake.name) as "Count Lines:Int:100",
+    sum(case when coalesce(stocktake.qty_delta, 0) <> 0 or stocktake.condition_status <> 'OK' then 1 else 0 end) as "Variance Lines:Int:110",
+    sum(case when stocktake.correction is not null and stocktake.correction != '' then 1 else 0 end) as "Corrections:Int:100",
+    session.notes as "Notes:Small Text:240"
+from `tabThree PL Stocktake Session` session
+left join `tabThree PL Stocktake` stocktake on stocktake.stocktake_session = session.name
+group by session.name, session.session_reference, session.status, session.client, session.warehouse, session.started_at, session.completed_at, session.notes
+order by session.started_at desc, session.creation desc
 """.strip(),
         },
         "3PL Client Inventory": {
@@ -2614,6 +2673,14 @@ def configure_scanner_pages():
   <h1 class="h3 mb-3">Stocktake</h1>
   <div class="row g-3">
     <div class="col-md-5">
+      <label class="form-label" for="stocktake-session">Session Ref</label>
+      <input class="form-control" id="stocktake-session" autocomplete="off" placeholder="e.g. COUNT-AISLE-A">
+    </div>
+    <div class="col-md-7">
+      <label class="form-label" for="stocktake-session-notes">Session Notes</label>
+      <input class="form-control" id="stocktake-session-notes" autocomplete="off">
+    </div>
+    <div class="col-md-5">
       <label class="form-label" for="stocktake-container">Container / HU</label>
       <input class="form-control" id="stocktake-container" autocomplete="off" autofocus>
     </div>
@@ -2645,6 +2712,7 @@ def configure_scanner_pages():
   </div>
   <div class="d-flex gap-2 align-items-center mt-3">
     <button class="btn btn-primary" id="apply-stocktake" type="button">Apply Stocktake</button>
+    <button class="btn btn-outline-secondary" id="complete-stocktake-session" type="button">Complete Session</button>
     <span class="text-muted small" id="stocktake-status"></span>
   </div>
 </section>
@@ -2729,6 +2797,14 @@ def configure_scanner_pages():
   function insertDoc(doc) {
     return api('frappe.client.insert', { doc: doc });
   }
+  function getList(doctype, filters, fields, limit) {
+    return api('frappe.client.get_list', {
+      doctype: doctype,
+      filters: filters || {},
+      fields: fields || ['name'],
+      limit_page_length: limit || 1
+    });
+  }
   function saveDoc(doc) {
     return api('frappe.client.save', { doc: doc });
   }
@@ -2739,6 +2815,54 @@ def configure_scanner_pages():
     return Object.keys(values).reduce(function (promise, fieldname) {
       return promise.then(function () { return setValue(doctype, name, fieldname, values[fieldname]); });
     }, Promise.resolve());
+  }
+  function ensureSession(reference, container, notes) {
+    if (!reference) return Promise.resolve(null);
+    return getList('Three PL Stocktake Session', { session_reference: reference }, ['name', 'status'], 1).then(function (response) {
+      var rows = response.message || [];
+      if (rows.length) {
+        if (rows[0].status === 'Completed' || rows[0].status === 'Cancelled') {
+          throw new Error('Stocktake session is not open: ' + rows[0].status + '.');
+        }
+        return rows[0].name;
+      }
+      return insertDoc({
+        doctype: 'Three PL Stocktake Session',
+        session_reference: reference,
+        status: 'In Progress',
+        client: container.client,
+        warehouse: container.current_warehouse,
+        started_at: frappe.datetime.now_datetime(),
+        notes: notes || ''
+      }).then(function (sessionResponse) {
+        return sessionResponse.message.name;
+      });
+    });
+  }
+  function completeSession() {
+    if (frappe.session && frappe.session.user === 'Guest') {
+      window.location.href = '/login?redirect-to=' + encodeURIComponent('/warehouse/stocktake');
+      return;
+    }
+    if (!requireWarehouseRole()) return;
+    var reference = (byId('stocktake-session').value || '').trim();
+    if (!reference) {
+      setStatus('Enter a stocktake session reference first.', true);
+      return;
+    }
+    setStatus('Completing session...', false);
+    getList('Three PL Stocktake Session', { session_reference: reference }, ['name'], 1).then(function (response) {
+      var rows = response.message || [];
+      if (!rows.length) throw new Error('Stocktake session not found.');
+      return setValues('Three PL Stocktake Session', rows[0].name, {
+        status: 'Completed',
+        completed_at: frappe.datetime.now_datetime()
+      });
+    }).then(function () {
+      setStatus('Stocktake session completed.', false);
+    }).catch(function (error) {
+      setStatus(error.message || 'Could not complete stocktake session.', true);
+    });
   }
   function findItemRow(container, itemCode, uom) {
     return (container.items || []).find(function (row) {
@@ -2780,6 +2904,9 @@ def configure_scanner_pages():
     var condition = byId('stocktake-condition').value;
     var uom = (byId('stocktake-uom').value || '').trim() || 'Nos';
     var notes = (byId('stocktake-notes').value || '').trim();
+    var sessionReference = (byId('stocktake-session').value || '').trim();
+    var sessionNotes = (byId('stocktake-session-notes').value || '').trim();
+    var sessionName = null;
     if (!containerCode || !itemCode || Number.isNaN(countedQty) || countedQty < 0) {
       setStatus('Scan container, item, and a non-negative counted quantity first.', true);
       return;
@@ -2794,6 +2921,9 @@ def configure_scanner_pages():
       container = response.message;
       if (!container || !container.name) throw new Error('Container not found.');
       if (['Shipped', 'Closed', 'Replaced'].indexOf(container.status) !== -1) throw new Error('Container cannot be counted from status ' + container.status + '.');
+      return ensureSession(sessionReference, container, sessionNotes);
+    }).then(function (createdSessionName) {
+      sessionName = createdSessionName;
       return updateContainer(container, itemCode, countedQty, uom, condition, notes);
     }).then(function (updateResult) {
       result = updateResult;
@@ -2803,6 +2933,7 @@ def configure_scanner_pages():
         operation_reference: 'STOCKTAKE-' + containerCode + '-' + itemCode + '-' + Date.now(),
         operation_datetime: frappe.datetime.now_datetime(),
         status: needsCorrection ? 'Draft' : 'No Difference',
+        stocktake_session: sessionName,
         client: container.client,
         warehouse: container.current_warehouse,
         container_code: container.name,
@@ -2880,7 +3011,9 @@ def configure_scanner_pages():
     requireWarehouseRole();
     var button = byId('apply-stocktake');
     if (button) button.addEventListener('click', applyStocktake);
-    ['stocktake-container', 'stocktake-item', 'stocktake-counted-qty', 'stocktake-uom'].forEach(function (id, index, fields) {
+    var complete = byId('complete-stocktake-session');
+    if (complete) complete.addEventListener('click', completeSession);
+    ['stocktake-session', 'stocktake-container', 'stocktake-item', 'stocktake-counted-qty', 'stocktake-uom'].forEach(function (id, index, fields) {
       var input = byId(id);
       if (input) input.addEventListener('keydown', function (event) {
         if (event.key === 'Enter') {
@@ -4377,6 +4510,398 @@ def configure_scanner_pages():
     picking_page.show_sidebar = 0
     picking_page.save(ignore_permissions=True)
 
+    receiving_review_html = """
+<section class="container py-4" style="max-width: 1120px;">
+  <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+    <h1 class="h3 m-0">Receiving Review</h1>
+    <button class="btn btn-outline-secondary btn-sm" id="refresh-receiving-review" type="button">Refresh</button>
+  </div>
+  <div class="text-muted small mb-3">Confirm receiving status and client-instruction state after warehouse comparison.</div>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th>Notice</th>
+          <th>Client Ref</th>
+          <th>Client</th>
+          <th>Status</th>
+          <th>Instruction</th>
+          <th>Expected</th>
+          <th>Received</th>
+          <th>Variance</th>
+          <th class="text-end">Action</th>
+        </tr>
+      </thead>
+      <tbody id="receiving-review-body">
+        <tr><td colspan="9" class="text-muted">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="small text-muted" id="receiving-review-status"></div>
+</section>
+""".strip()
+    receiving_review_script = """
+(function () {
+  function byId(id) { return document.getElementById(id); }
+  function setStatus(message, isError) {
+    var target = byId('receiving-review-status');
+    if (!target) return;
+    target.textContent = message || '';
+    target.className = isError ? 'small text-danger' : 'small text-muted';
+  }
+  function getCsrfToken() {
+    if (frappe.csrf_token && frappe.csrf_token !== 'None') return Promise.resolve(frappe.csrf_token);
+    return fetch('/app', { credentials: 'same-origin' }).then(function (response) { return response.text(); }).then(function (html) {
+      var match = html.match(/frappe\\.csrf_token\\s*=\\s*"([^"]+)"/);
+      if (!match || !match[1] || match[1] === 'None') throw new Error('Could not initialize session token. Please refresh and try again.');
+      frappe.csrf_token = match[1];
+      return match[1];
+    });
+  }
+  function parseServerMessage(payload) {
+    if (!payload) return null;
+    if (payload._server_messages) {
+      try {
+        var messages = JSON.parse(payload._server_messages);
+        if (messages.length) {
+          var first = JSON.parse(messages[0]);
+          if (first.message) return first.message.replace(/<[^>]*>/g, '');
+        }
+      } catch (error) {
+        return payload._error_message || payload.exception || null;
+      }
+    }
+    return payload._error_message || payload.exception || null;
+  }
+  function api(method, args) {
+    return getCsrfToken().then(function (csrfToken) {
+      var body = new URLSearchParams();
+      Object.keys(args || {}).forEach(function (key) {
+        var value = args[key];
+        body.set(key, typeof value === 'string' ? value : JSON.stringify(value));
+      });
+      return fetch('/api/method/' + method, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-Frappe-CSRF-Token': csrfToken},
+        body: body
+      }).then(function (response) {
+        return response.text().then(function (text) {
+          var payload = text ? JSON.parse(text) : {};
+          if (!response.ok) throw new Error(parseServerMessage(payload) || ('Request failed: ' + response.status));
+          return payload;
+        });
+      });
+    });
+  }
+  function hasWarehouseRole() {
+    var roles = frappe.user_roles || [];
+    return roles.indexOf('3PL Warehouse User') !== -1 || roles.indexOf('3PL Warehouse Manager') !== -1 || roles.indexOf('Stock Manager') !== -1 || roles.indexOf('System Manager') !== -1;
+  }
+  function escapeHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+      return ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[ch];
+    });
+  }
+  function loadRows() {
+    if (!hasWarehouseRole()) {
+      byId('receiving-review-body').innerHTML = '<tr><td colspan="9" class="text-danger">This page is only available to warehouse users.</td></tr>';
+      return;
+    }
+    setStatus('Loading receiving notices...', false);
+    api('frappe.client.get_list', {
+      doctype: 'Inbound Shipment Notice',
+      filters: { status: ['not in', ['Closed']] },
+      fields: ['name', 'external_reference', 'customer', 'status', 'client_instruction_status'],
+      order_by: 'modified desc',
+      limit_page_length: 50
+    }).then(function (response) {
+      var notices = response.message || [];
+      if (!notices.length) {
+        byId('receiving-review-body').innerHTML = '<tr><td colspan="9" class="text-muted">No active receiving notices.</td></tr>';
+        setStatus('', false);
+        return;
+      }
+      return Promise.all(notices.map(function (notice) {
+        return api('frappe.client.get', { doctype: 'Inbound Shipment Notice', name: notice.name }).then(function (docResponse) {
+          var doc = docResponse.message;
+          var expected = 0;
+          var received = 0;
+          (doc.items || []).forEach(function (row) {
+            expected += Number(row.expected_qty || 0);
+            received += Number(row.received_qty || 0);
+          });
+          notice.expected = expected;
+          notice.received = received;
+          notice.variance = received - expected;
+          return notice;
+        });
+      }));
+    }).then(function (rows) {
+      if (!rows) return;
+      byId('receiving-review-body').innerHTML = rows.map(function (row) {
+        return '<tr>' +
+          '<td><a href="/app/inbound-shipment-notice/' + encodeURIComponent(row.name) + '">' + escapeHtml(row.name) + '</a></td>' +
+          '<td>' + escapeHtml(row.external_reference) + '</td>' +
+          '<td>' + escapeHtml(row.customer) + '</td>' +
+          '<td>' + escapeHtml(row.status) + '</td>' +
+          '<td>' + escapeHtml(row.client_instruction_status) + '</td>' +
+          '<td>' + escapeHtml(row.expected) + '</td>' +
+          '<td>' + escapeHtml(row.received) + '</td>' +
+          '<td>' + escapeHtml(row.variance) + '</td>' +
+          '<td class="text-end text-nowrap">' +
+            '<button class="btn btn-sm btn-outline-primary me-1" data-action="received" data-name="' + escapeHtml(row.name) + '">Confirm Received</button>' +
+            '<button class="btn btn-sm btn-outline-warning me-1" data-action="wait-client" data-name="' + escapeHtml(row.name) + '">Wait Client</button>' +
+            '<button class="btn btn-sm btn-outline-secondary" data-action="close" data-name="' + escapeHtml(row.name) + '">Close</button>' +
+          '</td>' +
+        '</tr>';
+      }).join('');
+      setStatus(rows.length + ' active receiving notice(s).', false);
+    }).catch(function (error) {
+      setStatus(error.message || 'Could not load receiving notices.', true);
+    });
+  }
+  function updateNotice(name, action) {
+    var values = {};
+    if (action === 'received') {
+      values.status = 'Received';
+      values.client_instruction_status = 'Not Required';
+    }
+    if (action === 'wait-client') {
+      values.status = 'Discrepancy Review';
+      values.client_instruction_status = 'Waiting for Client';
+    }
+    if (action === 'close') {
+      values.status = 'Closed';
+    }
+    setStatus('Updating ' + name + '...', false);
+    api('frappe.client.set_value', {
+      doctype: 'Inbound Shipment Notice',
+      name: name,
+      fieldname: values
+    }).then(loadRows).catch(function (error) {
+      setStatus(error.message || 'Could not update receiving notice.', true);
+    });
+  }
+  frappe.ready(function () {
+    if (frappe.session && frappe.session.user === 'Guest') {
+      window.location.href = '/login?redirect-to=' + encodeURIComponent('/warehouse/receiving-review');
+      return;
+    }
+    var refresh = byId('refresh-receiving-review');
+    if (refresh) refresh.addEventListener('click', loadRows);
+    var body = byId('receiving-review-body');
+    if (body) body.addEventListener('click', function (event) {
+      var button = event.target.closest('button[data-action]');
+      if (!button) return;
+      updateNotice(button.getAttribute('data-name'), button.getAttribute('data-action'));
+    });
+    loadRows();
+  });
+})();
+""".strip()
+
+    existing_receiving_review_page = frappe.db.get_value("Web Page", {"route": "warehouse/receiving-review"}, "name")
+    if existing_receiving_review_page:
+        receiving_review_page = frappe.get_doc("Web Page", existing_receiving_review_page)
+    else:
+        receiving_review_page = frappe.new_doc("Web Page")
+        receiving_review_page.name = "warehouse/receiving-review"
+
+    receiving_review_page.title = "Receiving Review"
+    receiving_review_page.route = "warehouse/receiving-review"
+    receiving_review_page.published = 1
+    if receiving_review_page.meta.has_field("login_required"):
+        receiving_review_page.login_required = 1
+    receiving_review_page.content_type = "HTML"
+    receiving_review_page.main_section = receiving_review_html
+    if receiving_review_page.meta.has_field("main_section_html"):
+        receiving_review_page.main_section_html = receiving_review_html
+    receiving_review_page.javascript = receiving_review_script
+    receiving_review_page.insert_code = 0
+    receiving_review_page.show_sidebar = 0
+    receiving_review_page.save(ignore_permissions=True)
+
+    shipment_review_html = """
+<section class="container py-4" style="max-width: 1040px;">
+  <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+    <h1 class="h3 m-0">Shipment Review</h1>
+    <button class="btn btn-outline-secondary btn-sm" id="refresh-shipment-review" type="button">Refresh</button>
+  </div>
+  <div class="text-muted small mb-3">Accept, close, or cancel outbound requests after warehouse processing.</div>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th>Request</th>
+          <th>Client Ref</th>
+          <th>Client</th>
+          <th>Status</th>
+          <th>Ship Date</th>
+          <th>Destination</th>
+          <th class="text-end">Action</th>
+        </tr>
+      </thead>
+      <tbody id="shipment-review-body">
+        <tr><td colspan="7" class="text-muted">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="small text-muted" id="shipment-review-status"></div>
+</section>
+""".strip()
+    shipment_review_script = """
+(function () {
+  function byId(id) { return document.getElementById(id); }
+  function setStatus(message, isError) {
+    var target = byId('shipment-review-status');
+    if (!target) return;
+    target.textContent = message || '';
+    target.className = isError ? 'small text-danger' : 'small text-muted';
+  }
+  function getCsrfToken() {
+    if (frappe.csrf_token && frappe.csrf_token !== 'None') return Promise.resolve(frappe.csrf_token);
+    return fetch('/app', { credentials: 'same-origin' }).then(function (response) { return response.text(); }).then(function (html) {
+      var match = html.match(/frappe\\.csrf_token\\s*=\\s*"([^"]+)"/);
+      if (!match || !match[1] || match[1] === 'None') throw new Error('Could not initialize session token. Please refresh and try again.');
+      frappe.csrf_token = match[1];
+      return match[1];
+    });
+  }
+  function parseServerMessage(payload) {
+    if (!payload) return null;
+    if (payload._server_messages) {
+      try {
+        var messages = JSON.parse(payload._server_messages);
+        if (messages.length) {
+          var first = JSON.parse(messages[0]);
+          if (first.message) return first.message.replace(/<[^>]*>/g, '');
+        }
+      } catch (error) {
+        return payload._error_message || payload.exception || null;
+      }
+    }
+    return payload._error_message || payload.exception || null;
+  }
+  function api(method, args) {
+    return getCsrfToken().then(function (csrfToken) {
+      var body = new URLSearchParams();
+      Object.keys(args || {}).forEach(function (key) {
+        var value = args[key];
+        body.set(key, typeof value === 'string' ? value : JSON.stringify(value));
+      });
+      return fetch('/api/method/' + method, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-Frappe-CSRF-Token': csrfToken},
+        body: body
+      }).then(function (response) {
+        return response.text().then(function (text) {
+          var payload = text ? JSON.parse(text) : {};
+          if (!response.ok) throw new Error(parseServerMessage(payload) || ('Request failed: ' + response.status));
+          return payload;
+        });
+      });
+    });
+  }
+  function hasWarehouseRole() {
+    var roles = frappe.user_roles || [];
+    return roles.indexOf('3PL Warehouse User') !== -1 || roles.indexOf('3PL Warehouse Manager') !== -1 || roles.indexOf('Stock Manager') !== -1 || roles.indexOf('System Manager') !== -1;
+  }
+  function escapeHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+      return ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[ch];
+    });
+  }
+  function loadRows() {
+    if (!hasWarehouseRole()) {
+      byId('shipment-review-body').innerHTML = '<tr><td colspan="7" class="text-danger">This page is only available to warehouse users.</td></tr>';
+      return;
+    }
+    setStatus('Loading shipment requests...', false);
+    api('frappe.client.get_list', {
+      doctype: 'Three PL Shipment Request',
+      filters: { status: ['not in', ['Closed', 'Cancelled']] },
+      fields: ['name', 'external_reference', 'customer', 'status', 'requested_ship_date', 'destination_name'],
+      order_by: 'modified desc',
+      limit_page_length: 50
+    }).then(function (response) {
+      var rows = response.message || [];
+      if (!rows.length) {
+        byId('shipment-review-body').innerHTML = '<tr><td colspan="7" class="text-muted">No active shipment requests.</td></tr>';
+        setStatus('', false);
+        return;
+      }
+      byId('shipment-review-body').innerHTML = rows.map(function (row) {
+        return '<tr>' +
+          '<td><a href="/app/three-pl-shipment-request/' + encodeURIComponent(row.name) + '">' + escapeHtml(row.name) + '</a></td>' +
+          '<td>' + escapeHtml(row.external_reference) + '</td>' +
+          '<td>' + escapeHtml(row.customer) + '</td>' +
+          '<td>' + escapeHtml(row.status) + '</td>' +
+          '<td>' + escapeHtml(row.requested_ship_date) + '</td>' +
+          '<td>' + escapeHtml(row.destination_name) + '</td>' +
+          '<td class="text-end text-nowrap">' +
+            '<button class="btn btn-sm btn-outline-primary me-1" data-action="accepted" data-name="' + escapeHtml(row.name) + '">Accept</button>' +
+            '<button class="btn btn-sm btn-outline-secondary me-1" data-action="closed" data-name="' + escapeHtml(row.name) + '">Close</button>' +
+            '<button class="btn btn-sm btn-outline-danger" data-action="cancelled" data-name="' + escapeHtml(row.name) + '">Cancel</button>' +
+          '</td>' +
+        '</tr>';
+      }).join('');
+      setStatus(rows.length + ' active shipment request(s).', false);
+    }).catch(function (error) {
+      setStatus(error.message || 'Could not load shipment requests.', true);
+    });
+  }
+  function updateRequest(name, action) {
+    var status = action === 'accepted' ? 'Accepted' : (action === 'closed' ? 'Closed' : 'Cancelled');
+    setStatus('Updating ' + name + '...', false);
+    api('frappe.client.set_value', {
+      doctype: 'Three PL Shipment Request',
+      name: name,
+      fieldname: { status: status }
+    }).then(loadRows).catch(function (error) {
+      setStatus(error.message || 'Could not update shipment request.', true);
+    });
+  }
+  frappe.ready(function () {
+    if (frappe.session && frappe.session.user === 'Guest') {
+      window.location.href = '/login?redirect-to=' + encodeURIComponent('/warehouse/shipment-review');
+      return;
+    }
+    var refresh = byId('refresh-shipment-review');
+    if (refresh) refresh.addEventListener('click', loadRows);
+    var body = byId('shipment-review-body');
+    if (body) body.addEventListener('click', function (event) {
+      var button = event.target.closest('button[data-action]');
+      if (!button) return;
+      updateRequest(button.getAttribute('data-name'), button.getAttribute('data-action'));
+    });
+    loadRows();
+  });
+})();
+""".strip()
+
+    existing_shipment_review_page = frappe.db.get_value("Web Page", {"route": "warehouse/shipment-review"}, "name")
+    if existing_shipment_review_page:
+        shipment_review_page = frappe.get_doc("Web Page", existing_shipment_review_page)
+    else:
+        shipment_review_page = frappe.new_doc("Web Page")
+        shipment_review_page.name = "warehouse/shipment-review"
+
+    shipment_review_page.title = "Shipment Review"
+    shipment_review_page.route = "warehouse/shipment-review"
+    shipment_review_page.published = 1
+    if shipment_review_page.meta.has_field("login_required"):
+        shipment_review_page.login_required = 1
+    shipment_review_page.content_type = "HTML"
+    shipment_review_page.main_section = shipment_review_html
+    if shipment_review_page.meta.has_field("main_section_html"):
+        shipment_review_page.main_section_html = shipment_review_html
+    shipment_review_page.javascript = shipment_review_script
+    shipment_review_page.insert_code = 0
+    shipment_review_page.show_sidebar = 0
+    shipment_review_page.save(ignore_permissions=True)
+
     correction_review_html = """
 <section class="container py-4" style="max-width: 1120px;">
   <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
@@ -4384,6 +4909,10 @@ def configure_scanner_pages():
     <button class="btn btn-outline-secondary btn-sm" id="refresh-correction-review" type="button">Refresh</button>
   </div>
   <div class="text-muted small mb-3">Review warehouse corrections where ERPNext stock posting needs a manager decision.</div>
+  <div class="mb-3">
+    <label class="form-label" for="correction-review-notes">Review Notes</label>
+    <input class="form-control" id="correction-review-notes" autocomplete="off" placeholder="Optional manager decision note">
+  </div>
   <div class="table-responsive">
     <table class="table table-sm align-middle">
       <thead>
@@ -4506,7 +5035,8 @@ def configure_scanner_pages():
           '<td class="small text-muted" style="max-width: 360px;">' + escapeHtml(row.stock_posting_error) + '</td>' +
           '<td class="text-end text-nowrap">' +
             '<button class="btn btn-sm btn-outline-primary me-1" data-action="retry" data-name="' + escapeHtml(row.name) + '">Retry</button>' +
-            '<button class="btn btn-sm btn-outline-secondary" data-action="not-required" data-name="' + escapeHtml(row.name) + '">Not Required</button>' +
+            '<button class="btn btn-sm btn-outline-secondary me-1" data-action="not-required" data-name="' + escapeHtml(row.name) + '">Not Required</button>' +
+            '<button class="btn btn-sm btn-outline-danger" data-action="cancel" data-name="' + escapeHtml(row.name) + '">Cancel</button>' +
           '</td>' +
         '</tr>';
       }).join('');
@@ -4515,15 +5045,33 @@ def configure_scanner_pages():
       setStatus(error.message || 'Could not load corrections.', true);
     });
   }
-  function updateCorrection(name, status) {
+  function updateCorrection(name, action) {
+    var notesInput = byId('correction-review-notes');
+    var reviewNotes = notesInput ? (notesInput.value || '').trim() : '';
+    var values = {
+      stock_posting_error: '',
+      reviewed_by: frappe.session.user,
+      reviewed_at: frappe.datetime.now_datetime(),
+      review_notes: reviewNotes
+    };
+    if (action === 'retry') {
+      values.stock_posting_status = 'Pending';
+      values.review_decision = 'Retry Posting';
+    }
+    if (action === 'not-required') {
+      values.stock_posting_status = 'Not Required';
+      values.review_decision = 'No Stock Posting Required';
+    }
+    if (action === 'cancel') {
+      values.status = 'Cancelled';
+      values.stock_posting_status = 'Not Required';
+      values.review_decision = 'Cancelled';
+    }
     setStatus('Updating ' + name + '...', false);
     return api('frappe.client.set_value', {
       doctype: 'Three PL Warehouse Correction',
       name: name,
-      fieldname: {
-        stock_posting_status: status,
-        stock_posting_error: ''
-      }
+      fieldname: values
     }).then(function () {
       loadRows();
     }).catch(function (error) {
@@ -4543,8 +5091,9 @@ def configure_scanner_pages():
       if (!button) return;
       var action = button.getAttribute('data-action');
       var name = button.getAttribute('data-name');
-      if (action === 'retry') updateCorrection(name, 'Pending');
-      if (action === 'not-required') updateCorrection(name, 'Not Required');
+      if (action === 'retry') updateCorrection(name, 'retry');
+      if (action === 'not-required') updateCorrection(name, 'not-required');
+      if (action === 'cancel') updateCorrection(name, 'cancel');
     });
     loadRows();
   });

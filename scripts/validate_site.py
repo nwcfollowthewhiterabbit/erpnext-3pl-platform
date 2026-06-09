@@ -40,6 +40,7 @@ REQUIRED_DOCTYPES = [
     "Three PL Repack Source",
     "Three PL Repack Item",
     "Three PL Warehouse Correction",
+    "Three PL Stocktake Session",
     "Three PL Stocktake",
     "Three PL Inventory Snapshot",
     "Three PL Inventory Balance Snapshot",
@@ -137,11 +138,24 @@ REQUIRED_WAREHOUSE_CORRECTION_FIELDS = {
     "stock_entry",
     "stock_posting_status",
     "stock_posting_error",
+    "review_decision",
+    "reviewed_by",
+    "reviewed_at",
+    "review_notes",
+}
+REQUIRED_STOCKTAKE_SESSION_FIELDS = {
+    "session_reference",
+    "status",
+    "client",
+    "warehouse",
+    "started_at",
+    "completed_at",
 }
 REQUIRED_STOCKTAKE_FIELDS = {
     "operation_reference",
     "operation_datetime",
     "status",
+    "stocktake_session",
     "client",
     "warehouse",
     "container_code",
@@ -175,6 +189,7 @@ REQUIRED_REPORTS = [
     "3PL Container Repacks",
     "3PL Warehouse Corrections",
     "3PL Corrections Needing Review",
+    "3PL Stocktake Sessions",
     "3PL Stocktakes",
     "3PL Container Movements",
     "3PL Shipment Requests",
@@ -331,6 +346,9 @@ def main():
     correction_meta = frappe.get_meta("Three PL Warehouse Correction")
     correction_fields = {field.fieldname for field in correction_meta.fields}
     require(correction_fields >= REQUIRED_WAREHOUSE_CORRECTION_FIELDS, "Three PL Warehouse Correction misses required fields")
+    stocktake_session_meta = frappe.get_meta("Three PL Stocktake Session")
+    stocktake_session_fields = {field.fieldname for field in stocktake_session_meta.fields}
+    require(stocktake_session_fields >= REQUIRED_STOCKTAKE_SESSION_FIELDS, "Three PL Stocktake Session misses required fields")
     stocktake_meta = frappe.get_meta("Three PL Stocktake")
     stocktake_fields = {field.fieldname for field in stocktake_meta.fields}
     require(stocktake_fields >= REQUIRED_STOCKTAKE_FIELDS, "Three PL Stocktake misses required fields")
@@ -352,6 +370,7 @@ def main():
 
     for route, label in (
         ("warehouse/receiving", "receiving"),
+        ("warehouse/receiving-review", "receiving review"),
         ("warehouse/correction", "correction"),
         ("warehouse/correction-review", "correction review"),
         ("warehouse/stocktake", "stocktake"),
@@ -359,6 +378,7 @@ def main():
         ("warehouse/putaway", "putaway"),
         ("warehouse/repack", "repack"),
         ("warehouse/picking-confirmation", "picking confirmation"),
+        ("warehouse/shipment-review", "shipment review"),
         ("warehouse/outbound-fulfillment", "outbound fulfillment"),
     ):
         scanner_page_name = frappe.db.get_value("Web Page", {"route": route}, "name")
@@ -1062,6 +1082,12 @@ def cleanup_stocktake_validation_docs():
         pluck="name",
     ):
         frappe.delete_doc("Three PL Stocktake", stocktake_name, ignore_permissions=True, force=True)
+    for session_name in frappe.get_all(
+        "Three PL Stocktake Session",
+        filters={"session_reference": "STOCKTAKE-VALIDATION-SESSION"},
+        pluck="name",
+    ):
+        frappe.delete_doc("Three PL Stocktake Session", session_name, ignore_permissions=True, force=True)
     if frappe.db.exists("Three PL Container", "BOX-STOCKTAKE-VALIDATION"):
         frappe.delete_doc("Three PL Container", "BOX-STOCKTAKE-VALIDATION", ignore_permissions=True, force=True)
 
@@ -1094,12 +1120,25 @@ def validate_stocktake():
 
     frappe.set_user(WAREHOUSE_MANAGER_USER)
     operation_time = now_datetime()
+    stocktake_session = frappe.get_doc(
+        {
+            "doctype": "Three PL Stocktake Session",
+            "session_reference": "STOCKTAKE-VALIDATION-SESSION",
+            "status": "In Progress",
+            "client": "Demo Client Alpha",
+            "warehouse": "Aisle B - 3",
+            "started_at": operation_time,
+            "notes": "Validation grouped stocktake session.",
+        }
+    )
+    stocktake_session.insert()
     stocktake_same = frappe.get_doc(
         {
             "doctype": "Three PL Stocktake",
             "operation_reference": "STOCKTAKE-VALIDATION-SAME",
             "operation_datetime": operation_time,
             "status": "No Difference",
+            "stocktake_session": stocktake_session.name,
             "client": "Demo Client Alpha",
             "warehouse": "Aisle B - 3",
             "container_code": "BOX-STOCKTAKE-VALIDATION",
@@ -1128,6 +1167,7 @@ def validate_stocktake():
             "operation_reference": "STOCKTAKE-VALIDATION-DELTA",
             "operation_datetime": operation_time,
             "status": "Draft",
+            "stocktake_session": stocktake_session.name,
             "client": container.client,
             "warehouse": container.current_warehouse,
             "container_code": container.name,
@@ -1187,14 +1227,21 @@ def validate_stocktake():
     stocktake_delta.correction = correction.name
     stocktake_delta.movement = movement.name
     stocktake_delta.save()
+    stocktake_session.status = "Completed"
+    stocktake_session.completed_at = operation_time
+    stocktake_session.save()
 
     frappe.set_user("Administrator")
     container.reload()
     stocktake_same.reload()
     stocktake_delta.reload()
+    stocktake_session.reload()
     require(stocktake_same.status == "No Difference", "No-difference stocktake has wrong status")
+    require(stocktake_same.stocktake_session == stocktake_session.name, "No-difference stocktake is not linked to session")
     require(container.items[0].qty == counted_qty, "Stocktake did not update container quantity")
     require(stocktake_delta.status == "Applied", "Delta stocktake was not applied")
+    require(stocktake_delta.stocktake_session == stocktake_session.name, "Delta stocktake is not linked to session")
+    require(stocktake_session.status == "Completed", "Stocktake session was not completed")
     require(stocktake_delta.qty_delta == -1, "Delta stocktake has wrong delta")
     require(stocktake_delta.correction == correction.name, "Stocktake is not linked to correction")
     require(stocktake_delta.movement == movement.name, "Stocktake is not linked to movement")

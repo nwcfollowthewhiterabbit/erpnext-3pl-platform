@@ -40,11 +40,11 @@ Focused readiness table: `docs/client-mvp-scope-status.md`.
 Client-confirmed first working scope:
 
 - Roles: implemented.
-- Receiving products: implemented as MVP through client Receiving Notice, scanner receiving for expected and unexpected items, condition capture for damaged/quality issues, required inbound receipt context, warehouse receiving/verification, received quantity sync, variance calculation, discrepancy records, and stock/container references. Remaining work: polished workflow actions.
+- Receiving products: implemented as MVP through client Receiving Notice, scanner receiving for expected and unexpected items, condition capture for damaged/quality issues, required inbound receipt context, warehouse receiving/verification, received quantity sync, variance calculation, discrepancy records, stock/container references, and warehouse review actions at `/warehouse/receiving-review`. Remaining work: dedicated client-facing discrepancy detail page.
 - Location moves: implemented for containers through `Three PL Container Move`, movement history, and scanner-first move page. Remaining work: polished scanner UX and stronger operational guards.
-- Sending orders: implemented as MVP through client `Three PL Shipment Request` to draft ERPNext Pick List conversion, scanner picking confirmation, and packing/shipping status sync from submitted Stock Entries. Allocated containers are marked as `Picking`, picked containers become `Picked`, and packed/shipped operations update Shipment Request and container movement history. Scanner pages exist at `/warehouse/picking-confirmation` and `/warehouse/outbound-fulfillment`. Remaining work: carrier labels, shipment tracking, and stronger operational guards.
-- Warehouse corrections: implemented as MVP through `Three PL Warehouse Correction`, scanner page `/warehouse/correction`, container item updates, `Adjusted` movement history, automatic ERPNext Stock Entry posting for clear quantity deltas, and manager review queue at `/warehouse/correction-review`. Remaining work: richer approval workflow for ambiguous/damaged/quality postings.
-- Inventory / stocktake: implemented as MVP through `Three PL Stocktake`, scanner page `/warehouse/stocktake`, counted-vs-system delta, linked correction, `Adjusted` movement history, and correction stock posting where ERPNext ledger permits it. Remaining work: richer count sessions.
+- Sending orders: implemented as MVP through client `Three PL Shipment Request` to draft ERPNext Pick List conversion, scanner picking confirmation, packing/shipping status sync from submitted Stock Entries, and warehouse shipment review actions at `/warehouse/shipment-review`. Allocated containers are marked as `Picking`, picked containers become `Picked`, and packed/shipped operations update Shipment Request and container movement history. Scanner pages exist at `/warehouse/picking-confirmation` and `/warehouse/outbound-fulfillment`. Remaining work: carrier labels, shipment tracking, and stronger operational guards.
+- Warehouse corrections: implemented as MVP through `Three PL Warehouse Correction`, scanner page `/warehouse/correction`, container item updates, `Adjusted` movement history, automatic ERPNext Stock Entry posting for clear quantity deltas, manager review queue at `/warehouse/correction-review`, and review metadata for manager decisions. Remaining work: richer multi-step approval workflow if required.
+- Inventory / stocktake: implemented as MVP through `Three PL Stocktake Session`, `Three PL Stocktake`, scanner page `/warehouse/stocktake`, counted-vs-system delta, linked correction, `Adjusted` movement history, and correction stock posting where ERPNext ledger permits it. Remaining work: richer large-count assignment/review UX.
 
 Client-confirmed reporting scope:
 
@@ -101,7 +101,7 @@ Remaining:
 - Add richer guided quantity editing for multi-item partial repacks.
 - Add richer guided workflow actions after receiving discrepancies are found.
 - Add richer approval workflow and audit trail for correction stock postings that ERPNext marks as `Needs Review`.
-- Add grouped stocktake sessions.
+- Add richer large-count assignment/review UX for stocktake sessions.
 - Add UI actions and validation for empty / closed / replaced container lifecycle transitions.
 - Automate inventory snapshot updates immediately after every stock and container movement rather than only through processors.
 - Decide whether mixed client / mixed SKU storage is allowed in one location.

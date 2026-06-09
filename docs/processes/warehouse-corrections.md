@@ -54,6 +54,14 @@ The review page shows corrections where stock posting needs a decision. A manage
 
 - reset the correction to `Pending` for the next processor retry;
 - mark the correction as `Not Required` when no ERPNext stock posting should be created.
+- cancel the correction when the operational correction should not be used.
+
+The review page stores manager decision metadata on the correction:
+
+- review decision;
+- reviewed by;
+- reviewed at;
+- review notes.
 
 Still requiring manager review:
 

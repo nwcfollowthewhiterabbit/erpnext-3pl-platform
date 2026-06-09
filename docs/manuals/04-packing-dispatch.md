@@ -64,6 +64,14 @@ Manual fallback:
 
 After submit, `scripts/sync_outbound_fulfillment.py` updates the linked Shipment Request to `Shipped`, marks referenced containers as `Shipped`, and creates `Three PL Container Movement` history.
 
+## Shipment Review
+
+Warehouse users can open:
+
+`/warehouse/shipment-review`
+
+The page lists active client shipment requests and lets the warehouse mark them as `Accepted`, `Closed`, or `Cancelled`. Packing and shipping operations still update `Packed` and `Shipped` statuses from submitted Stock Entries.
+
 ## Future Extension
 
 Dispatch can later be connected to courier/shipping systems. For now it is represented as a confirmed ERPNext Stock Entry plus custom shipment/container status sync.

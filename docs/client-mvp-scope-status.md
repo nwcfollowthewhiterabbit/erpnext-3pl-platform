@@ -22,15 +22,15 @@ The client asked for:
 | Area | MVP readiness | Current status |
 | --- | ---: | --- |
 | User roles | 90% | Implemented and tested for client, warehouse operator, warehouse manager, and business owner. Remaining work is role polish after customer feedback. |
-| Receiving products | 80% | Implemented as MVP. Client can create Receiving Notice; warehouse can receive into temporary area; expected vs actual quantities are synced; discrepancies are stored. Remaining work is more polished confirmation/status actions. |
+| Receiving products | 85% | Implemented as MVP. Client can create Receiving Notice; warehouse can receive into temporary area; expected vs actual quantities are synced; discrepancies are stored. Warehouse review actions now exist for confirming received, waiting for client, and closing active notices. |
 | Location movement | 75% | Implemented through container/HU moves and movement history. Good enough for MVP testing. Remaining work is stronger operational validation and real warehouse location naming import. |
-| Sending orders | 70% | Implemented as MVP. Client can create Shipment Request; system creates Pick Lists; warehouse can confirm picking and outbound packing/shipping. Remaining work is labels, carrier/tracking integrations, and more polished shipment status UX. |
-| Warehouse corrections | 75% | Implemented as MVP. Corrections can adjust container contents, record movement history, and post clear quantity deltas to ERPNext Stock Entry. Ambiguous cases go to Needs Review. Remaining work is richer approval workflow. |
-| Inventory / stocktake | 70% | Implemented as MVP. Stocktake records counted vs system quantity and links deltas to corrections. Remaining work is grouped stocktake sessions for larger counts. |
+| Sending orders | 80% | Implemented as MVP. Client can create Shipment Request; system creates Pick Lists; warehouse can confirm picking and outbound packing/shipping. Warehouse review actions now exist for accept, close, and cancel. Remaining work is labels, carrier/tracking integrations, and customer-facing tracking polish. |
+| Warehouse corrections | 85% | Implemented as MVP. Corrections can adjust container contents, record movement history, and post clear quantity deltas to ERPNext Stock Entry. Ambiguous cases go to Needs Review with manager review actions and review metadata. |
+| Inventory / stocktake | 85% | Implemented as MVP. Stocktake records counted vs system quantity, links deltas to corrections, and now supports grouped stocktake sessions. Remaining work is richer assignment/review UX for large physical counts. |
 | Product balance on selected day | 70% | Implemented through daily inventory balance snapshots and `3PL Inventory Balance By Date`. Limitation: history starts from the day snapshots are generated, not before. |
 | Warehouse operation turnover | 75% | Implemented through container movement history and `3PL Warehouse Operation Turnover`. Remaining work is report filtering/presentation polish for client-facing usage. |
 
-Overall MVP readiness for the client's described scope: approximately 75-80%.
+Overall MVP readiness for the client's described scope: approximately 82-87%.
 
 ## What Is Ready For Customer Testing
 
@@ -60,11 +60,12 @@ Ready:
 - Expected vs actual received quantity comparison.
 - Discrepancy rows for missing, unexpected, damaged, and quality issue cases.
 - Client instructions for discrepancies as separate portal records.
+- Warehouse review page at `/warehouse/receiving-review` for confirming received notices, marking notices as waiting for client, and closing notices.
 
 Not fully polished yet:
 
-- Final workflow buttons such as "confirm receiving", "notify client", "client approved discrepancy", and similar status transitions.
 - Rich discrepancy detail page for the client.
+- More formal approval history for client discrepancy decisions.
 
 ### Moving Products Between Locations
 
@@ -91,6 +92,7 @@ Ready:
 - Picking confirmation.
 - Packing and shipping operation pages.
 - Shipment/container status updates from outbound stock entries.
+- Warehouse review page at `/warehouse/shipment-review` for accepting, closing, or cancelling active shipment requests.
 
 Not fully polished yet:
 
@@ -108,24 +110,26 @@ Ready:
 - Hold-for-review path.
 - Clear quantity deltas create ERPNext Stock Entries where the ledger allows it.
 - Manager review queue for corrections that cannot be posted automatically.
+- Manager review metadata: decision, reviewer, reviewed timestamp, and review notes.
 
 Not fully polished yet:
 
-- Approval workflow with named approver, comments, timestamps, and final decision.
 - More guided UI for ambiguous correction cases.
+- Multi-step approval workflow if the client wants more than one reviewer.
 
 ### Inventory / Stocktake
 
 Ready:
 
 - Stocktake by container/location/SKU.
+- Grouped stocktake sessions.
 - Counted quantity vs system quantity.
 - Linked correction if there is a delta.
 - Stocktake report.
+- Stocktake session report.
 
 Not fully polished yet:
 
-- Grouped stocktake sessions.
 - Larger count workflow with many lines, assignments, and review states.
 
 ### Reports
@@ -147,21 +151,19 @@ Not fully polished yet:
 
 These are the remaining gaps specifically for the client's described MVP:
 
-1. Polish receiving confirmation statuses and discrepancy decision workflow.
+1. Add a dedicated client-facing discrepancy detail page.
 2. Import or create the real warehouse location hierarchy after naming convention is agreed.
 3. Add stronger guards around location/container moves.
-4. Polish outbound shipment status screen for the client.
-5. Add grouped stocktake sessions.
-6. Add richer correction approval workflow for Needs Review cases.
+4. Polish outbound shipment tracking/status screen for the client.
+5. Add richer count assignments/review states for large stocktakes.
+6. Add multi-step correction approval if the client wants more than manager decision metadata.
 7. Improve client-facing report filters and presentation.
 
 ## Recommended Next Local Task
 
 Finish the "customer-testable MVP" layer:
 
-1. Add a simple MVP dashboard / guide page for the client and warehouse manager with links only to the flows in this document.
-2. Polish status transitions for Receiving Notice and Shipment Request.
-3. Add grouped stocktake sessions.
-4. Add correction approval actions for Needs Review.
-5. Add customer-friendly filters to the two required reports.
-
+1. Add customer-friendly filters to the two required reports.
+2. Add a dedicated client-facing discrepancy detail page.
+3. Improve outbound shipment tracking/status screen for clients.
+4. Import the real location hierarchy after the naming convention is agreed.
