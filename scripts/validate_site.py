@@ -183,6 +183,13 @@ REQUIRED_REPORTS = [
     "3PL Inventory Balance By Date",
     "3PL Warehouse Operation Turnover",
 ]
+REQUIRED_REPORT_ROLES = {
+    "System Manager",
+    "Stock Manager",
+    "Stock User",
+    "3PL Warehouse Manager",
+    "3PL Warehouse User",
+}
 REQUIRED_CUSTOM_FIELDS = [
     "Stock Entry-client",
     "Stock Entry-inbound_shipment_notice",
@@ -337,6 +344,9 @@ def main():
     for report in REQUIRED_REPORTS:
         require(frappe.db.exists("Report", report), f"Missing Report: {report}")
         report_doc = frappe.get_doc("Report", report)
+        report_roles = {row.role for row in report_doc.roles}
+        missing_roles = REQUIRED_REPORT_ROLES - report_roles
+        require(not missing_roles, f"Report {report} misses roles: {', '.join(sorted(missing_roles))}")
         if report_doc.report_type == "Query Report":
             frappe.db.sql(report_doc.query)
 

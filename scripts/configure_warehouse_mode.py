@@ -1602,6 +1602,13 @@ def configure_portal_menu():
 
 
 def configure_reports():
+    report_roles = [
+        "System Manager",
+        "Stock Manager",
+        "Stock User",
+        "3PL Warehouse Manager",
+        "3PL Warehouse User",
+    ]
     reports = {
         "3PL ASN vs Received": {
             "ref_doctype": "Inbound Shipment Notice",
@@ -1914,6 +1921,9 @@ order by m.movement_datetime desc, m.creation desc
         report.is_standard = "No"
         report.module = "Stock"
         report.query = report_data["query"]
+        report.set("roles", [])
+        for role in report_roles:
+            report.append("roles", {"role": role})
         report.save(ignore_permissions=True)
 
 
