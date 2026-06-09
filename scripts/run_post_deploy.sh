@@ -58,7 +58,7 @@ docker exec "${project_env[@]}" "$backend_cid" bash -lc \
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/apply_container_moves.py 0"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/apply_container_repacks.py 0"
+  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/apply_container_repacks.py 1"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/apply_warehouse_corrections.py 1"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \

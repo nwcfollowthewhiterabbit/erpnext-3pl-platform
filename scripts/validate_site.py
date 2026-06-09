@@ -112,6 +112,7 @@ REQUIRED_CONTAINER_REPACK_FIELDS = {
     "operation_reference",
     "operation_datetime",
     "status",
+    "repack_mode",
     "client",
     "target_container",
     "target_location",
@@ -650,6 +651,7 @@ def main():
     validate_warehouse_correction()
     validate_warehouse_correction_stock_posting()
     validate_stocktake()
+    validate_partial_repack()
     validate_putaway_operation()
     validate_picking_confirmation()
     validate_outbound_fulfillment()
@@ -1200,6 +1202,126 @@ def validate_stocktake():
     )
 
     cleanup_stocktake_validation_docs()
+
+
+def cleanup_partial_repack_validation_docs():
+    frappe.set_user("Administrator")
+    for movement_name in frappe.get_all(
+        "Three PL Container Movement",
+        filters={"container_code": ("in", ["BOX-REPACK-SPLIT-SOURCE", "BOX-REPACK-SPLIT-TARGET"])},
+        pluck="name",
+    ):
+        frappe.delete_doc("Three PL Container Movement", movement_name, ignore_permissions=True, force=True)
+    for repack_name in frappe.get_all(
+        "Three PL Container Repack",
+        filters={"operation_reference": ("like", "REPACK-SPLIT-VALIDATION%")},
+        pluck="name",
+    ):
+        frappe.delete_doc("Three PL Container Repack", repack_name, ignore_permissions=True, force=True)
+    for container_name in ("BOX-REPACK-SPLIT-TARGET", "BOX-REPACK-SPLIT-SOURCE"):
+        if frappe.db.exists("Three PL Container", container_name):
+            frappe.delete_doc("Three PL Container", container_name, ignore_permissions=True, force=True)
+
+
+def validate_partial_repack():
+    cleanup_partial_repack_validation_docs()
+    frappe.set_user("Administrator")
+
+    source = frappe.get_doc(
+        {
+            "doctype": "Three PL Container",
+            "container_code": "BOX-REPACK-SPLIT-SOURCE",
+            "barcode": "BOX-REPACK-SPLIT-SOURCE",
+            "container_type": "Box",
+            "client": "Demo Client Alpha",
+            "current_warehouse": "Aisle B - 3",
+            "status": "Stored",
+            "items": [
+                {
+                    "item_code": "SKU-ALPHA-001",
+                    "client_sku": "ALPHA-001",
+                    "qty": 10,
+                    "uom": "Nos",
+                    "condition_status": "OK",
+                }
+            ],
+        }
+    )
+    source.insert(ignore_permissions=True)
+    target = frappe.get_doc(
+        {
+            "doctype": "Three PL Container",
+            "container_code": "BOX-REPACK-SPLIT-TARGET",
+            "barcode": "BOX-REPACK-SPLIT-TARGET",
+            "container_type": "Box",
+            "client": "Demo Client Alpha",
+            "current_warehouse": "Aisle A - 3",
+            "status": "Stored",
+        }
+    )
+    target.insert(ignore_permissions=True)
+
+    operation_time = now_datetime()
+    repack = frappe.get_doc(
+        {
+            "doctype": "Three PL Container Repack",
+            "operation_reference": "REPACK-SPLIT-VALIDATION",
+            "operation_datetime": operation_time,
+            "status": "Draft",
+            "repack_mode": "Partial Split",
+            "client": "Demo Client Alpha",
+            "target_container": "BOX-REPACK-SPLIT-TARGET",
+            "target_location": "Aisle A - 3",
+            "source_containers": [
+                {
+                    "source_container": "BOX-REPACK-SPLIT-SOURCE",
+                    "source_location": "Aisle B - 3",
+                }
+            ],
+            "items": [
+                {
+                    "item_code": "SKU-ALPHA-001",
+                    "client_sku": "ALPHA-001",
+                    "qty": 4,
+                    "uom": "Nos",
+                    "condition_status": "OK",
+                    "notes": "Validation partial split.",
+                }
+            ],
+            "notes": "Validation partial repack.",
+        }
+    )
+    repack.insert(ignore_permissions=True)
+
+    processor = load_tmp_module("apply_container_repacks")
+    movement_name = processor.apply_repack(repack).name
+
+    source.reload()
+    target = frappe.get_doc("Three PL Container", "BOX-REPACK-SPLIT-TARGET")
+    repack.reload()
+    require(repack.status == "Applied", "Partial repack was not applied")
+    require(repack.repack_mode == "Partial Split", "Partial repack has wrong mode")
+    require(repack.movement == movement_name, "Partial repack is not linked to movement")
+    require(source.status == "Stored", "Partial repack source should remain stored while it has remaining stock")
+    require(not source.replaced_by, "Partial repack source must not be marked replaced")
+    require(source.items[0].qty == 6, "Partial repack did not subtract source quantity")
+    require(target.current_warehouse == "Aisle A - 3", "Partial repack target has wrong location")
+    require(target.items[0].qty == 4, "Partial repack target has wrong quantity")
+    require(
+        frappe.db.exists(
+            "Three PL Container Movement",
+            {
+                "name": movement_name,
+                "movement_type": "Repacked",
+                "container_code": "BOX-REPACK-SPLIT-TARGET",
+                "from_container": "BOX-REPACK-SPLIT-SOURCE",
+                "to_container": "BOX-REPACK-SPLIT-TARGET",
+            },
+        ),
+        "Partial repack did not create movement history",
+    )
+
+    cleanup_partial_repack_validation_docs()
 
 
 def cleanup_putaway_validation_docs():

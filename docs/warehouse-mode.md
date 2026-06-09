@@ -164,7 +164,7 @@ Still pending:
 - scanner UX for unexpected receiving items and damaged/quality inspection details;
 - stock-ledger posting automation for warehouse corrections;
 - grouped stocktake sessions and stock-ledger posting for count deltas;
-- richer scanner UX for partial repack / split operations;
+- richer guided quantity editing for multi-item partial repack / split operations;
 - ERPNext form submit-time or scanner-page automation for move/repack documents;
 - automatic inventory snapshot updates from stock movements and container movements;
 - import or guided creation of the client's real warehouse location tree.

@@ -2,7 +2,7 @@
 
 ## Goal
 
-Record and apply a warehouse operation where one or more source Handling Units are consolidated or repacked into a target Handling Unit.
+Record and apply a warehouse operation where one or more source Handling Units are consolidated or where part of one Handling Unit is split into a target Handling Unit.
 
 Typical example:
 
@@ -19,6 +19,7 @@ It stores:
 - operation reference;
 - operation time;
 - status;
+- repack mode;
 - client;
 - target container;
 - target location;
@@ -45,7 +46,9 @@ Demo operation:
 - Target Location: `Aisle A - 3`
 - Status after processor: `Applied`
 
-`scripts/apply_container_repacks.py` applies draft repacks:
+`scripts/apply_container_repacks.py` applies draft repacks.
+
+For `Full Consolidation`, it:
 
 - validates source container ownership;
 - rejects shipped, closed, or already replaced source containers;
@@ -57,18 +60,40 @@ Demo operation:
 - creates a `Three PL Container Movement` record with type `Repacked`;
 - marks the repack operation as `Applied`.
 
+For `Partial Split`, it:
+
+- requires exactly one source container;
+- validates that the source contains the requested item quantity;
+- subtracts the split quantity from the source container;
+- creates or updates the target container with the moved quantity;
+- keeps the source container active when stock remains;
+- marks the source container `Empty` only when all item rows are removed;
+- creates a `Three PL Container Movement` record with type `Repacked`;
+- marks the repack operation as `Applied`.
+
 ## Scanner-First Page
 
 Warehouse users can open:
 
 `/warehouse/repack`
 
-The current scanner flow supports full consolidation:
+The scanner flow supports full consolidation and partial split.
+
+Full consolidation:
 
 1. scan one or more source containers;
 2. scan or enter the target container;
 3. scan or enter the target location;
 4. apply repack.
+
+Partial split:
+
+1. select `Partial Split`;
+2. scan one source container;
+3. scan or enter the target container;
+4. scan or enter the target location;
+5. enter item, quantity, and UOM to move;
+6. apply repack.
 
 The page automatically aggregates all item rows from the source containers into the target container.
 
@@ -76,10 +101,10 @@ Expected result:
 
 - a `Three PL Container Repack` operation is created;
 - a `Three PL Container Movement` row is written with movement type `Repacked`;
-- source containers are marked `Replaced`;
-- source containers point to the target container through `replaced_by`;
+- full-consolidation source containers are marked `Replaced`;
+- partial-split source containers remain active while stock remains;
 - the target container becomes `Stored` at the target location;
-- target container contents equal the sum of source container contents.
+- target container contents equal the sum of source container contents for full consolidation, or the moved quantity for partial split.
 
 ## Important Boundary
 
@@ -88,7 +113,7 @@ This is a controlled MVP repack flow. It applies the resulting contents entered 
 Still pending:
 
 - ERPNext form submit-time automation;
-- richer item-level split guidance for partial repacks.
+- richer guided quantity editing for multi-item partial repacks.
 
 ## Target Flow
 

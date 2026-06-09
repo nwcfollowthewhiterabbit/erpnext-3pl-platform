@@ -818,6 +818,7 @@ def configure_custom_doctypes():
                 {"fieldname": "operation_reference", "label": "Operation Reference", "fieldtype": "Data", "reqd": 1, "unique": 1, "in_list_view": 1},
                 {"fieldname": "operation_datetime", "label": "Operation Time", "fieldtype": "Datetime", "default": "Now", "reqd": 1, "in_list_view": 1},
                 {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Draft\nNeeds Review\nApplied\nCancelled", "default": "Draft", "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "repack_mode", "label": "Repack Mode", "fieldtype": "Select", "options": "Full Consolidation\nPartial Split", "default": "Full Consolidation", "in_standard_filter": 1, "in_list_view": 1},
                 {"fieldname": "client", "label": "Client", "fieldtype": "Link", "options": "Customer", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
                 {"fieldname": "target_container", "label": "Target Container", "fieldtype": "Link", "options": "Three PL Container", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
                 {"fieldname": "target_location", "label": "Target Location", "fieldtype": "Link", "options": "Warehouse", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
@@ -1731,6 +1732,7 @@ select
     r.operation_reference as "Operation Ref:Data:150",
     r.operation_datetime as "Operation Time:Datetime:160",
     r.status as "Status:Data:100",
+    r.repack_mode as "Mode:Data:130",
     r.client as "Client:Link/Customer:170",
     r.target_container as "Target Container:Link/Three PL Container:150",
     r.target_location as "Target Location:Link/Warehouse:180",
@@ -3383,6 +3385,13 @@ def configure_scanner_pages():
 <section class="container py-4" style="max-width: 820px;">
   <h1 class="h3 mb-3">Container Repack</h1>
   <div class="mb-3">
+    <label class="form-label" for="repack-mode">Mode</label>
+    <select class="form-select" id="repack-mode">
+      <option value="Full Consolidation">Full Consolidation</option>
+      <option value="Partial Split">Partial Split</option>
+    </select>
+  </div>
+  <div class="mb-3">
     <label class="form-label" for="repack-source-container">Source Container / HU</label>
     <div class="d-flex gap-2">
       <input class="form-control" id="repack-source-container" autocomplete="off" autofocus>
@@ -3401,6 +3410,20 @@ def configure_scanner_pages():
     <div class="col-md-6">
       <label class="form-label" for="repack-target-location">Target Location</label>
       <input class="form-control" id="repack-target-location" autocomplete="off">
+    </div>
+  </div>
+  <div class="row g-3 mt-1" id="partial-repack-fields" style="display: none;">
+    <div class="col-md-5">
+      <label class="form-label" for="repack-item">Item / SKU To Move</label>
+      <input class="form-control" id="repack-item" autocomplete="off">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="repack-qty">Qty To Move</label>
+      <input class="form-control" id="repack-qty" inputmode="decimal" autocomplete="off">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" for="repack-uom">UOM</label>
+      <input class="form-control" id="repack-uom" autocomplete="off" value="Nos">
     </div>
   </div>
   <div class="d-flex gap-2 align-items-center mt-3">
@@ -3527,6 +3550,14 @@ def configure_scanner_pages():
       list.appendChild(item);
     });
   }
+  function currentMode() {
+    return byId('repack-mode').value || 'Full Consolidation';
+  }
+  function refreshModeFields() {
+    var partial = currentMode() === 'Partial Split';
+    var fields = byId('partial-repack-fields');
+    if (fields) fields.style.display = partial ? '' : 'none';
+  }
   function addSourceContainer() {
     if (frappe.session && frappe.session.user === 'Guest') {
       window.location.href = '/login?redirect-to=' + encodeURIComponent('/warehouse/repack');
@@ -3583,7 +3614,64 @@ def configure_scanner_pages():
     });
     return Object.keys(byKey).map(function (key) { return byKey[key]; });
   }
-  function ensureTargetContainer(targetCode, client, targetLocation, items, movementTime) {
+  function partialSplitItems() {
+    if (sourceContainers.length !== 1) throw new Error('Partial split requires exactly one source container.');
+    var itemCode = (byId('repack-item').value || '').trim();
+    var qty = Number((byId('repack-qty').value || '').trim());
+    var uom = (byId('repack-uom').value || '').trim() || 'Nos';
+    if (!itemCode || Number.isNaN(qty) || qty <= 0) throw new Error('Enter item and positive qty for partial split.');
+    var source = sourceContainers[0];
+    var sourceRow = (source.items || []).find(function (row) {
+      return row.item_code === itemCode && (row.uom || uom) === uom && Number(row.qty || 0) >= qty;
+    });
+    if (!sourceRow) throw new Error('Source container does not have enough item quantity to split.');
+    return [{
+      item_code: sourceRow.item_code,
+      client_sku: sourceRow.client_sku,
+      qty: qty,
+      uom: sourceRow.uom || uom,
+      condition_status: sourceRow.condition_status || 'OK',
+      notes: 'Moved by scanner-first partial split.'
+    }];
+  }
+  function itemKey(row) {
+    return [row.item_code, row.uom, row.condition_status || 'OK'].join('||');
+  }
+  function addItemsToTarget(target, items) {
+    target.items = target.items || [];
+    items.forEach(function (item) {
+      var matched = false;
+      target.items.forEach(function (row) {
+        if (itemKey(row) === itemKey(item)) {
+          row.qty = Number(row.qty || 0) + Number(item.qty || 0);
+          matched = true;
+        }
+      });
+      if (!matched) target.items.push(item);
+    });
+  }
+  function subtractItemsFromSource(source, items) {
+    items.forEach(function (item) {
+      var remaining = Number(item.qty || 0);
+      source.items = (source.items || []).reduce(function (kept, row) {
+        if (itemKey(row) !== itemKey(item)) {
+          kept.push(row);
+          return kept;
+        }
+        var available = Number(row.qty || 0);
+        var moved = Math.min(available, remaining);
+        var left = available - moved;
+        remaining -= moved;
+        if (left > 0) {
+          row.qty = left;
+          kept.push(row);
+        }
+        return kept;
+      }, []);
+      if (remaining > 0) throw new Error('Source container changed while splitting item ' + item.item_code + '.');
+    });
+  }
+  function ensureTargetContainer(targetCode, client, targetLocation, items, movementTime, mode) {
     return getValue('Three PL Container', { name: targetCode }, 'name').then(function (response) {
       if (!response.message || !response.message.name) {
         return insertDoc({
@@ -3610,7 +3698,8 @@ def configure_scanner_pages():
         target.current_warehouse = targetLocation;
         target.status = 'Stored';
         target.last_moved_at = movementTime;
-        target.items = items;
+        if (mode === 'Partial Split') addItemsToTarget(target, items);
+        else target.items = items;
         return saveDoc(target).then(function (saveResponse) {
           return saveResponse.message || target;
         });
@@ -3625,8 +3714,13 @@ def configure_scanner_pages():
     if (!requireWarehouseRole()) return;
     var targetCode = (byId('repack-target-container').value || '').trim();
     var targetLocation = (byId('repack-target-location').value || '').trim();
+    var mode = currentMode();
     if (sourceContainers.length < 1 || !targetCode || !targetLocation) {
       setStatus('Scan sources, target container, and target location first.', true);
+      return;
+    }
+    if (mode === 'Partial Split' && sourceContainers.length !== 1) {
+      setStatus('Partial split supports exactly one source container.', true);
       return;
     }
     if (sourceContainers.some(function (container) { return container.name === targetCode; })) {
@@ -3638,13 +3732,14 @@ def configure_scanner_pages():
       if (!warehouseResponse.message || !warehouseResponse.message.name) throw new Error('Target location not found.');
       var movementTime = frappe.datetime.now_datetime();
       var client = sourceContainers[0].client;
-      var items = aggregateItems();
-      return ensureTargetContainer(targetCode, client, targetLocation, items, movementTime).then(function () {
+      var items = mode === 'Partial Split' ? partialSplitItems() : aggregateItems();
+      return ensureTargetContainer(targetCode, client, targetLocation, items, movementTime, mode).then(function () {
         return insertDoc({
           doctype: 'Three PL Container Repack',
           operation_reference: 'REPACK-' + targetCode + '-' + Date.now(),
           operation_datetime: movementTime,
           status: 'Draft',
+          repack_mode: mode,
           client: client,
           target_container: targetCode,
           target_location: targetLocation,
@@ -3669,15 +3764,25 @@ def configure_scanner_pages():
             notes: 'Applied immediately from scanner-first repack page.'
           }).then(function (movementResponse) {
             var movement = movementResponse.message;
-            return sourceContainers.reduce(function (promise, container) {
-              return promise.then(function () {
-                return setValues('Three PL Container', container.name, {
-                  status: 'Replaced',
-                  replaced_by: targetCode,
-                  last_moved_at: movementTime
+            var sourceUpdate;
+            if (mode === 'Partial Split') {
+              var source = sourceContainers[0];
+              subtractItemsFromSource(source, items);
+              source.status = source.items && source.items.length ? 'Stored' : 'Empty';
+              source.last_moved_at = movementTime;
+              sourceUpdate = saveDoc(source);
+            } else {
+              sourceUpdate = sourceContainers.reduce(function (promise, container) {
+                return promise.then(function () {
+                  return setValues('Three PL Container', container.name, {
+                    status: 'Replaced',
+                    replaced_by: targetCode,
+                    last_moved_at: movementTime
+                  });
                 });
-              });
-            }, Promise.resolve()).then(function () {
+              }, Promise.resolve());
+            }
+            return sourceUpdate.then(function () {
               return setValues('Three PL Container Repack', repack.name, {
                 status: 'Applied',
                 movement: movement.name
@@ -3695,6 +3800,8 @@ def configure_scanner_pages():
       byId('repack-source-container').value = '';
       byId('repack-target-container').value = '';
       byId('repack-target-location').value = '';
+      byId('repack-item').value = '';
+      byId('repack-qty').value = '';
       byId('repack-source-container').focus();
     }).catch(function (error) {
       setStatus(error.message || 'Could not apply repack.', true);
@@ -3706,8 +3813,11 @@ def configure_scanner_pages():
       return;
     }
     requireWarehouseRole();
+    refreshModeFields();
     var addButton = byId('add-repack-source');
     var applyButton = byId('apply-repack');
+    var mode = byId('repack-mode');
+    if (mode) mode.addEventListener('change', refreshModeFields);
     if (addButton) addButton.addEventListener('click', addSourceContainer);
     if (applyButton) applyButton.addEventListener('click', applyRepack);
     byId('repack-source-container').addEventListener('keydown', function (event) {

@@ -85,7 +85,7 @@ Implemented:
 - Minimal scanner-first receiving page at `/warehouse/receiving` for expected item receipt, unexpected item capture, and damage/quality issue capture into temporary receiving.
 - Minimal scanner-first container move page at `/warehouse/container-move` with immediate apply for warehouse roles.
 - Minimal scanner-first putaway page at `/warehouse/putaway` with immediate apply for warehouse roles and explicit `Putaway` movement history.
-- Minimal scanner-first repack page at `/warehouse/repack` for full consolidation of source containers into one target container.
+- Minimal scanner-first repack page at `/warehouse/repack` for full consolidation and partial split from one source container into one target container.
 - Minimal scanner-first warehouse correction page at `/warehouse/correction` for wrong quantity, unexpected product, damaged product, quality issue, and hold-for-review cases.
 - Minimal scanner-first stocktake page at `/warehouse/stocktake` for cycle count by container and SKU.
 - `scripts/apply_warehouse_corrections.py` processor for posting clear correction quantity deltas into ERPNext Stock Entry.
@@ -96,7 +96,7 @@ Remaining:
 
 - Agree and import the real location naming scheme.
 - Add ERPNext form submit-time automation for container move operations.
-- Add partial split/repack scanner UX and stronger guided quantity editing.
+- Add richer guided quantity editing for multi-item partial repacks.
 - Add richer guided workflow actions after receiving discrepancies are found.
 - Add richer approval workflow and audit trail for correction stock postings that ERPNext marks as `Needs Review`.
 - Add grouped stocktake sessions.

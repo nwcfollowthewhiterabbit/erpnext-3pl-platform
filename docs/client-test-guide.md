@@ -302,7 +302,7 @@ Expected result:
 - Shipment requests are implemented as portal MVP records.
 - Structured shipment requests are converted to draft Pick Lists as an MVP.
 - Outbound status updates after packing/dispatch are implemented as MVP through submitted packing/shipping Stock Entries.
-- Box/container handling exists as a first ERPNext custom DocType model. Scanner-first pages exist for receiving, container moves, putaway, warehouse corrections, stocktake, full-container repack, picking confirmation, and outbound fulfillment; stock-ledger correction posting, grouped stocktake sessions, and partial split/repack screens still need polish.
+- Box/container handling exists as a first ERPNext custom DocType model. Scanner-first pages exist for receiving, container moves, putaway, warehouse corrections, stocktake, full-container repack, partial split, picking confirmation, and outbound fulfillment; grouped stocktake sessions and richer multi-item split guidance still need polish.
 - Real email delivery is not configured.
 - A placeholder outgoing email account exists only to prevent ERPNext forms from failing when an outgoing account is required.
 
