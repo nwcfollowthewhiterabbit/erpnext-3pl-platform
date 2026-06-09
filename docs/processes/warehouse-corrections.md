@@ -46,6 +46,15 @@ It updates the 3PL Handling Unit model and traceability history. Quantity increa
 
 If ERPNext blocks the stock posting, for example because ledger stock is insufficient for a Material Issue, the correction is kept operationally applied but its `Stock Posting Status` becomes `Needs Review`.
 
+Warehouse managers can review these records from:
+
+`/warehouse/correction-review`
+
+The review page shows corrections where stock posting needs a decision. A manager can:
+
+- reset the correction to `Pending` for the next processor retry;
+- mark the correction as `Not Required` when no ERPNext stock posting should be created.
+
 Still requiring manager review:
 
 - material transfer or hold movement for damaged/quality items;
@@ -54,5 +63,6 @@ Still requiring manager review:
 ## Related Reports
 
 - `3PL Warehouse Corrections`
+- `3PL Corrections Needing Review`
 - `3PL Container Movements`
 - `3PL Containers`

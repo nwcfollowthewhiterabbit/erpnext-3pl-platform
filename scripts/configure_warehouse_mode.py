@@ -244,6 +244,7 @@ def configure_workspaces():
                 {"type": "DocType", "link_to": "Three PL Warehouse Correction", "doc_view": "List", "label": "Warehouse Corrections"},
                 {"type": "DocType", "link_to": "Three PL Stocktake", "doc_view": "List", "label": "Stocktakes"},
                 {"type": "DocType", "link_to": "Stock Entry", "doc_view": "List", "label": "Stock Entries"},
+                {"type": "Report", "link_to": "3PL Corrections Needing Review", "label": "Corrections Review", "report_ref_doctype": "Three PL Warehouse Correction"},
                 {"type": "DocType", "link_to": "Pick List", "doc_view": "List", "label": "Pick Lists"},
                 {"type": "DocType", "link_to": "Three PL Shipment Request", "doc_view": "List", "label": "Shipment Requests"},
                 {"type": "Report", "link_to": "3PL ASN vs Received", "label": "ASN vs Received", "report_ref_doctype": "Inbound Shipment Notice"},
@@ -272,6 +273,7 @@ def configure_workspaces():
                 {"type": "Link", "label": "Warehouse Corrections", "link_type": "DocType", "link_to": "Three PL Warehouse Correction"},
                 {"type": "Link", "label": "Stocktakes", "link_type": "DocType", "link_to": "Three PL Stocktake"},
                 {"type": "Link", "label": "Stock Entries", "link_type": "DocType", "link_to": "Stock Entry"},
+                {"type": "Link", "label": "Corrections Needing Review", "link_type": "Report", "link_to": "3PL Corrections Needing Review", "is_query_report": 1},
                 {"type": "Link", "label": "ASN vs Received", "link_type": "Report", "link_to": "3PL ASN vs Received", "is_query_report": 1},
                 {"type": "Link", "label": "Receiving Discrepancies", "link_type": "Report", "link_to": "3PL Receiving Discrepancies", "is_query_report": 1},
                 {"type": "Card Break", "label": "Outbound Work"},
@@ -858,7 +860,7 @@ def configure_custom_doctypes():
                 {"fieldname": "reference_section", "label": "Reference", "fieldtype": "Section Break"},
                 {"fieldname": "movement", "label": "Movement Record", "fieldtype": "Link", "options": "Three PL Container Movement", "read_only": 1},
                 {"fieldname": "stock_entry", "label": "Stock Entry", "fieldtype": "Link", "options": "Stock Entry", "read_only": 1},
-                {"fieldname": "stock_posting_status", "label": "Stock Posting Status", "fieldtype": "Select", "options": "Pending\nPosted\nNot Required\nNeeds Review", "default": "Pending", "read_only": 1, "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "stock_posting_status", "label": "Stock Posting Status", "fieldtype": "Select", "options": "Pending\nPosted\nNot Required\nNeeds Review", "default": "Pending", "in_standard_filter": 1, "in_list_view": 1, "description": "Managers can reset Needs Review corrections to Pending for retry, or mark them Not Required when no ERPNext stock posting is needed."},
                 {"fieldname": "stock_posting_error", "label": "Stock Posting Error", "fieldtype": "Small Text", "read_only": 1},
                 {"fieldname": "source_doctype", "label": "Source DocType", "fieldtype": "Link", "options": "DocType"},
                 {"fieldname": "source_name", "label": "Source Name", "fieldtype": "Dynamic Link", "options": "source_doctype"},
@@ -1771,6 +1773,28 @@ select
     c.notes as "Notes:Small Text:260"
 from `tabThree PL Warehouse Correction` c
 order by c.operation_datetime desc, c.creation desc
+""".strip(),
+        },
+        "3PL Corrections Needing Review": {
+            "ref_doctype": "Three PL Warehouse Correction",
+            "query": """
+select
+    c.name as "Correction:Link/Three PL Warehouse Correction:170",
+    c.operation_datetime as "Operation Time:Datetime:160",
+    c.correction_type as "Type:Data:150",
+    c.client as "Client:Link/Customer:170",
+    c.container_code as "Container / HU:Link/Three PL Container:150",
+    c.warehouse as "Location:Link/Warehouse:180",
+    c.item_code as "Item:Link/Item:150",
+    c.client_sku as "Client SKU:Data:120",
+    c.qty_delta as "Delta:Float:90",
+    c.condition_status as "Condition:Data:120",
+    c.stock_posting_status as "Stock Posting:Data:130",
+    c.stock_posting_error as "Stock Posting Error:Small Text:320",
+    c.notes as "Notes:Small Text:240"
+from `tabThree PL Warehouse Correction` c
+where c.stock_posting_status = 'Needs Review'
+order by c.modified desc
 """.strip(),
         },
         "3PL Stocktakes": {
@@ -4175,6 +4199,201 @@ def configure_scanner_pages():
     picking_page.insert_code = 0
     picking_page.show_sidebar = 0
     picking_page.save(ignore_permissions=True)
+
+    correction_review_html = """
+<section class="container py-4" style="max-width: 1120px;">
+  <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+    <h1 class="h3 m-0">Correction Review</h1>
+    <button class="btn btn-outline-secondary btn-sm" id="refresh-correction-review" type="button">Refresh</button>
+  </div>
+  <div class="text-muted small mb-3">Review warehouse corrections where ERPNext stock posting needs a manager decision.</div>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th>Correction</th>
+          <th>Client</th>
+          <th>Container</th>
+          <th>Item</th>
+          <th>Delta</th>
+          <th>Location</th>
+          <th>Error</th>
+          <th class="text-end">Action</th>
+        </tr>
+      </thead>
+      <tbody id="correction-review-body">
+        <tr><td colspan="8" class="text-muted">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="small text-muted" id="correction-review-status"></div>
+</section>
+""".strip()
+    correction_review_script = """
+(function () {
+  function byId(id) { return document.getElementById(id); }
+  function setStatus(message, isError) {
+    var target = byId('correction-review-status');
+    if (!target) return;
+    target.textContent = message || '';
+    target.className = isError ? 'small text-danger' : 'small text-muted';
+  }
+  function getCsrfToken() {
+    if (frappe.csrf_token && frappe.csrf_token !== 'None') return Promise.resolve(frappe.csrf_token);
+    if (window.__threePlCsrfTokenPromise) return window.__threePlCsrfTokenPromise;
+    window.__threePlCsrfTokenPromise = fetch('/app', { credentials: 'same-origin' })
+      .then(function (response) { return response.text(); })
+      .then(function (html) {
+        var match = html.match(/frappe\\.csrf_token\\s*=\\s*"([^"]+)"/);
+        if (!match || !match[1] || match[1] === 'None') throw new Error('Could not initialize session token. Please refresh and try again.');
+        frappe.csrf_token = match[1];
+        return match[1];
+      });
+    return window.__threePlCsrfTokenPromise;
+  }
+  function parseServerMessage(payload) {
+    if (!payload) return null;
+    if (payload._server_messages) {
+      try {
+        var messages = JSON.parse(payload._server_messages);
+        if (messages.length) {
+          var first = JSON.parse(messages[0]);
+          if (first.message) return first.message.replace(/<[^>]*>/g, '');
+        }
+      } catch (error) {
+        return payload._error_message || payload.exception || null;
+      }
+    }
+    return payload._error_message || payload.exception || null;
+  }
+  function api(method, args) {
+    return getCsrfToken().then(function (csrfToken) {
+      var body = new URLSearchParams();
+      Object.keys(args || {}).forEach(function (key) {
+        var value = args[key];
+        body.set(key, typeof value === 'string' ? value : JSON.stringify(value));
+      });
+      return fetch('/api/method/' + method, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Frappe-CSRF-Token': csrfToken
+        },
+        body: body
+      }).then(function (response) {
+        return response.text().then(function (text) {
+          var payload = text ? JSON.parse(text) : {};
+          if (!response.ok) throw new Error(parseServerMessage(payload) || ('Request failed: ' + response.status));
+          return payload;
+        });
+      });
+    });
+  }
+  function hasManagerRole() {
+    var roles = (frappe.user_roles || []);
+    return roles.indexOf('3PL Warehouse Manager') !== -1 || roles.indexOf('Stock Manager') !== -1 || roles.indexOf('System Manager') !== -1;
+  }
+  function escapeHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+      return ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[ch];
+    });
+  }
+  function loadRows() {
+    if (!hasManagerRole()) {
+      byId('correction-review-body').innerHTML = '<tr><td colspan="8" class="text-danger">This page is only available to warehouse managers.</td></tr>';
+      return;
+    }
+    setStatus('Loading corrections...', false);
+    api('frappe.client.get_list', {
+      doctype: 'Three PL Warehouse Correction',
+      filters: { stock_posting_status: 'Needs Review' },
+      fields: ['name', 'client', 'container_code', 'item_code', 'qty_delta', 'warehouse', 'stock_posting_error'],
+      order_by: 'modified desc',
+      limit_page_length: 50
+    }).then(function (response) {
+      var rows = response.message || [];
+      if (!rows.length) {
+        byId('correction-review-body').innerHTML = '<tr><td colspan="8" class="text-muted">No corrections need review.</td></tr>';
+        setStatus('', false);
+        return;
+      }
+      byId('correction-review-body').innerHTML = rows.map(function (row) {
+        return '<tr>' +
+          '<td><a href="/app/three-pl-warehouse-correction/' + encodeURIComponent(row.name) + '">' + escapeHtml(row.name) + '</a></td>' +
+          '<td>' + escapeHtml(row.client) + '</td>' +
+          '<td>' + escapeHtml(row.container_code) + '</td>' +
+          '<td>' + escapeHtml(row.item_code) + '</td>' +
+          '<td>' + escapeHtml(row.qty_delta) + '</td>' +
+          '<td>' + escapeHtml(row.warehouse) + '</td>' +
+          '<td class="small text-muted" style="max-width: 360px;">' + escapeHtml(row.stock_posting_error) + '</td>' +
+          '<td class="text-end text-nowrap">' +
+            '<button class="btn btn-sm btn-outline-primary me-1" data-action="retry" data-name="' + escapeHtml(row.name) + '">Retry</button>' +
+            '<button class="btn btn-sm btn-outline-secondary" data-action="not-required" data-name="' + escapeHtml(row.name) + '">Not Required</button>' +
+          '</td>' +
+        '</tr>';
+      }).join('');
+      setStatus(rows.length + ' correction(s) need review.', false);
+    }).catch(function (error) {
+      setStatus(error.message || 'Could not load corrections.', true);
+    });
+  }
+  function updateCorrection(name, status) {
+    setStatus('Updating ' + name + '...', false);
+    return api('frappe.client.set_value', {
+      doctype: 'Three PL Warehouse Correction',
+      name: name,
+      fieldname: {
+        stock_posting_status: status,
+        stock_posting_error: ''
+      }
+    }).then(function () {
+      loadRows();
+    }).catch(function (error) {
+      setStatus(error.message || 'Could not update correction.', true);
+    });
+  }
+  frappe.ready(function () {
+    if (frappe.session && frappe.session.user === 'Guest') {
+      window.location.href = '/login?redirect-to=' + encodeURIComponent('/warehouse/correction-review');
+      return;
+    }
+    var refresh = byId('refresh-correction-review');
+    if (refresh) refresh.addEventListener('click', loadRows);
+    var body = byId('correction-review-body');
+    if (body) body.addEventListener('click', function (event) {
+      var button = event.target.closest('button[data-action]');
+      if (!button) return;
+      var action = button.getAttribute('data-action');
+      var name = button.getAttribute('data-name');
+      if (action === 'retry') updateCorrection(name, 'Pending');
+      if (action === 'not-required') updateCorrection(name, 'Not Required');
+    });
+    loadRows();
+  });
+})();
+""".strip()
+
+    existing_correction_review_page = frappe.db.get_value("Web Page", {"route": "warehouse/correction-review"}, "name")
+    if existing_correction_review_page:
+        correction_review_page = frappe.get_doc("Web Page", existing_correction_review_page)
+    else:
+        correction_review_page = frappe.new_doc("Web Page")
+        correction_review_page.name = "warehouse/correction-review"
+
+    correction_review_page.title = "Correction Review"
+    correction_review_page.route = "warehouse/correction-review"
+    correction_review_page.published = 1
+    if correction_review_page.meta.has_field("login_required"):
+        correction_review_page.login_required = 1
+    correction_review_page.content_type = "HTML"
+    correction_review_page.main_section = correction_review_html
+    if correction_review_page.meta.has_field("main_section_html"):
+        correction_review_page.main_section_html = correction_review_html
+    correction_review_page.javascript = correction_review_script
+    correction_review_page.insert_code = 0
+    correction_review_page.show_sidebar = 0
+    correction_review_page.save(ignore_permissions=True)
 
 
 def configure_defaults():

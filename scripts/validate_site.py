@@ -173,6 +173,7 @@ REQUIRED_REPORTS = [
     "3PL Container Moves",
     "3PL Container Repacks",
     "3PL Warehouse Corrections",
+    "3PL Corrections Needing Review",
     "3PL Stocktakes",
     "3PL Container Movements",
     "3PL Shipment Requests",
@@ -341,6 +342,7 @@ def main():
     for route, label in (
         ("warehouse/receiving", "receiving"),
         ("warehouse/correction", "correction"),
+        ("warehouse/correction-review", "correction review"),
         ("warehouse/stocktake", "stocktake"),
         ("warehouse/container-move", "container move"),
         ("warehouse/putaway", "putaway"),
