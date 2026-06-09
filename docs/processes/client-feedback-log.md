@@ -76,11 +76,11 @@ Requested reports:
 Current interpretation:
 
 - Roles are implemented.
-- Receiving is implemented as an MVP with required inbound receipt context, received quantity sync, variance calculation, and auto-generated discrepancy rows.
+- Receiving is implemented as an MVP with required inbound receipt context, scanner support for expected/unexpected items, condition capture, received quantity sync, variance calculation, and discrepancy rows.
 - Location movement is implemented for containers and scanner-first container moves.
-- Shipment requests are implemented as portal MVP records and now create draft Pick Lists for structured item rows. A scanner-first picking confirmation page marks containers as picked. Submitted packing/shipping Stock Entries update request and container statuses. Carrier integrations, shipment tracking, and additional scanner screens remain open.
-- Corrections and inventory/stocktake need dedicated process design and implementation.
-- Inventory snapshot reports exist as MVP; date-based balance and period operation turnover reports need to be added.
+- Shipment requests are implemented as portal MVP records and create draft Pick Lists for structured item rows. Scanner-first picking confirmation marks containers as picked. Submitted packing/shipping Stock Entries update request and container statuses. Carrier integrations and polished shipment tracking remain open.
+- Corrections, correction stock posting, correction review, stocktake, full-container repack, and partial split are implemented as MVP flows.
+- Inventory snapshot reports, date-based balance, and period operation turnover reports exist as MVP reports.
 
 Implementation note:
 

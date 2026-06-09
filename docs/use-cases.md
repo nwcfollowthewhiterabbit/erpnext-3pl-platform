@@ -371,4 +371,4 @@ The business owner has broad system rights. The warehouse manager is operational
 
 ## Current Recommended Next Build Step
 
-Build automatic conversion from client shipment request to internal warehouse picking flow.
+Build grouped stocktake sessions so multiple container/SKU counts can be managed as one inventory count operation.

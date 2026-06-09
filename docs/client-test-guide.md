@@ -237,8 +237,8 @@ Expected result:
 
 Current boundary:
 
-- This is an operational Handling Unit correction.
-- ERPNext stock-ledger adjustment Stock Entries are not created automatically yet.
+- Clear quantity deltas create `3PL Quantity Gain` or `3PL Quantity Loss` Stock Entries.
+- If ERPNext cannot post the Stock Entry automatically, the correction is marked `Needs Review` for manager review.
 
 ### Stocktake
 
