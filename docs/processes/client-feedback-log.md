@@ -99,3 +99,28 @@ Client question:
 Answer:
 
 ERPNext has standard stock entities, but not a complete 3PL Handling Unit workflow. This project implements that missing WMS layer as `Three PL Container`, while keeping ERPNext stock movement logic as the base.
+
+## Stage MVP2 Product Card Management
+
+Status: captured for roadmap.
+
+Client feedback:
+
+> Important functionality: product card management. New products are created and old products are updated by the client, so this functionality needs to be added. Ideally this should also support Excel export/import. Each product should have a photo.
+
+Current interpretation:
+
+- This is not part of the current first MVP flow validation.
+- This belongs to Stage MVP2 because it changes client-facing master data management.
+- The product record should stay based on ERPNext `Item`.
+- The 3PL business identity should remain `Owner Client + Client SKU`.
+- The client should manage products through a constrained client portal flow.
+- Product photos should be attached to the item/product card.
+- Excel import/export should use a controlled template and validation, not unrestricted ERPNext import access for clients.
+
+Open:
+
+- required fields for product cards;
+- product approval workflow before warehouse use;
+- whether clients can deactivate/archive products;
+- exact Excel template columns and error handling.

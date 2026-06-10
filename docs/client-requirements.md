@@ -30,6 +30,22 @@ Initial reporting scope:
 1. Client product balance on a selected date.
 2. Warehouse operation turnover for a selected period, visible for both client and warehouse users.
 
+## Stage MVP2 Requirement: Product Card Management
+
+The next-stage client requirement is product master data ownership:
+
+1. The client creates new product cards.
+2. The client updates existing product cards.
+3. Each product card can have a photo.
+4. Product data can be exported and imported through an Excel table.
+
+Expected direction:
+
+- Keep ERPNext `Item` as the base product record.
+- Treat `Owner Client + Client SKU` as the product business identity.
+- Expose product maintenance through the client portal, not through unrestricted Desk access.
+- Validate that clients can only manage their own products.
+
 ## Picking and Shipping
 
 1. Create a Pick List.

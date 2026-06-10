@@ -116,6 +116,40 @@ Status: pending.
 - Decide whether a custom scanner-first page is needed for warehouse operators.
 - Define required barcode labels for SKU, warehouse locations, and containers.
 
+## Stage MVP2 - Client Product Card Management
+
+Status: captured, not implemented.
+
+Client-confirmed future requirement:
+
+- Clients should create new product cards themselves.
+- Clients should update existing product cards themselves.
+- Each product card should support at least:
+  - owner client;
+  - client SKU;
+  - product name / description;
+  - unit of measure;
+  - product photo.
+- The business identity should remain `Owner Client + Client SKU`, not global SKU alone.
+- The client portal should provide a safe product management flow, without giving clients Desk access.
+- Excel export/import should be available for bulk product maintenance.
+
+Implementation direction:
+
+- Build this on top of standard ERPNext `Item`.
+- Keep custom ownership fields (`owner_client`, `client_sku`, `client_product_name`) as the 3PL layer.
+- Add portal pages or Web Forms for client-safe create/update.
+- Add validation so a client can only create or update products for their own customer account.
+- Add import/export templates with clear required columns and validation errors.
+- Store product photos using ERPNext file attachments or item image fields.
+
+Open design questions:
+
+- Exact required product fields for the client's operational catalog.
+- Whether product approval by warehouse/admin is needed before the item becomes usable.
+- Whether clients may deactivate products themselves.
+- Whether Excel import should create products immediately or stage them for review.
+
 ## Phase 5 - Multi-Client Stock Model
 
 Status: pending.
