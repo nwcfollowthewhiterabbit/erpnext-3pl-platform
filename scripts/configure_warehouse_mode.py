@@ -1612,10 +1612,14 @@ def configure_client_portal_website_script():
         '.three-pl-portal-nav {{ max-width: 1480px; margin: 0 auto; padding: 12px 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 12px; }}',
         '.three-pl-portal-nav-group {{ display: inline-flex; align-items: center; gap: 3px; padding-right: 12px; border-right: 1px solid #e5e7eb; }}',
         '.three-pl-portal-nav-group:last-child {{ border-right: 0; padding-right: 0; }}',
-        '.three-pl-portal-nav-label {{ margin-right: 2px; color: #6b7280; font-size: 11px; font-weight: 700; line-height: 1; letter-spacing: .04em; text-transform: uppercase; }}',
+        '.three-pl-portal-nav-label {{ margin-right: 2px; color: #6b7280; font-size: 11px; font-weight: 700; line-height: 1; letter-spacing: .04em; text-transform: uppercase; text-decoration: underline; text-underline-offset: 3px; }}',
         '.three-pl-portal-link {{ display: inline-flex; align-items: center; min-height: 32px; padding: 6px 8px; border-radius: 6px; color: #374151; text-decoration: none; font-size: 14px; line-height: 1.2; }}',
         '.three-pl-portal-link:hover {{ background: #f3f4f6; color: #111827; text-decoration: none; }}',
         '.three-pl-portal-link.active {{ background: #111827; color: #fff; }}',
+        '.three-pl-import-template-action {{ display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 12px 0 18px; padding: 12px 14px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; }}',
+        '.three-pl-import-template-action .three-pl-import-template-copy {{ color: #6b7280; font-size: 13px; }}',
+        '.three-pl-import-template-action button {{ min-height: 32px; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; color: #111827; font-size: 13px; }}',
+        '.three-pl-import-template-action button:hover {{ background: #f3f4f6; }}',
         '@media (max-width: 720px) {{ body.three-pl-client-portal .page_content, body.three-pl-client-portal .web-form-container {{ margin-top: 16px; padding: 0 12px; }} body.three-pl-client-portal .web-form, body.three-pl-client-portal .page_content section.container, body.three-pl-client-portal main section.container {{ padding: 20px 16px; }} .three-pl-portal-nav {{ justify-content: flex-start; padding: 10px 12px; overflow-x: auto; flex-wrap: nowrap; }} .three-pl-portal-nav-group {{ flex: 0 0 auto; }} .three-pl-portal-link {{ white-space: nowrap; }} }}'
       ].join('\\n');
       document.head.appendChild(style);
@@ -1696,7 +1700,9 @@ def configure_client_portal_website_script():
     var target = document.querySelector('.web-list-table');
     if (!target || target.getAttribute('data-client-list-rendered') === '1') return;
 
-    var columns = (frappe.web_form_doc.list_columns || []).slice(0, 6);
+    var columns = (frappe.web_form_doc.list_columns || []).filter(function (column) {{
+      return !/^(customer|client)$/i.test(column.fieldname || '') && !/^client$/i.test(column.label || '');
+    }}).slice(0, 6);
     if (!columns.length) return;
 
     var payload = new URLSearchParams();
@@ -1732,6 +1738,49 @@ def configure_client_portal_website_script():
 
         target.innerHTML = '<table class="table table-sm table-bordered mb-0"><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table>';
       }});
+  }}
+
+  function downloadClientProductTemplate() {{
+    var rows = [[
+      'client_sku',
+      'product_name',
+      'product_description',
+      'uom',
+      'barcode',
+      'product_image',
+      'status',
+      'notes'
+    ]];
+    var csv = rows.map(function (row) {{
+      return row.map(function (value) {{
+        value = String(value == null ? '' : value);
+        if (/[",\\n]/.test(value)) return '"' + value.replace(/"/g, '""') + '"';
+        return value;
+      }}).join(',');
+    }}).join('\\n') + '\\n';
+    var blob = new Blob([csv], {{ type: 'text/csv;charset=utf-8;' }});
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = '3pl-product-import-template.csv';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(link.href);
+  }}
+
+  function installProductImportTemplateAction() {{
+    if (!isClientPortal() || window.location.pathname.indexOf('/client/product-import') !== 0) return;
+    if (document.querySelector('.three-pl-import-template-action')) return;
+    var heading = document.querySelector('h1');
+    if (!heading) return;
+    heading.insertAdjacentHTML('afterend',
+      '<div class="three-pl-import-template-action">' +
+        '<button id="three-pl-download-import-template" type="button">Download Import Template CSV</button>' +
+        '<span class="three-pl-import-template-copy">Use this template for bulk product creation or updates.</span>' +
+      '</div>'
+    );
+    var button = document.getElementById('three-pl-download-import-template');
+    if (button) button.addEventListener('click', downloadClientProductTemplate);
   }}
 
   function getWebFormValue(fieldname) {{
@@ -2010,14 +2059,17 @@ def configure_client_portal_website_script():
       tuneClientPortalBoot();
       installClientPortalNav();
       renderClientPortalList();
+      installProductImportTemplateAction();
       autoFillClientReference();
       installClientProductPicker();
       removeDeskPermissionNoise();
       setTimeout(renderClientPortalList, 250);
+      setTimeout(installProductImportTemplateAction, 250);
       setTimeout(autoFillClientReference, 250);
       setTimeout(installClientProductPicker, 250);
       setTimeout(removeDeskPermissionNoise, 250);
       setTimeout(renderClientPortalList, 1000);
+      setTimeout(installProductImportTemplateAction, 1000);
       setTimeout(autoFillClientReference, 1000);
       setTimeout(installClientProductPicker, 1000);
       setTimeout(removeDeskPermissionNoise, 1000);
@@ -2027,6 +2079,7 @@ def configure_client_portal_website_script():
       tuneClientPortalBoot();
       installClientPortalNav();
       renderClientPortalList();
+      installProductImportTemplateAction();
       autoFillClientReference();
       installClientProductPicker();
       removeDeskPermissionNoise();

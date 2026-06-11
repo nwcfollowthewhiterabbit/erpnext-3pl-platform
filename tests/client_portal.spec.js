@@ -45,6 +45,7 @@ const navTargets = {
 const expectedPageText = {
   "/client/receiving-notice/list": ["ASN-ALPHA-001", "ASN-ALPHA-002", "ASN-ALPHA-003"],
   "/client/products/list": ["ALPHA-001", "ALPHA-002", "ALPHA-003"],
+  "/client/product-import/list": ["Download Import Template CSV"],
   "/client/product-export": ["Download Products CSV", "Download Import Template CSV"],
   "/client/inventory/list": ["ALPHA-001", "ALPHA-002", "ALPHA-003"],
   "/client/shipment-request/list": ["SHIP-ALPHA-001", "SHIP-ALPHA-002"],
@@ -108,6 +109,16 @@ async function assertPortalPage(page, path, problems) {
   const navCount = await page.locator("[data-client-portal-nav]").count();
   if (navCount !== 1) {
     problems.push(`body ${path}: expected one portal nav, found ${navCount}`);
+  }
+
+  if (path === "/client/products/list") {
+    const clientColumn = page.locator(".web-list-table table th", { hasText: /^Client$/ });
+    if ((await clientColumn.count()) > 0) {
+      problems.push("body /client/products/list: client column should be hidden in portal list");
+    }
+    if (bodyText.includes("Demo Client Alpha")) {
+      problems.push("body /client/products/list: client name should not be shown in portal list");
+    }
   }
 }
 

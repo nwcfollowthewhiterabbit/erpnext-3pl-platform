@@ -541,9 +541,14 @@ def main():
     require(
         all(
             marker in (website_script.javascript or "")
-            for marker in ("data-client-portal-nav", "three-pl-portal-link", "three-pl-portal-nav-group")
+            for marker in (
+                "data-client-portal-nav",
+                "three-pl-portal-link",
+                "three-pl-portal-nav-group",
+                "three-pl-import-template-action",
+            )
         ),
-        "Client portal Website Script misses grouped portal navigation",
+        "Client portal Website Script misses grouped portal navigation or import template action",
     )
     require(
         CLIENT_PORTAL_SHIPMENT_REF_PREFIX in (website_script.javascript or ""),
