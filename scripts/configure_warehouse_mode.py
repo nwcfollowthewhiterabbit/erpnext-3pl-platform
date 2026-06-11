@@ -3,7 +3,7 @@ import json
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
-from project_config import CLIENT_PORTAL_CUSTOMER, CLIENT_PORTAL_FORMS, CLIENT_PORTAL_HOME, CLIENT_PORTAL_RECEIVING_REF_PREFIX, COMPANY, COMPANY_ABBR, COUNTRY, CURRENCY, LANGUAGE, PLACEHOLDER_EMAIL, TIME_ZONE
+from project_config import CLIENT_PORTAL_CUSTOMER, CLIENT_PORTAL_FORMS, CLIENT_PORTAL_HOME, CLIENT_PORTAL_RECEIVING_REF_PREFIX, CLIENT_PORTAL_SHIPMENT_REF_PREFIX, COMPANY, COMPANY_ABBR, COUNTRY, CURRENCY, LANGUAGE, PLACEHOLDER_EMAIL, TIME_ZONE
 
 
 CUSTOM_DOCTYPE_MODULE = "Website"
@@ -1668,7 +1668,7 @@ def configure_client_portal_website_script():
     return String(now.getFullYear()) + padReferencePart(now.getMonth() + 1, 2) + padReferencePart(now.getDate(), 2);
   }}
 
-  function nextReceivingReference(rows, basePrefix) {{
+  function nextClientReference(rows, basePrefix) {{
     var maxNumber = 0;
     (rows || []).forEach(function (row) {{
       var ref = row.external_reference || '';
@@ -1679,14 +1679,22 @@ def configure_client_portal_website_script():
     return basePrefix + '-' + padReferencePart(maxNumber + 1, 3);
   }}
 
-  function autoFillReceivingNoticeReference() {{
-    if (window.location.pathname !== '/client/receiving-notice/new') return;
+  function autoFillClientReference() {{
+    var pathname = window.location.pathname;
+    var config = null;
+    if (pathname === '/client/receiving-notice/new') {{
+      config = {{ doctype: 'Inbound Shipment Notice', prefix: '{CLIENT_PORTAL_RECEIVING_REF_PREFIX}' }};
+    }}
+    if (pathname === '/client/shipment-request/new') {{
+      config = {{ doctype: 'Three PL Shipment Request', prefix: '{CLIENT_PORTAL_SHIPMENT_REF_PREFIX}' }};
+    }}
+    if (!config) return;
     if (getWebFormValue('external_reference')) return;
 
-    var basePrefix = '{CLIENT_PORTAL_RECEIVING_REF_PREFIX}-' + todayReferenceStamp();
+    var basePrefix = config.prefix + '-' + todayReferenceStamp();
     var customer = getWebFormValue('customer') || '{CLIENT_PORTAL_CUSTOMER}';
     var payload = new URLSearchParams();
-    payload.set('doctype', 'Inbound Shipment Notice');
+    payload.set('doctype', config.doctype);
     payload.set('filters', JSON.stringify({{
       customer: customer,
       external_reference: ['like', basePrefix + '-%']
@@ -1704,7 +1712,7 @@ def configure_client_portal_website_script():
       .then(function (response) {{ return response.json(); }})
       .then(function (response) {{
         if (getWebFormValue('external_reference')) return;
-        setWebFormValue('external_reference', nextReceivingReference(response.message || [], basePrefix));
+        setWebFormValue('external_reference', nextClientReference(response.message || [], basePrefix));
       }})
       .catch(function () {{
         if (!getWebFormValue('external_reference')) {{
@@ -1888,15 +1896,15 @@ def configure_client_portal_website_script():
       tuneClientPortalBoot();
       installClientPortalNav();
       renderClientPortalList();
-      autoFillReceivingNoticeReference();
+      autoFillClientReference();
       installClientProductPicker();
       removeDeskPermissionNoise();
       setTimeout(renderClientPortalList, 250);
-      setTimeout(autoFillReceivingNoticeReference, 250);
+      setTimeout(autoFillClientReference, 250);
       setTimeout(installClientProductPicker, 250);
       setTimeout(removeDeskPermissionNoise, 250);
       setTimeout(renderClientPortalList, 1000);
-      setTimeout(autoFillReceivingNoticeReference, 1000);
+      setTimeout(autoFillClientReference, 1000);
       setTimeout(installClientProductPicker, 1000);
       setTimeout(removeDeskPermissionNoise, 1000);
     }});
@@ -1905,7 +1913,7 @@ def configure_client_portal_website_script():
       tuneClientPortalBoot();
       installClientPortalNav();
       renderClientPortalList();
-      autoFillReceivingNoticeReference();
+      autoFillClientReference();
       installClientProductPicker();
       removeDeskPermissionNoise();
     }});

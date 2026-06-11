@@ -190,3 +190,27 @@ test("receiving notice form auto-fills client reference", async ({ page }) => {
 
   expect(problems).toEqual([]);
 });
+
+test("shipment request form auto-fills client reference", async ({ page }) => {
+  const problems = [];
+  await collectPortalProblems(page, problems);
+
+  const loginResponse = await page.context().request.post(`${baseURL}/api/method/login`, {
+    form: { usr: clientUser, pwd: clientPassword },
+  });
+  expect(loginResponse.ok()).toBeTruthy();
+
+  await page.goto(`${baseURL}/client/shipment-request/new`);
+  await page.waitForLoadState("networkidle");
+
+  const referenceInput = page
+    .locator('input[data-fieldname="external_reference"], input[name="external_reference"], [data-fieldname="external_reference"] input')
+    .first();
+  await expect(referenceInput).toBeVisible();
+  await expect(referenceInput).toHaveValue(/^ALPHA-OUT-\d{8}-\d{3}$/, { timeout: 10000 });
+  await expect(page.locator("#client-product-picker")).toBeVisible({ timeout: 10000 });
+  await page.locator("#client-product-picker-search").fill("ALPHA-001");
+  await expect(page.locator("#client-product-picker-results")).toContainText("ALPHA-001", { timeout: 10000 });
+
+  expect(problems).toEqual([]);
+});

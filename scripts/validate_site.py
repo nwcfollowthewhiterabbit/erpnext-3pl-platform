@@ -10,6 +10,7 @@ from project_config import (
     BUSINESS_OWNER_USER,
     CLIENT_PORTAL_CUSTOMER,
     CLIENT_PORTAL_RECEIVING_REF_PREFIX,
+    CLIENT_PORTAL_SHIPMENT_REF_PREFIX,
     CLIENT_PORTAL_FORMS,
     CLIENT_PORTAL_HOME,
     CLIENT_PORTAL_ROUTES,
@@ -515,17 +516,14 @@ def main():
         for field in web_form.web_form_fields:
             if field.fieldtype == "Link":
                 require(field.allow_read_on_all_link_options == 1, f"Client Web Form Link field must not be owner-filtered: {title}.{field.fieldname}")
-        if title == "3PL Client Receiving Notice":
-            web_form_script = ""
-            if web_form.meta.has_field("client_script"):
-                web_form_script = web_form.client_script or ""
-            elif web_form.meta.has_field("script"):
-                web_form_script = web_form.script or ""
-            require(CLIENT_PORTAL_RECEIVING_REF_PREFIX in web_form_script, "Receiving Notice Web Form misses auto reference script")
     website_script = frappe.get_single("Website Script")
     require(
         CLIENT_PORTAL_RECEIVING_REF_PREFIX in (website_script.javascript or ""),
         "Client portal Website Script misses receiving notice auto reference logic",
+    )
+    require(
+        CLIENT_PORTAL_SHIPMENT_REF_PREFIX in (website_script.javascript or ""),
+        "Client portal Website Script misses shipment request auto reference logic",
     )
 
     require(
