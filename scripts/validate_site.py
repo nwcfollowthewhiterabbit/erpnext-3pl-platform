@@ -364,6 +364,24 @@ def main():
         doc = frappe.get_doc("Workspace", workspace)
         require(doc.public == 1, f"Workspace is not public: {workspace}")
         require(doc.is_hidden == 0, f"Workspace is hidden: {workspace}")
+        if workspace == "3PL Warehouse":
+            workspace_links = {row.link_to for row in doc.links if row.link_to}
+            workspace_shortcuts = {row.link_to for row in doc.shortcuts if row.link_to}
+            required_staff_doctypes = {
+                "Customer",
+                "Inbound Shipment Notice",
+                "Three PL Shipment Request",
+                "Three PL Client Product",
+                "Three PL Client Product Import",
+                "Three PL Client Product Change Log",
+                "Three PL Client Instruction",
+                "Three PL Inventory Snapshot",
+                "Three PL Inventory Balance Snapshot",
+                "Item",
+                "Warehouse",
+            }
+            missing_links = required_staff_doctypes - workspace_links - workspace_shortcuts
+            require(not missing_links, "3PL Warehouse workspace misses staff links: " + ", ".join(sorted(missing_links)))
 
     for doctype in REQUIRED_DOCTYPES:
         require(frappe.db.exists("DocType", doctype), f"Missing DocType: {doctype}")
@@ -567,9 +585,29 @@ def main():
     require_role_perm("Three PL Shipment Request", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Three PL Shipment Request Item", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Three PL Client Instruction", "3PL Client", read=1, write=1, create=1)
+    staff_client_doctypes = (
+        "Customer",
+        "Inbound Shipment Notice",
+        "Three PL Shipment Request",
+        "Three PL Client Product",
+        "Three PL Client Product Import",
+        "Three PL Client Product Change Log",
+        "Three PL Client Instruction",
+        "Three PL Inventory Snapshot",
+        "Three PL Inventory Balance Snapshot",
+    )
+    for doctype in staff_client_doctypes:
+        require_role_perm(doctype, "3PL Warehouse Manager", read=1)
+        require_role_perm(doctype, "System Manager", read=1)
+    for doctype in ("Three PL Client Product", "Three PL Client Product Import", "Three PL Shipment Request", "Three PL Client Instruction"):
+        require_role_perm(doctype, "3PL Warehouse Manager", write=1, create=1)
+        require_role_perm(doctype, "System Manager", write=1, create=1)
 
     for doctype in ("Warehouse", "Item", "Inbound Shipment Notice", "Three PL Container", "Three PL Container Move", "Three PL Warehouse Correction", "Three PL Stocktake"):
         require_effective_perm(WAREHOUSE_MANAGER_USER, doctype, "read", "create")
+    for doctype in staff_client_doctypes:
+        require_effective_perm(WAREHOUSE_MANAGER_USER, doctype, "read")
+        require_effective_perm(BUSINESS_OWNER_USER, doctype, "read")
     for doctype in ("Warehouse", "Inbound Shipment Notice", "Three PL Container", "Three PL Container Move"):
         require_effective_perm(WAREHOUSE_OPERATOR_USER, doctype, "read")
     for doctype in ("Inbound Shipment Notice", "Three PL Container", "Three PL Container Move", "Three PL Warehouse Correction", "Three PL Stocktake"):
