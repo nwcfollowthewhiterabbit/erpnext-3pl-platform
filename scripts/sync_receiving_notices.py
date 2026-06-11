@@ -1,3 +1,5 @@
+import json
+
 import frappe
 
 
@@ -7,6 +9,43 @@ def qty_key(item_code, uom):
 
 def add_qty(target, key, qty):
     target[key] = target.get(key, 0) + (qty or 0)
+
+
+def structured_portal_items(description):
+    if not description:
+        return []
+    try:
+        payload = json.loads(description)
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(payload, dict) or payload.get("source") != "client_product_picker":
+        return []
+    return payload.get("items") if isinstance(payload.get("items"), list) else []
+
+
+def ensure_structured_notice_items(notice):
+    items = structured_portal_items(notice.portal_items_description)
+    if not items:
+        return False
+
+    notice.set("items", [])
+    for item in items:
+        item_code = item.get("item_code")
+        if not item_code:
+            continue
+        qty = item.get("expected_qty") or item.get("qty") or 0
+        notice.append(
+            "items",
+            {
+                "item_code": item_code,
+                "client_sku": item.get("client_sku") or frappe.db.get_value("Item", item_code, "client_sku"),
+                "item_name": item.get("item_name") or frappe.db.get_value("Item", item_code, "item_name"),
+                "expected_qty": qty,
+                "uom": item.get("uom") or frappe.db.get_value("Item", item_code, "stock_uom") or "Nos",
+                "notes": item.get("notes"),
+            },
+        )
+    return True
 
 
 def submitted_receipt_entries(notice_name):
@@ -110,6 +149,7 @@ def set_notice_status(notice, expected_by_key, actual_by_key):
 
 def sync_notice(notice_name):
     notice = frappe.get_doc("Inbound Shipment Notice", notice_name)
+    ensure_structured_notice_items(notice)
     stock_entry_names = submitted_receipt_entries(notice.name)
     expected_by_key, _rows_by_key = expected_totals(notice)
     actual_by_key, source_by_key = actual_totals(stock_entry_names)
@@ -128,9 +168,13 @@ def sync_notice(notice_name):
 def sync_receiving_notices():
     synced = []
     for notice_name in frappe.get_all("Inbound Shipment Notice", pluck="name"):
+        notice = frappe.get_doc("Inbound Shipment Notice", notice_name)
+        if ensure_structured_notice_items(notice):
+            notice.save(ignore_permissions=True)
+            synced.append(notice.name)
         if submitted_receipt_entries(notice_name):
             synced.append(sync_notice(notice_name))
-    return synced
+    return sorted(set(synced))
 
 
 def main():

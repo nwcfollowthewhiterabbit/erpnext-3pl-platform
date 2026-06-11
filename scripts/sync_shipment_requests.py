@@ -1,8 +1,45 @@
+import json
+
 import frappe
 from frappe.utils import now
 
 
 OPEN_REQUEST_STATUSES = {"Submitted", "Accepted", "Picking"}
+
+
+def structured_portal_items(description):
+    if not description:
+        return []
+    try:
+        payload = json.loads(description)
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(payload, dict) or payload.get("source") != "client_product_picker":
+        return []
+    return payload.get("items") if isinstance(payload.get("items"), list) else []
+
+
+def ensure_structured_request_items(request):
+    items = structured_portal_items(request.portal_items_description)
+    if not items:
+        return False
+
+    request.set("items", [])
+    for item in items:
+        item_code = item.get("item_code")
+        if not item_code:
+            continue
+        request.append(
+            "items",
+            {
+                "item_code": item_code,
+                "client_sku": item.get("client_sku") or frappe.db.get_value("Item", item_code, "client_sku"),
+                "qty": item.get("qty") or item.get("expected_qty") or 0,
+                "uom": item.get("uom") or frappe.db.get_value("Item", item_code, "stock_uom") or "Nos",
+                "notes": item.get("notes"),
+            },
+        )
+    return True
 
 
 def existing_pick_list(request):
@@ -138,6 +175,8 @@ def append_request_note(request, message):
 
 def sync_request(request_name):
     request = frappe.get_doc("Three PL Shipment Request", request_name)
+    if ensure_structured_request_items(request):
+        request.save(ignore_permissions=True)
     if request.status not in OPEN_REQUEST_STATUSES:
         return None
 

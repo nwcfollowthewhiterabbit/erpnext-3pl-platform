@@ -1624,7 +1624,7 @@ def configure_client_portal_website_script():
     if (window.frappe && frappe.web_form && frappe.web_form.get_value) {{
       return frappe.web_form.get_value(fieldname);
     }}
-    var input = document.querySelector('[data-fieldname="' + fieldname + '"] input, [name="' + fieldname + '"], input[data-fieldname="' + fieldname + '"]');
+    var input = document.querySelector('[data-fieldname="' + fieldname + '"] input, [data-fieldname="' + fieldname + '"] textarea, [name="' + fieldname + '"], input[data-fieldname="' + fieldname + '"], textarea[data-fieldname="' + fieldname + '"]');
     return input ? input.value : '';
   }}
 
@@ -1633,11 +1633,30 @@ def configure_client_portal_website_script():
       frappe.web_form.set_value(fieldname, value);
       return;
     }}
-    var input = document.querySelector('[data-fieldname="' + fieldname + '"] input, [name="' + fieldname + '"], input[data-fieldname="' + fieldname + '"]');
+    var input = document.querySelector('[data-fieldname="' + fieldname + '"] input, [data-fieldname="' + fieldname + '"] textarea, [name="' + fieldname + '"], input[data-fieldname="' + fieldname + '"], textarea[data-fieldname="' + fieldname + '"]');
     if (input) {{
       input.value = value;
       input.dispatchEvent(new Event('change', {{ bubbles: true }}));
     }}
+  }}
+
+  function portalApi(method, args) {{
+    var body = new URLSearchParams();
+    Object.keys(args || {{}}).forEach(function (key) {{
+      var value = args[key];
+      body.set(key, typeof value === 'string' ? value : JSON.stringify(value));
+    }});
+    return fetch('/api/method/' + method, {{
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {{'Content-Type': 'application/x-www-form-urlencoded'}},
+      body: body
+    }}).then(function (response) {{
+      return response.json().then(function (payload) {{
+        if (!response.ok) throw new Error(payload.exception || payload._error_message || ('Request failed: ' + response.status));
+        return payload;
+      }});
+    }});
   }}
 
   function padReferencePart(value, width) {{
@@ -1694,6 +1713,141 @@ def configure_client_portal_website_script():
       }});
   }}
 
+  function installClientProductPicker() {{
+    var pathname = window.location.pathname;
+    var mode = pathname === '/client/receiving-notice/new' ? 'receiving' : (pathname === '/client/shipment-request/new' ? 'shipment' : null);
+    if (!mode || document.getElementById('client-product-picker')) return;
+
+    var fieldWrapper = document.querySelector('[data-fieldname="portal_items_description"]');
+    if (!fieldWrapper) return;
+
+    var qtyLabel = mode === 'receiving' ? 'Expected Qty' : 'Qty';
+    var rows = [];
+    var products = [];
+
+    function syncProductPayload() {{
+      setWebFormValue('portal_items_description', JSON.stringify({{
+        version: 1,
+        source: 'client_product_picker',
+        mode: mode,
+        items: rows.map(function (row) {{
+          return {{
+            item_code: row.item_code,
+            client_sku: row.client_sku,
+            item_name: row.item_name,
+            uom: row.uom || 'Nos',
+            expected_qty: row.qty,
+            qty: row.qty,
+            notes: row.notes || ''
+          }};
+        }})
+      }}));
+    }}
+
+    function productLabel(product) {{
+      return [product.client_sku, product.product_name].filter(Boolean).join(' - ');
+    }}
+
+    function renderPickerRows() {{
+      var body = document.getElementById('client-product-picker-body');
+      if (!body) return;
+      if (!rows.length) {{
+        body.innerHTML = '<tr><td colspan="5" class="text-muted small">Add at least one product row.</td></tr>';
+        syncProductPayload();
+        return;
+      }}
+      body.innerHTML = rows.map(function (row, index) {{
+        return '<tr>' +
+          '<td>' + escapeHtml(productLabel(row)) + '</td>' +
+          '<td><input class="form-control form-control-sm client-product-qty" data-index="' + index + '" type="number" min="0.0001" step="0.0001" value="' + escapeHtml(row.qty) + '"></td>' +
+          '<td>' + escapeHtml(row.uom || 'Nos') + '</td>' +
+          '<td><input class="form-control form-control-sm client-product-notes" data-index="' + index + '" value="' + escapeHtml(row.notes || '') + '"></td>' +
+          '<td><button class="btn btn-sm btn-outline-danger client-product-remove" data-index="' + index + '" type="button">Remove</button></td>' +
+        '</tr>';
+      }}).join('');
+      syncProductPayload();
+    }}
+
+    function renderProductOptions() {{
+      var select = document.getElementById('client-product-picker-select');
+      if (!select) return;
+      select.innerHTML = products.map(function (product) {{
+        return '<option value="' + escapeHtml(product.name) + '">' + escapeHtml(productLabel(product)) + '</option>';
+      }}).join('');
+    }}
+
+    function addPickerRow() {{
+      var select = document.getElementById('client-product-picker-select');
+      var qty = document.getElementById('client-product-picker-qty');
+      var notes = document.getElementById('client-product-picker-notes');
+      var product = products.find(function (candidate) {{ return candidate.name === (select && select.value); }});
+      var parsedQty = parseFloat(qty && qty.value);
+      if (!product || !parsedQty || parsedQty <= 0) return;
+      rows.push({{
+        item_code: product.item_code,
+        client_sku: product.client_sku,
+        item_name: product.product_name,
+        product_name: product.product_name,
+        uom: product.uom || 'Nos',
+        qty: parsedQty,
+        notes: notes ? notes.value : ''
+      }});
+      if (qty) qty.value = '1';
+      if (notes) notes.value = '';
+      renderPickerRows();
+    }}
+
+    fieldWrapper.style.display = 'none';
+    fieldWrapper.insertAdjacentHTML('beforebegin',
+      '<div id="client-product-picker" class="mb-4">' +
+        '<label class="form-label">Products and Quantities <span class="text-danger">*</span></label>' +
+        '<div class="row g-2 align-items-end mb-2">' +
+          '<div class="col-md-5"><label class="small text-muted">Product</label><select id="client-product-picker-select" class="form-control form-control-sm"></select></div>' +
+          '<div class="col-md-2"><label class="small text-muted">' + qtyLabel + '</label><input id="client-product-picker-qty" class="form-control form-control-sm" type="number" min="0.0001" step="0.0001" value="1"></div>' +
+          '<div class="col-md-4"><label class="small text-muted">Notes</label><input id="client-product-picker-notes" class="form-control form-control-sm"></div>' +
+          '<div class="col-md-1"><button id="client-product-picker-add" class="btn btn-sm btn-primary w-100" type="button">Add</button></div>' +
+        '</div>' +
+        '<div class="table-responsive"><table class="table table-sm table-bordered mb-1">' +
+          '<thead><tr><th>Product</th><th>' + qtyLabel + '</th><th>UOM</th><th>Notes</th><th></th></tr></thead>' +
+          '<tbody id="client-product-picker-body"></tbody>' +
+        '</table></div>' +
+        '<div class="small text-muted">Only active synced products from your product catalog are available.</div>' +
+      '</div>'
+    );
+
+    document.getElementById('client-product-picker-add').addEventListener('click', addPickerRow);
+    document.getElementById('client-product-picker-body').addEventListener('input', function (event) {{
+      var index = parseInt(event.target.getAttribute('data-index'), 10);
+      if (Number.isNaN(index) || !rows[index]) return;
+      if (event.target.classList.contains('client-product-qty')) rows[index].qty = parseFloat(event.target.value) || 0;
+      if (event.target.classList.contains('client-product-notes')) rows[index].notes = event.target.value;
+      syncProductPayload();
+    }});
+    document.getElementById('client-product-picker-body').addEventListener('click', function (event) {{
+      if (!event.target.classList.contains('client-product-remove')) return;
+      var index = parseInt(event.target.getAttribute('data-index'), 10);
+      if (!Number.isNaN(index)) rows.splice(index, 1);
+      renderPickerRows();
+    }});
+
+    portalApi('frappe.client.get_list', {{
+      doctype: 'Three PL Client Product',
+      filters: {{ customer: '{CLIENT_PORTAL_CUSTOMER}', status: 'Active' }},
+      fields: ['name', 'client_sku', 'product_name', 'uom', 'item_code'],
+      order_by: 'client_sku asc',
+      limit_page_length: 5000
+    }}).then(function (response) {{
+      products = (response.message || []).filter(function (product) {{ return product.item_code; }});
+      renderProductOptions();
+      if (!products.length) {{
+        document.getElementById('client-product-picker').insertAdjacentHTML('beforeend', '<div class="text-danger small mt-2">No synced active products found. Create or import products first.</div>');
+      }}
+    }}).catch(function (error) {{
+      document.getElementById('client-product-picker').insertAdjacentHTML('beforeend', '<div class="text-danger small mt-2">' + escapeHtml(error.message || 'Could not load products.') + '</div>');
+    }});
+    renderPickerRows();
+  }}
+
   if (window.frappe && frappe.ready) {{
     tuneClientPortalBoot();
     frappe.ready(function () {{
@@ -1701,12 +1855,15 @@ def configure_client_portal_website_script():
       installClientPortalNav();
       renderClientPortalList();
       autoFillReceivingNoticeReference();
+      installClientProductPicker();
       removeDeskPermissionNoise();
       setTimeout(renderClientPortalList, 250);
       setTimeout(autoFillReceivingNoticeReference, 250);
+      setTimeout(installClientProductPicker, 250);
       setTimeout(removeDeskPermissionNoise, 250);
       setTimeout(renderClientPortalList, 1000);
       setTimeout(autoFillReceivingNoticeReference, 1000);
+      setTimeout(installClientProductPicker, 1000);
       setTimeout(removeDeskPermissionNoise, 1000);
     }});
   }} else {{
@@ -1715,6 +1872,7 @@ def configure_client_portal_website_script():
       installClientPortalNav();
       renderClientPortalList();
       autoFillReceivingNoticeReference();
+      installClientProductPicker();
       removeDeskPermissionNoise();
     }});
   }}
@@ -2128,11 +2286,10 @@ def configure_portal_web_form(
     form.success_url = f"/{portal_list_route(route)}"
     form.hide_navbar = 1
     form.hide_footer = 1
-    if client_script:
-        if form.meta.has_field("client_script"):
-            form.client_script = client_script
-        elif form.meta.has_field("script"):
-            form.script = client_script
+    if form.meta.has_field("client_script"):
+        form.client_script = client_script or ""
+    elif form.meta.has_field("script"):
+        form.script = client_script or ""
 
     for field in fields:
         form.append("web_form_fields", field)

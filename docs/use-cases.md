@@ -329,11 +329,11 @@ The business owner has broad system rights. The warehouse manager is operational
 | Client portal instead of Desk for clients | Implemented as MVP | Client Receiving Notice Web Form exists. |
 | Website User without Desk access | Implemented | Demo client user is `Website User`. |
 | Client linked to Customer | Implemented | Demo client user is linked to `Demo Client Alpha`. |
-| Client can create Receiving Notice | Implemented | Server validation inserts a notice as client user. |
+| Client can create Receiving Notice | Implemented | Client selects active synced products from their product catalog; server validation expands the structured portal payload into Receiving Notice item rows. |
 | Client restricted to own Customer | Implemented | Server validation confirms cross-customer creation is blocked. |
 | Product ownership | Implemented | `Item.owner_client`, `Item.client_sku`, `Item.client_product_name`. |
 | Business identity is Client + SKU | Implemented in data model | Not yet enforced by unique DB constraint. |
-| Receiving Notice required workflow | Implemented as MVP | Inbound receipt Stock Entries require client, Receiving Notice, scanned location, and container context. Scanner receiving exists at `/warehouse/receiving`. |
+| Receiving Notice required workflow | Implemented as MVP | Client Receiving Notices use structured item rows based on `Three PL Client Product`; inbound receipt Stock Entries require client, Receiving Notice, scanned location, and container context. Scanner receiving exists at `/warehouse/receiving`. |
 | Receiving Area before storage | Implemented as configured flow | Inbound receipt context is required; final storage is handled by separate putaway movement. |
 | Temporary receiving area | Implemented | `Temporary Receiving - 3`. |
 | Verification/inspection step | Implemented as MVP | Submitted inbound receipts sync received quantities, variances, notice status, and auto-generated discrepancies. |
@@ -342,7 +342,7 @@ The business owner has broad system rights. The warehouse manager is operational
 | Client instructions for discrepancies | Implemented as MVP | Portal Web Form creates `Three PL Client Instruction` records linked to a Receiving Notice. |
 | Dynamic storage locations | Implemented as warehouse hierarchy | Locations are modeled as warehouses. |
 | Putaway process | Implemented as MVP | Uses standard ERPNext Stock Entry flow and a scanner-first container putaway page at `/warehouse/putaway`. |
-| Picking from locations | Implemented as MVP | Shipment requests create draft Pick Lists; scanner picking confirmation marks containers as `Picked`. |
+| Picking from locations | Implemented as MVP | Client Shipment Requests use structured product rows from the client catalog, create draft Pick Lists, and scanner picking confirmation marks containers as `Picked`. |
 | Warehouse corrections | Implemented as MVP | Scanner page `/warehouse/correction` updates container contents/condition and writes `Adjusted` movement history. Clear quantity deltas are posted to ERPNext Stock Entry. |
 | Warehouse correction stock posting | Implemented as MVP | Clear quantity deltas create `3PL Quantity Gain` or `3PL Quantity Loss` Stock Entries; blocked postings are marked `Needs Review`. |
 | Warehouse correction review | Implemented as MVP | Managers can review `Needs Review` corrections at `/warehouse/correction-review` and report `3PL Corrections Needing Review`. |

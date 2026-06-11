@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import os
 import tempfile
 
@@ -1834,17 +1835,19 @@ def validate_outbound_fulfillment():
 def validate_client_portal_permissions():
     allowed_ref = "PORTAL-VALIDATION-ALPHA"
     forbidden_ref = "PORTAL-VALIDATION-BETA"
+    structured_ref = "PORTAL-STRUCTURED-ALPHA"
     shipment_ref = "PORTAL-SHIPMENT-ALPHA"
     forbidden_shipment_ref = "PORTAL-SHIPMENT-BETA"
+    structured_shipment_ref = "PORTAL-SHIPMENT-STRUCTURED-ALPHA"
     product_sku = "PORTAL-PRODUCT-ALPHA"
     forbidden_product_sku = "PORTAL-PRODUCT-BETA"
     import_sku = "PORTAL-IMPORT-ALPHA"
     frappe.set_user("Administrator")
-    for reference in (allowed_ref, forbidden_ref):
+    for reference in (allowed_ref, forbidden_ref, structured_ref):
         existing = frappe.db.get_value("Inbound Shipment Notice", {"external_reference": reference}, "name")
         if existing:
             frappe.delete_doc("Inbound Shipment Notice", existing, ignore_permissions=True, force=True)
-    for reference in (shipment_ref, forbidden_shipment_ref):
+    for reference in (shipment_ref, forbidden_shipment_ref, structured_shipment_ref):
         existing = frappe.db.get_value("Three PL Shipment Request", {"external_reference": reference}, "name")
         if existing:
             frappe.delete_doc("Three PL Shipment Request", existing, ignore_permissions=True, force=True)
@@ -1928,6 +1931,69 @@ def validate_client_portal_permissions():
     )
     shipment.insert()
     require(shipment.owner == CLIENT_PORTAL_USER, f"Client-created shipment request has wrong owner: {shipment.owner}")
+
+    structured_items_payload = json.dumps(
+        {
+            "version": 1,
+            "source": "client_product_picker",
+            "mode": "receiving",
+            "items": [
+                {
+                    "item_code": "SKU-ALPHA-001",
+                    "client_sku": "ALPHA-001",
+                    "item_name": "Demo Alpha Widget",
+                    "uom": "Nos",
+                    "expected_qty": 2,
+                    "qty": 2,
+                    "notes": "Structured receiving validation row",
+                }
+            ],
+        }
+    )
+    structured_notice = frappe.get_doc(
+        {
+            "doctype": "Inbound Shipment Notice",
+            "customer": CLIENT_PORTAL_CUSTOMER,
+            "external_reference": structured_ref,
+            "expected_arrival_date": frappe.utils.nowdate(),
+            "portal_source": 1,
+            "portal_items_description": structured_items_payload,
+        }
+    )
+    structured_notice.insert()
+    require(structured_notice.owner == CLIENT_PORTAL_USER, f"Structured client notice has wrong owner: {structured_notice.owner}")
+
+    structured_shipment_payload = json.dumps(
+        {
+            "version": 1,
+            "source": "client_product_picker",
+            "mode": "shipment",
+            "items": [
+                {
+                    "item_code": "SKU-ALPHA-001",
+                    "client_sku": "ALPHA-001",
+                    "item_name": "Demo Alpha Widget",
+                    "uom": "Nos",
+                    "qty": 1,
+                    "notes": "Structured shipment validation row",
+                }
+            ],
+        }
+    )
+    structured_shipment = frappe.get_doc(
+        {
+            "doctype": "Three PL Shipment Request",
+            "customer": CLIENT_PORTAL_CUSTOMER,
+            "external_reference": structured_shipment_ref,
+            "requested_ship_date": frappe.utils.nowdate(),
+            "destination_name": "Portal Structured Validation",
+            "destination_address": "Validation Address",
+            "portal_source": 1,
+            "portal_items_description": structured_shipment_payload,
+        }
+    )
+    structured_shipment.insert()
+    require(structured_shipment.owner == CLIENT_PORTAL_USER, f"Structured client shipment has wrong owner: {structured_shipment.owner}")
 
     try:
         forbidden_shipment = frappe.get_doc(
@@ -2045,6 +2111,20 @@ def validate_client_portal_permissions():
 
     frappe.set_user("Administrator")
     product_sync = load_tmp_module("sync_client_products")
+    receiving_sync = load_tmp_module("sync_receiving_notices")
+    shipment_sync = load_tmp_module("sync_shipment_requests")
+    receiving_sync.sync_receiving_notices()
+    structured_notice.reload()
+    require(len(structured_notice.items) == 1, "Structured receiving notice did not create child item rows")
+    require(structured_notice.items[0].item_code == "SKU-ALPHA-001", "Structured receiving item_code is wrong")
+    require(structured_notice.items[0].expected_qty == 2, "Structured receiving expected_qty is wrong")
+
+    shipment_sync.sync_request(structured_shipment.name)
+    structured_shipment.reload()
+    require(len(structured_shipment.items) == 1, "Structured shipment request did not create child item rows")
+    require(structured_shipment.items[0].item_code == "SKU-ALPHA-001", "Structured shipment item_code is wrong")
+    require(structured_shipment.items[0].qty == 1, "Structured shipment qty is wrong")
+
     product_sync.process_product_import(product_import.name)
     product_import.reload()
     imported_product_name = frappe.db.get_value(
