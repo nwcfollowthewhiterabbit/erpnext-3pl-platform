@@ -1524,14 +1524,50 @@ def configure_client_portal():
 
 
 def build_client_portal_nav():
-    links = []
-    for form in CLIENT_PORTAL_FORMS:
-        label = frappe.utils.escape_html(form["menu_title"])
-        links.append(f'<a class="three-pl-portal-link" href="/{portal_list_route(form["route"])}">{label}</a>')
-    links.append('<a class="three-pl-portal-link" href="/client/product-export">Product Export</a>')
-    links.append('<a class="three-pl-portal-link" href="/client/discrepancies">Discrepancies</a>')
-    links.append('<a class="three-pl-portal-link" href="/client/shipment-tracking">Shipment Tracking</a>')
-    return f'<nav class="three-pl-portal-nav" aria-label="Client portal navigation">{" ".join(links)}</nav>'
+    form_links = {
+        form["menu_title"]: f"/{portal_list_route(form['route'])}"
+        for form in CLIENT_PORTAL_FORMS
+    }
+    groups = [
+        ("Inbound", [("Receiving Notices", form_links["Receiving Notices"])]),
+        (
+            "Products",
+            [
+                ("Products", form_links["Products"]),
+                ("Product Imports", form_links["Product Imports"]),
+                ("Product Export", "/client/product-export"),
+            ],
+        ),
+        ("Inventory", [("Inventory", form_links["Inventory"])]),
+        (
+            "Outbound",
+            [
+                ("Shipment Requests", form_links["Shipment Requests"]),
+                ("Shipment Tracking", "/client/shipment-tracking"),
+            ],
+        ),
+        (
+            "Issues",
+            [
+                ("Discrepancies", "/client/discrepancies"),
+                ("Discrepancy Instructions", form_links["Discrepancy Instructions"]),
+            ],
+        ),
+    ]
+    nav_groups = []
+    for group_label, group_links in groups:
+        safe_group_label = frappe.utils.escape_html(group_label)
+        links = []
+        for label, href in group_links:
+            safe_label = frappe.utils.escape_html(label)
+            links.append(f'<a class="three-pl-portal-link" href="{href}">{safe_label}</a>')
+        nav_groups.append(
+            '<div class="three-pl-portal-nav-group">'
+            f'<span class="three-pl-portal-nav-label">{safe_group_label}</span>'
+            f'{" ".join(links)}'
+            '</div>'
+        )
+    return f'<nav class="three-pl-portal-nav" aria-label="Client portal navigation">{" ".join(nav_groups)}</nav>'
 
 
 def portal_list_route(route):
@@ -1573,11 +1609,14 @@ def configure_client_portal_website_script():
         'body.three-pl-client-portal .web-form, body.three-pl-client-portal .page_content section.container, body.three-pl-client-portal main section.container {{ max-width: 1200px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 28px 32px; box-shadow: 0 1px 2px rgba(16, 24, 40, .04); }}',
         'body.three-pl-client-portal h1 {{ font-size: 28px; line-height: 1.2; margin-bottom: 10px; }}',
         '.three-pl-portal-nav-wrap {{ background: #fff; border-bottom: 1px solid #e5e7eb; }}',
-        '.three-pl-portal-nav {{ max-width: 1320px; margin: 0 auto; padding: 10px 24px; display: flex; flex-wrap: wrap; gap: 6px; }}',
-        '.three-pl-portal-link {{ display: inline-flex; align-items: center; min-height: 32px; padding: 6px 10px; border-radius: 6px; color: #374151; text-decoration: none; font-size: 14px; line-height: 1.2; }}',
+        '.three-pl-portal-nav {{ max-width: 1480px; margin: 0 auto; padding: 12px 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 12px; }}',
+        '.three-pl-portal-nav-group {{ display: inline-flex; align-items: center; gap: 3px; padding-right: 12px; border-right: 1px solid #e5e7eb; }}',
+        '.three-pl-portal-nav-group:last-child {{ border-right: 0; padding-right: 0; }}',
+        '.three-pl-portal-nav-label {{ margin-right: 2px; color: #6b7280; font-size: 11px; font-weight: 700; line-height: 1; letter-spacing: .04em; text-transform: uppercase; }}',
+        '.three-pl-portal-link {{ display: inline-flex; align-items: center; min-height: 32px; padding: 6px 8px; border-radius: 6px; color: #374151; text-decoration: none; font-size: 14px; line-height: 1.2; }}',
         '.three-pl-portal-link:hover {{ background: #f3f4f6; color: #111827; text-decoration: none; }}',
         '.three-pl-portal-link.active {{ background: #111827; color: #fff; }}',
-        '@media (max-width: 720px) {{ body.three-pl-client-portal .page_content, body.three-pl-client-portal .web-form-container {{ margin-top: 16px; padding: 0 12px; }} body.three-pl-client-portal .web-form, body.three-pl-client-portal .page_content section.container, body.three-pl-client-portal main section.container {{ padding: 20px 16px; }} .three-pl-portal-nav {{ padding: 8px 12px; overflow-x: auto; flex-wrap: nowrap; }} .three-pl-portal-link {{ white-space: nowrap; }} }}'
+        '@media (max-width: 720px) {{ body.three-pl-client-portal .page_content, body.three-pl-client-portal .web-form-container {{ margin-top: 16px; padding: 0 12px; }} body.three-pl-client-portal .web-form, body.three-pl-client-portal .page_content section.container, body.three-pl-client-portal main section.container {{ padding: 20px 16px; }} .three-pl-portal-nav {{ justify-content: flex-start; padding: 10px 12px; overflow-x: auto; flex-wrap: nowrap; }} .three-pl-portal-nav-group {{ flex: 0 0 auto; }} .three-pl-portal-link {{ white-space: nowrap; }} }}'
       ].join('\\n');
       document.head.appendChild(style);
     }}

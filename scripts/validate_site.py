@@ -539,8 +539,11 @@ def main():
         "Client portal Website Script misses receiving notice auto reference logic",
     )
     require(
-        "data-client-portal-nav" in (website_script.javascript or "") and "three-pl-portal-link" in (website_script.javascript or ""),
-        "Client portal Website Script misses consolidated portal navigation",
+        all(
+            marker in (website_script.javascript or "")
+            for marker in ("data-client-portal-nav", "three-pl-portal-link", "three-pl-portal-nav-group")
+        ),
+        "Client portal Website Script misses grouped portal navigation",
     )
     require(
         CLIENT_PORTAL_SHIPMENT_REF_PREFIX in (website_script.javascript or ""),
