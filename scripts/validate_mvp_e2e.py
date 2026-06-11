@@ -55,6 +55,8 @@ def cleanup():
         cancel_and_delete("Three PL Container Move", move_name)
     for stocktake_name in frappe.get_all("Three PL Stocktake", filters={"container_code": CONTAINER_CODE}, pluck="name"):
         cancel_and_delete("Three PL Stocktake", stocktake_name)
+    for session_name in frappe.get_all("Three PL Stocktake Session", filters={"session_reference": f"{PREFIX}-STOCKTAKE-SESSION"}, pluck="name"):
+        cancel_and_delete("Three PL Stocktake Session", session_name)
     for correction_name in frappe.get_all("Three PL Warehouse Correction", filters={"container_code": CONTAINER_CODE}, pluck="name"):
         cancel_and_delete("Three PL Warehouse Correction", correction_name)
     for snapshot_name in frappe.get_all("Three PL Inventory Snapshot", filters={"container_code": CONTAINER_CODE}, pluck="name"):

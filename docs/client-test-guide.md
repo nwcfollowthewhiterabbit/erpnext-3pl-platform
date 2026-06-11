@@ -58,6 +58,36 @@ This walkthrough covers the current MVP boundary: client portal input, customer 
 
 The deploy validator now checks these same boundaries automatically: internal warehouse logins, business-owner master-data pages, client portal routes, demo records, and Alpha-vs-Beta data isolation.
 
+## Automated Test Packs
+
+There are three separate validation packs:
+
+Run stateful server-side packs sequentially, not in parallel. They create and clean up temporary stock documents, so parallel runs may lock the ERPNext stock ledger.
+
+1. Deploy validation:
+
+```bash
+./scripts/validate_instance.sh https://erpnext.77.237.244.169.sslip.io
+```
+
+Checks that the deployed instance, roles, workspaces, permissions, demo data, portal routes, and core server-side setup are consistent.
+
+2. Client portal validation:
+
+```bash
+CLIENT_PORTAL_PASSWORD="..." npm run test:client-portal
+```
+
+Checks client login/session behavior, portal navigation, access errors, product/receiving/shipment pages, reference autofill, and product picker search.
+
+3. Warehouse operations validation:
+
+```bash
+./scripts/validate_warehouse_ops.sh
+```
+
+Checks staff-side warehouse scenarios: container movement, putaway, full repack, partial repack, invalid repack review, warehouse correction gain/loss/no-op, stocktake, picking confirmation, packing, and shipping.
+
 ## Pre-Client Golden Path Validation
 
 Before giving the instance to a customer for testing, run:
