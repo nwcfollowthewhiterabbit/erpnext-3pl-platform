@@ -12,6 +12,14 @@ Client portal section:
 
 `/client/products/list`
 
+Bulk import section:
+
+`/client/product-import/list`
+
+Bulk export section:
+
+`/client/product-export`
+
 Client-editable fields:
 
 - client SKU;
@@ -32,6 +40,12 @@ System-managed fields:
 - last sync timestamp.
 
 When a client creates or updates a product card, `scripts/sync_client_products.py` synchronizes allowed fields into ERPNext `Item`.
+
+Clients can also upload a controlled CSV/XLSX product file through `3PL Client Product Import`. The processor validates the file, creates or updates `Three PL Client Product` records for the logged-in client's customer account, and then synchronizes those cards into ERPNext `Item`.
+
+The product export page downloads the client's current product cards as an Excel-compatible CSV file. It also provides a CSV import template with the supported columns:
+
+`client_sku, product_name, product_description, uom, barcode, product_image, status, notes`
 
 ## Identity Rule
 
@@ -65,14 +79,15 @@ The log stores old values, new values, changed user, change time, linked client 
 
 ## Current Limits
 
-- Excel import/export is not implemented yet.
+- Import is implemented for CSV and XLSX files. CSV is the recommended exchange format for the current MVP.
+- Export is implemented as Excel-compatible CSV, not native XLSX.
 - Product approval workflow is not implemented yet.
 - Product image is captured as a product card attachment/image field; final production image handling still needs review.
 - Sync currently runs through the versioned processor, not through a custom app hook.
 
 ## Remaining MVP2 Work
 
-- Add controlled Excel template export/import.
-- Add row-level validation and import error reporting.
+- Add richer import preview and row-by-row correction UI if the client needs bulk maintenance often.
+- Decide whether native XLSX export is required or CSV is enough.
 - Decide whether new/edited products need warehouse/admin approval before becoming active.
 - Decide whether clients can reactivate inactive products themselves.

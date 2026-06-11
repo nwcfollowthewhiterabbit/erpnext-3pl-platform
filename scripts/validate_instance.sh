@@ -177,14 +177,14 @@ if data.get("home_page") not in {"/client/receiving-notice/list", "client/receiv
     raise SystemExit(f"unexpected portal home_page: {data}")
 PY
 
-  for path in /client/receiving-notice/list /client/products/list /client/inventory/list /client/shipment-request/list /client/discrepancy-instruction/list; do
+  for path in /client/receiving-notice/list /client/products/list /client/product-import/list /client/product-export /client/inventory/list /client/shipment-request/list /client/discrepancy-instruction/list; do
     curl -fsSL --max-time 30 -b "$cookie_file" "${base_url%/}${path}" -o "$page_file"
     if grep -Eiq "Page not found|Not permitted|No permission" "$page_file"; then
       echo "Unexpected portal error page for ${user} at ${path}" >&2
       grep -Eio "Page not found|Not permitted|No permission" "$page_file" | head -5 >&2
       exit 1
     fi
-    for label in "Receiving Notices" "Products" "Inventory" "Shipment Requests" "Discrepancy Instructions"; do
+    for label in "Receiving Notices" "Products" "Product Imports" "Product Export" "Inventory" "Shipment Requests" "Discrepancy Instructions"; do
       if ! grep -Fq "$label" "$page_file"; then
         echo "Portal page for ${user} at ${path} misses navigation label: ${label}" >&2
         exit 1

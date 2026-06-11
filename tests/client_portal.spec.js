@@ -11,6 +11,8 @@ if (!clientPassword) {
 const portalPages = [
   "/client/receiving-notice/list",
   "/client/products/list",
+  "/client/product-import/list",
+  "/client/product-export",
   "/client/inventory/list",
   "/client/shipment-request/list",
   "/client/shipment-tracking",
@@ -18,10 +20,22 @@ const portalPages = [
   "/client/discrepancy-instruction/list",
 ];
 
-const navLabels = ["Receiving Notices", "Products", "Inventory", "Shipment Requests", "Discrepancies", "Shipment Tracking", "Discrepancy Instructions"];
+const navLabels = [
+  "Receiving Notices",
+  "Products",
+  "Product Imports",
+  "Product Export",
+  "Inventory",
+  "Shipment Requests",
+  "Discrepancies",
+  "Shipment Tracking",
+  "Discrepancy Instructions",
+];
 const navTargets = {
   "Receiving Notices": "/client/receiving-notice/list",
   Products: "/client/products/list",
+  "Product Imports": "/client/product-import/list",
+  "Product Export": "/client/product-export",
   Inventory: "/client/inventory/list",
   "Shipment Requests": "/client/shipment-request/list",
   Discrepancies: "/client/discrepancies",
@@ -31,6 +45,7 @@ const navTargets = {
 const expectedPageText = {
   "/client/receiving-notice/list": ["ASN-ALPHA-001", "ASN-ALPHA-002", "ASN-ALPHA-003"],
   "/client/products/list": ["ALPHA-001", "ALPHA-002", "ALPHA-003"],
+  "/client/product-export": ["Download Products CSV", "Download Import Template CSV"],
   "/client/inventory/list": ["ALPHA-001", "ALPHA-002", "ALPHA-003"],
   "/client/shipment-request/list": ["SHIP-ALPHA-001", "SHIP-ALPHA-002"],
   "/client/shipment-tracking": ["SHIP-ALPHA-001", "SHIP-ALPHA-002"],

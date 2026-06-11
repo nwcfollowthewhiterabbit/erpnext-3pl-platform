@@ -1,11 +1,15 @@
+import csv
 import json
 import re
+from pathlib import Path
 
 import frappe
 from frappe.utils import now
 
 
 SYNC_FIELDS = ["customer", "client_sku", "product_name", "product_description", "uom", "barcode", "product_image", "status"]
+IMPORT_COLUMNS = ["client_sku", "product_name", "product_description", "uom", "barcode", "product_image", "status", "notes"]
+REQUIRED_IMPORT_COLUMNS = {"client_sku", "product_name"}
 
 
 def clean_code(value):
@@ -97,6 +101,15 @@ def insert_log(product, action, old_snapshot, new_snapshot, notes=None):
     return log.name
 
 
+def normalize_status(value):
+    value = str(value or "Active").strip() or "Active"
+    if value.lower() in {"active", "enabled", "1", "yes", "y"}:
+        return "Active"
+    if value.lower() in {"inactive", "disabled", "0", "no", "n"}:
+        return "Inactive"
+    raise RuntimeError(f"Unsupported product status: {value}")
+
+
 def sync_product(product_name):
     product = frappe.get_doc("Three PL Client Product", product_name)
     snapshot = product_snapshot(product)
@@ -162,9 +175,141 @@ def sync_client_products():
     return synced, failed
 
 
+def file_path(file_url):
+    file_name = frappe.db.get_value("File", {"file_url": file_url}, "name")
+    if not file_name:
+        raise RuntimeError(f"Import file not found: {file_url}")
+    file_doc = frappe.get_doc("File", file_name)
+    return Path(file_doc.get_full_path())
+
+
+def parse_csv(path):
+    with path.open(newline="", encoding="utf-8-sig") as handle:
+        return list(csv.DictReader(handle))
+
+
+def parse_xlsx(path):
+    try:
+        from openpyxl import load_workbook
+    except ImportError as exc:
+        raise RuntimeError("XLSX import requires openpyxl in the ERPNext backend. Upload CSV instead.") from exc
+
+    workbook = load_workbook(path, read_only=True, data_only=True)
+    sheet = workbook.active
+    rows = list(sheet.iter_rows(values_only=True))
+    if not rows:
+        return []
+    headers = [str(value or "").strip() for value in rows[0]]
+    parsed = []
+    for row in rows[1:]:
+        parsed.append({headers[index]: value for index, value in enumerate(row) if index < len(headers)})
+    return parsed
+
+
+def import_rows(path):
+    suffix = path.suffix.lower()
+    if suffix == ".csv":
+        return parse_csv(path)
+    if suffix in {".xlsx", ".xlsm"}:
+        return parse_xlsx(path)
+    raise RuntimeError("Unsupported import format. Upload .csv or .xlsx.")
+
+
+def validate_import_headers(rows):
+    if not rows:
+        raise RuntimeError("Import file has no product rows.")
+    headers = set(rows[0])
+    missing = sorted(REQUIRED_IMPORT_COLUMNS - headers)
+    if missing:
+        raise RuntimeError("Import file misses required columns: " + ", ".join(missing))
+
+
+def upsert_product_from_row(import_doc, row, row_number):
+    client_sku = str(row.get("client_sku") or "").strip()
+    product_name = str(row.get("product_name") or "").strip()
+    if not client_sku:
+        raise RuntimeError(f"Row {row_number}: client_sku is required")
+    if not product_name:
+        raise RuntimeError(f"Row {row_number}: product_name is required")
+
+    existing = frappe.db.get_value(
+        "Three PL Client Product",
+        {"customer": import_doc.customer, "client_sku": client_sku},
+        "name",
+    )
+    product = frappe.get_doc("Three PL Client Product", existing) if existing else frappe.new_doc("Three PL Client Product")
+    product.customer = import_doc.customer
+    product.client_sku = client_sku
+    product.product_name = product_name
+    product.product_description = str(row.get("product_description") or "").strip()
+    product.uom = str(row.get("uom") or "Nos").strip() or "Nos"
+    product.barcode = str(row.get("barcode") or "").strip()
+    product.product_image = str(row.get("product_image") or "").strip()
+    product.status = normalize_status(row.get("status"))
+    product.notes = str(row.get("notes") or "").strip()
+    product.sync_status = "Pending"
+    product.save(ignore_permissions=True)
+    if product.owner != import_doc.owner:
+        frappe.db.set_value(product.doctype, product.name, "owner", import_doc.owner, update_modified=False)
+        product.owner = import_doc.owner
+    return product.name
+
+
+def process_product_import(import_name):
+    import_doc = frappe.get_doc("Three PL Client Product Import", import_name)
+    rows = import_rows(file_path(import_doc.import_file))
+    validate_import_headers(rows)
+
+    errors = []
+    applied = []
+    for index, row in enumerate(rows, start=2):
+        if not any(row.values()):
+            continue
+        try:
+            applied.append(upsert_product_from_row(import_doc, row, index))
+        except Exception as exc:
+            errors.append(str(exc))
+
+    import_doc.rows_total = len([row for row in rows if any(row.values())])
+    import_doc.rows_applied = len(applied)
+    import_doc.processed_at = now()
+    import_doc.error_log = "\n".join(errors)
+    import_doc.status = "Failed" if errors else "Applied"
+    import_doc.save(ignore_permissions=True)
+
+    for product_name in applied:
+        sync_product(product_name)
+    return import_doc.name
+
+
+def sync_product_imports():
+    applied = []
+    failed = []
+    for import_name in frappe.get_all("Three PL Client Product Import", filters={"status": "Pending"}, pluck="name"):
+        try:
+            applied.append(process_product_import(import_name))
+            frappe.db.commit()
+        except Exception as exc:
+            import_doc = frappe.get_doc("Three PL Client Product Import", import_name)
+            import_doc.status = "Failed"
+            import_doc.processed_at = now()
+            import_doc.error_log = str(exc)
+            import_doc.save(ignore_permissions=True)
+            failed.append((import_name, str(exc)))
+            frappe.db.commit()
+    return applied, failed
+
+
 def main():
+    imports_applied, imports_failed = sync_product_imports()
     synced, failed = sync_client_products()
     frappe.db.commit()
+    print(f"Applied client product imports: {len(imports_applied)}")
+    for import_name in imports_applied:
+        print(import_name)
+    print(f"Failed client product imports: {len(imports_failed)}")
+    for import_name, error in imports_failed:
+        print(f"{import_name}: {error}")
     print(f"Synced client products: {len(synced)}")
     for item_code in synced:
         print(item_code)

@@ -102,7 +102,7 @@ ERPNext has standard stock entities, but not a complete 3PL Handling Unit workfl
 
 ## Stage MVP2 Product Card Management
 
-Status: captured for roadmap.
+Status: MVP2 base implemented.
 
 Client feedback:
 
@@ -116,7 +116,7 @@ Current interpretation:
 - The 3PL business identity should remain `Owner Client + Client SKU`.
 - The client should manage products through a constrained client portal flow.
 - Product photos should be attached to the item/product card.
-- Excel import/export should use a controlled template and validation, not unrestricted ERPNext import access for clients.
+- Excel import/export uses a controlled template and validation, not unrestricted ERPNext import access for clients. Current MVP supports CSV export and CSV/XLSX import.
 - Client delete is implemented as deactivate/soft-delete, preserving ERPNext item and stock history.
 - Client product changes are recorded in `Three PL Client Product Change Log`.
 
@@ -125,4 +125,4 @@ Open:
 - final required fields for product cards;
 - product approval workflow before warehouse use;
 - whether clients can reactivate inactive products;
-- exact Excel template columns and error handling.
+- whether the current CSV/XLSX import flow needs an approval step before products become active.

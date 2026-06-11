@@ -1,4 +1,6 @@
 import importlib.util
+import os
+import tempfile
 
 import frappe
 from frappe.utils import now_datetime, nowdate
@@ -47,6 +49,7 @@ REQUIRED_DOCTYPES = [
     "Three PL Inventory Balance Snapshot",
     "Three PL Client Product",
     "Three PL Client Product Change Log",
+    "Three PL Client Product Import",
     "Three PL Shipment Request",
     "Three PL Shipment Request Item",
     "Three PL Client Instruction",
@@ -209,6 +212,16 @@ REQUIRED_CLIENT_PRODUCT_LOG_FIELDS = {
     "change_datetime",
     "old_values",
     "new_values",
+    "notes",
+}
+REQUIRED_CLIENT_PRODUCT_IMPORT_FIELDS = {
+    "customer",
+    "import_file",
+    "status",
+    "processed_at",
+    "rows_total",
+    "rows_applied",
+    "error_log",
     "notes",
 }
 REQUIRED_REPORTS = [
@@ -394,6 +407,9 @@ def main():
     client_product_log_meta = frappe.get_meta("Three PL Client Product Change Log")
     client_product_log_fields = {field.fieldname for field in client_product_log_meta.fields}
     require(client_product_log_fields >= REQUIRED_CLIENT_PRODUCT_LOG_FIELDS, "Three PL Client Product Change Log misses required fields")
+    client_product_import_meta = frappe.get_meta("Three PL Client Product Import")
+    client_product_import_fields = {field.fieldname for field in client_product_import_meta.fields}
+    require(client_product_import_fields >= REQUIRED_CLIENT_PRODUCT_IMPORT_FIELDS, "Three PL Client Product Import misses required fields")
 
     for report in REQUIRED_REPORTS:
         require(frappe.db.exists("Report", report), f"Missing Report: {report}")
@@ -418,6 +434,7 @@ def main():
         ("warehouse/outbound-fulfillment", "outbound fulfillment"),
         ("client/discrepancies", "client discrepancies"),
         ("client/shipment-tracking", "client shipment tracking"),
+        ("client/product-export", "client product export"),
     ):
         scanner_page_name = frappe.db.get_value("Web Page", {"route": route}, "name")
         require(scanner_page_name, f"Missing scanner {label} Web Page")
@@ -547,6 +564,7 @@ def main():
     require_role_perm("Three PL Inventory Balance Snapshot", "3PL Client", read=1)
     require_role_perm("Three PL Client Product", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Three PL Client Product Change Log", "3PL Client", read=1)
+    require_role_perm("Three PL Client Product Import", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Three PL Shipment Request", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Three PL Shipment Request Item", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Three PL Client Instruction", "3PL Client", read=1, write=1, create=1)
@@ -1820,6 +1838,7 @@ def validate_client_portal_permissions():
     forbidden_shipment_ref = "PORTAL-SHIPMENT-BETA"
     product_sku = "PORTAL-PRODUCT-ALPHA"
     forbidden_product_sku = "PORTAL-PRODUCT-BETA"
+    import_sku = "PORTAL-IMPORT-ALPHA"
     frappe.set_user("Administrator")
     for reference in (allowed_ref, forbidden_ref):
         existing = frappe.db.get_value("Inbound Shipment Notice", {"external_reference": reference}, "name")
@@ -1831,13 +1850,17 @@ def validate_client_portal_permissions():
             frappe.delete_doc("Three PL Shipment Request", existing, ignore_permissions=True, force=True)
     for existing in frappe.get_all("Three PL Client Instruction", filters={"instruction_text": ("like", "Portal validation%")}, pluck="name"):
         frappe.delete_doc("Three PL Client Instruction", existing, ignore_permissions=True, force=True)
-    for sku in (product_sku, forbidden_product_sku):
+    for sku in (product_sku, forbidden_product_sku, import_sku):
         for product_name in frappe.get_all("Three PL Client Product", filters={"client_sku": sku}, pluck="name"):
             for log_name in frappe.get_all("Three PL Client Product Change Log", filters={"product": product_name}, pluck="name"):
                 frappe.delete_doc("Three PL Client Product Change Log", log_name, ignore_permissions=True, force=True)
             frappe.delete_doc("Three PL Client Product", product_name, ignore_permissions=True, force=True)
         for item_name in frappe.get_all("Item", filters={"client_sku": sku}, pluck="name"):
             frappe.delete_doc("Item", item_name, ignore_permissions=True, force=True)
+    for import_name in frappe.get_all("Three PL Client Product Import", filters={"notes": ("like", "Portal validation%")}, pluck="name"):
+        frappe.delete_doc("Three PL Client Product Import", import_name, ignore_permissions=True, force=True)
+    for file_name in frappe.get_all("File", filters={"file_name": "portal-product-import-validation.csv"}, pluck="name"):
+        frappe.delete_doc("File", file_name, ignore_permissions=True, force=True)
 
     frappe.set_user(CLIENT_PORTAL_USER)
     allowed = frappe.get_doc(
@@ -1963,6 +1986,46 @@ def validate_client_portal_permissions():
     product.insert()
     require(product.owner == CLIENT_PORTAL_USER, f"Client-created product has wrong owner: {product.owner}")
 
+    import_file = frappe.get_doc(
+        {
+            "doctype": "File",
+            "file_name": "portal-product-import-validation.csv",
+            "is_private": 1,
+            "content": (
+                "client_sku,product_name,product_description,uom,barcode,product_image,status,notes\n"
+                f"{import_sku},Portal Imported Product,Imported by portal validation,Nos,PORTAL-IMPORT-BARCODE,,Active,Portal validation import row\n"
+            ),
+        }
+    )
+    import_file.insert(ignore_permissions=True)
+    product_import = frappe.get_doc(
+        {
+            "doctype": "Three PL Client Product Import",
+            "customer": CLIENT_PORTAL_CUSTOMER,
+            "import_file": import_file.file_url,
+            "status": "Pending",
+            "notes": "Portal validation product import.",
+        }
+    )
+    product_import.insert()
+    require(product_import.owner == CLIENT_PORTAL_USER, f"Client-created product import has wrong owner: {product_import.owner}")
+
+    try:
+        forbidden_import = frappe.get_doc(
+            {
+                "doctype": "Three PL Client Product Import",
+                "customer": "Demo Client Beta",
+                "import_file": import_file.file_url,
+                "status": "Pending",
+                "notes": "Portal validation forbidden product import.",
+            }
+        )
+        forbidden_import.insert()
+    except frappe.PermissionError:
+        pass
+    else:
+        raise RuntimeError("Client user can create product import for another customer")
+
     try:
         forbidden_product = frappe.get_doc(
             {
@@ -1982,6 +2045,25 @@ def validate_client_portal_permissions():
 
     frappe.set_user("Administrator")
     product_sync = load_tmp_module("sync_client_products")
+    product_sync.process_product_import(product_import.name)
+    product_import.reload()
+    imported_product_name = frappe.db.get_value(
+        "Three PL Client Product",
+        {"customer": CLIENT_PORTAL_CUSTOMER, "client_sku": import_sku},
+        "name",
+    )
+    imported_item_name = frappe.db.get_value("Item", {"owner_client": CLIENT_PORTAL_CUSTOMER, "client_sku": import_sku}, "name")
+    require(product_import.status == "Applied", f"Client product import was not applied: {product_import.status}")
+    require(product_import.rows_applied == 1, "Client product import did not apply the validation row")
+    require(imported_product_name, "Client product import did not create product card")
+    require(imported_item_name, "Client product import did not synchronize ERPNext Item")
+    imported_item = frappe.get_doc("Item", imported_item_name)
+    require(imported_item.item_name == "Portal Imported Product", "Imported Item has wrong item_name")
+    require(
+        frappe.db.exists("Three PL Client Product Change Log", {"product": imported_product_name, "action": "Created"}),
+        "Client product import creation was not logged",
+    )
+
     item_code = product_sync.sync_product(product.name)
     item = frappe.get_doc("Item", item_code)
     product.reload()

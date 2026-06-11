@@ -118,7 +118,7 @@ Status: pending.
 
 ## Stage MVP2 - Client Product Card Management
 
-Status: base implemented; bulk Excel workflow pending.
+Status: MVP2 base implemented, including controlled product import/export.
 
 Client-confirmed future requirement:
 
@@ -132,7 +132,7 @@ Client-confirmed future requirement:
   - product photo.
 - The business identity should remain `Owner Client + Client SKU`, not global SKU alone.
 - The client portal provides a safe product management flow, without giving clients Desk access.
-- Excel export/import should be available for bulk product maintenance. This remains pending.
+- Excel-compatible export/import is available for bulk product maintenance. Current implementation uses CSV export and CSV/XLSX import through the client portal.
 
 Implementation direction:
 
@@ -140,7 +140,7 @@ Implementation direction:
 - Keep custom ownership fields (`owner_client`, `client_sku`, `client_product_name`) as the 3PL layer.
 - Add portal pages or Web Forms for client-safe create/update. Base implemented at `/client/products/list`.
 - Add validation so a client can only create or update products for their own customer account. Base server validation implemented.
-- Add import/export templates with clear required columns and validation errors.
+- Add import/export templates with clear required columns and validation errors. Base implemented at `/client/product-export` and `/client/product-import/list`.
 - Store product photos using ERPNext file attachments or item image fields.
 - Record client product changes in `Three PL Client Product Change Log`.
 
@@ -149,7 +149,7 @@ Open design questions:
 - Exact final required product fields for the client's operational catalog.
 - Whether product approval by warehouse/admin is needed before the item becomes usable.
 - Whether clients may reactivate inactive products themselves.
-- Whether Excel import should create products immediately or stage them for review.
+- Whether product imports should keep creating products immediately or be staged for warehouse/admin review.
 
 ## Phase 5 - Multi-Client Stock Model
 

@@ -783,6 +783,30 @@ def configure_custom_doctypes():
             ],
         },
         {
+            "name": "Three PL Client Product Import",
+            "module": "Stock",
+            "custom": 1,
+            "track_changes": 1,
+            "title_field": "import_file",
+            "autoname": "naming_series:",
+            "fields": [
+                {"fieldname": "naming_series", "label": "Series", "fieldtype": "Select", "options": "CLIENT-PRODUCT-IMPORT-.YYYY.-.#####", "default": "CLIENT-PRODUCT-IMPORT-.YYYY.-.#####", "reqd": 1},
+                {"fieldname": "customer", "label": "Client", "fieldtype": "Link", "options": "Customer", "reqd": 1, "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "import_file", "label": "Excel / CSV File", "fieldtype": "Attach", "reqd": 1, "in_list_view": 1},
+                {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Pending\nApplied\nFailed", "default": "Pending", "read_only": 1, "in_standard_filter": 1, "in_list_view": 1},
+                {"fieldname": "processed_at", "label": "Processed At", "fieldtype": "Datetime", "read_only": 1},
+                {"fieldname": "rows_total", "label": "Rows Total", "fieldtype": "Int", "read_only": 1},
+                {"fieldname": "rows_applied", "label": "Rows Applied", "fieldtype": "Int", "read_only": 1},
+                {"fieldname": "error_log", "label": "Error Log", "fieldtype": "Small Text", "read_only": 1},
+                {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
+            ],
+            "permissions": manager_permissions
+            + [
+                {"role": "3PL Warehouse User", "read": 1, "report": 1},
+                {"role": "3PL Client", "read": 1, "write": 1, "create": 1, "report": 1, "export": 1},
+            ],
+        },
+        {
             "name": "Three PL Container Movement",
             "module": "Stock",
             "custom": 1,
@@ -1080,6 +1104,7 @@ def configure_custom_doctypes():
         "Three PL Inventory Balance Snapshot": {"read": 1},
         "Three PL Client Product": {"read": 1, "write": 1, "create": 1, "report": 1, "export": 1},
         "Three PL Client Product Change Log": {"read": 1, "report": 1, "export": 1},
+        "Three PL Client Product Import": {"read": 1, "write": 1, "create": 1, "report": 1, "export": 1},
         "Three PL Shipment Request": {"read": 1, "write": 1, "create": 1},
         "Three PL Shipment Request Item": {"read": 1, "write": 1, "create": 1},
         "Three PL Client Instruction": {"read": 1, "write": 1, "create": 1},
@@ -1468,6 +1493,7 @@ def build_client_portal_nav():
     for form in CLIENT_PORTAL_FORMS:
         label = frappe.utils.escape_html(form["menu_title"])
         links.append(f'<a class="btn btn-sm btn-default" href="/{portal_list_route(form["route"])}">{label}</a>')
+    links.append('<a class="btn btn-sm btn-default" href="/client/product-export">Product Export</a>')
     links.append('<a class="btn btn-sm btn-default" href="/client/discrepancies">Discrepancies</a>')
     links.append('<a class="btn btn-sm btn-default" href="/client/shipment-tracking">Shipment Tracking</a>')
     return f'<div class="mb-4 d-flex flex-wrap gap-2">{" ".join(links)}</div>'
@@ -1704,6 +1730,120 @@ def configure_client_portal_website_script():
 def configure_client_status_pages():
     portal_nav = build_client_portal_nav()
     pages = [
+        {
+            "route": "client/product-export",
+            "title": "Product Export",
+            "html": f"""
+<section class="container py-4">
+  {portal_nav}
+  <h1 class="h3 mb-3">Product Export</h1>
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <button class="btn btn-primary btn-sm" id="download-products" type="button">Download Products CSV</button>
+    <button class="btn btn-outline-secondary btn-sm" id="download-product-template" type="button">Download Import Template CSV</button>
+  </div>
+  <div class="small text-muted" id="client-product-export-status"></div>
+</section>
+""".strip(),
+            "javascript": f"""
+(function () {{
+  function byId(id) {{ return document.getElementById(id); }}
+  function setStatus(message, isError) {{
+    var target = byId('client-product-export-status');
+    if (!target) return;
+    target.textContent = message || '';
+    target.className = isError ? 'small text-danger' : 'small text-muted';
+  }}
+  function csvEscape(value) {{
+    value = String(value == null ? '' : value);
+    if (/[",\\n]/.test(value)) return '"' + value.replace(/"/g, '""') + '"';
+    return value;
+  }}
+  function downloadCsv(filename, rows) {{
+    var csv = rows.map(function (row) {{ return row.map(csvEscape).join(','); }}).join('\\n') + '\\n';
+    var blob = new Blob([csv], {{ type: 'text/csv;charset=utf-8;' }});
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(link.href);
+  }}
+  function api(method, args) {{
+    var body = new URLSearchParams();
+    Object.keys(args || {{}}).forEach(function (key) {{
+      var value = args[key];
+      body.set(key, typeof value === 'string' ? value : JSON.stringify(value));
+    }});
+    return fetch('/api/method/' + method, {{
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {{'Content-Type': 'application/x-www-form-urlencoded'}},
+      body: body
+    }}).then(function (response) {{
+      return response.json().then(function (payload) {{
+        if (!response.ok) throw new Error(payload.exception || payload._error_message || ('Request failed: ' + response.status));
+        return payload;
+      }});
+    }});
+  }}
+  function templateRows() {{
+    return [[
+      'client_sku',
+      'product_name',
+      'product_description',
+      'uom',
+      'barcode',
+      'product_image',
+      'status',
+      'notes'
+    ]];
+  }}
+  function downloadTemplate() {{
+    downloadCsv('3pl-product-import-template.csv', templateRows());
+    setStatus('Template downloaded.', false);
+  }}
+  function downloadProducts() {{
+    setStatus('Preparing product export...', false);
+    api('frappe.client.get_list', {{
+      doctype: 'Three PL Client Product',
+      filters: {{ customer: '{CLIENT_PORTAL_CUSTOMER}' }},
+      fields: ['client_sku', 'product_name', 'product_description', 'uom', 'barcode', 'product_image', 'status', 'notes'],
+      order_by: 'client_sku asc',
+      limit_page_length: 5000
+    }}).then(function (response) {{
+      var rows = templateRows();
+      (response.message || []).forEach(function (row) {{
+        rows.push([
+          row.client_sku,
+          row.product_name,
+          row.product_description,
+          row.uom,
+          row.barcode,
+          row.product_image,
+          row.status,
+          row.notes
+        ]);
+      }});
+      downloadCsv('3pl-products.csv', rows);
+      setStatus((rows.length - 1) + ' product row(s) exported.', false);
+    }}).catch(function (error) {{
+      setStatus(error.message || 'Could not export products.', true);
+    }});
+  }}
+  frappe.ready(function () {{
+    if (frappe.session && frappe.session.user === 'Guest') {{
+      window.location.href = '/login?redirect-to=' + encodeURIComponent('/client/product-export');
+      return;
+    }}
+    var products = byId('download-products');
+    var template = byId('download-product-template');
+    if (products) products.addEventListener('click', downloadProducts);
+    if (template) template.addEventListener('click', downloadTemplate);
+  }});
+}})();
+""".strip(),
+        },
         {
             "route": "client/discrepancies",
             "title": "Discrepancies",
