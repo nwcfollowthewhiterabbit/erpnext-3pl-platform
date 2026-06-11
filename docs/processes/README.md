@@ -12,6 +12,7 @@ Use this structure when a process is changed:
 
 Current process notes:
 
+- [MVP1/MVP2 Acceptance Guide](../mvp1-mvp2-acceptance-guide.md)
 - [Handling Units](handling-units.md)
 - [Container Move](container-move.md)
 - [Putaway](putaway.md)
