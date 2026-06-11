@@ -1724,6 +1724,7 @@ def configure_client_portal_website_script():
     var qtyLabel = mode === 'receiving' ? 'Expected Qty' : 'Qty';
     var rows = [];
     var products = [];
+    var selectedProductName = null;
 
     function syncProductPayload() {{
       setWebFormValue('portal_items_description', JSON.stringify({{
@@ -1768,19 +1769,41 @@ def configure_client_portal_website_script():
       syncProductPayload();
     }}
 
-    function renderProductOptions() {{
-      var select = document.getElementById('client-product-picker-select');
-      if (!select) return;
-      select.innerHTML = products.map(function (product) {{
-        return '<option value="' + escapeHtml(product.name) + '">' + escapeHtml(productLabel(product)) + '</option>';
+    function matchingProducts(query) {{
+      query = String(query || '').trim().toLowerCase();
+      if (!query) return products.slice(0, 20);
+      return products.filter(function (product) {{
+        return productLabel(product).toLowerCase().indexOf(query) !== -1;
+      }}).slice(0, 20);
+    }}
+
+    function selectProduct(product) {{
+      selectedProductName = product ? product.name : null;
+      var input = document.getElementById('client-product-picker-search');
+      if (input) input.value = product ? productLabel(product) : '';
+      renderProductMatches(product ? productLabel(product) : '');
+    }}
+
+    function renderProductMatches(query) {{
+      var target = document.getElementById('client-product-picker-results');
+      if (!target) return;
+      var matches = matchingProducts(query);
+      if (!matches.length) {{
+        target.innerHTML = '<div class="text-muted small p-2">No matching products.</div>';
+        return;
+      }}
+      target.innerHTML = matches.map(function (product) {{
+        var selectedClass = product.name === selectedProductName ? ' active' : '';
+        return '<button class="dropdown-item small client-product-match' + selectedClass + '" data-product-name="' + escapeHtml(product.name) + '" type="button">' +
+          escapeHtml(productLabel(product)) +
+          '</button>';
       }}).join('');
     }}
 
     function addPickerRow() {{
-      var select = document.getElementById('client-product-picker-select');
       var qty = document.getElementById('client-product-picker-qty');
       var notes = document.getElementById('client-product-picker-notes');
-      var product = products.find(function (candidate) {{ return candidate.name === (select && select.value); }});
+      var product = products.find(function (candidate) {{ return candidate.name === selectedProductName; }});
       var parsedQty = parseFloat(qty && qty.value);
       if (!product || !parsedQty || parsedQty <= 0) return;
       rows.push({{
@@ -1794,6 +1817,7 @@ def configure_client_portal_website_script():
       }});
       if (qty) qty.value = '1';
       if (notes) notes.value = '';
+      selectProduct(null);
       renderPickerRows();
     }}
 
@@ -1802,7 +1826,7 @@ def configure_client_portal_website_script():
       '<div id="client-product-picker" class="mb-4">' +
         '<label class="form-label">Products and Quantities <span class="text-danger">*</span></label>' +
         '<div class="row g-2 align-items-end mb-2">' +
-          '<div class="col-md-5"><label class="small text-muted">Product</label><select id="client-product-picker-select" class="form-control form-control-sm"></select></div>' +
+          '<div class="col-md-5 position-relative"><label class="small text-muted">Product</label><input id="client-product-picker-search" class="form-control form-control-sm" autocomplete="off" placeholder="Search by SKU or product name"><div id="client-product-picker-results" class="dropdown-menu show w-100 mt-1" style="position: static; max-height: 220px; overflow-y: auto;"></div></div>' +
           '<div class="col-md-2"><label class="small text-muted">' + qtyLabel + '</label><input id="client-product-picker-qty" class="form-control form-control-sm" type="number" min="0.0001" step="0.0001" value="1"></div>' +
           '<div class="col-md-4"><label class="small text-muted">Notes</label><input id="client-product-picker-notes" class="form-control form-control-sm"></div>' +
           '<div class="col-md-1"><button id="client-product-picker-add" class="btn btn-sm btn-primary w-100" type="button">Add</button></div>' +
@@ -1816,6 +1840,16 @@ def configure_client_portal_website_script():
     );
 
     document.getElementById('client-product-picker-add').addEventListener('click', addPickerRow);
+    document.getElementById('client-product-picker-search').addEventListener('input', function (event) {{
+      selectedProductName = null;
+      renderProductMatches(event.target.value);
+    }});
+    document.getElementById('client-product-picker-results').addEventListener('click', function (event) {{
+      var button = event.target.closest('.client-product-match');
+      if (!button) return;
+      var product = products.find(function (candidate) {{ return candidate.name === button.getAttribute('data-product-name'); }});
+      selectProduct(product);
+    }});
     document.getElementById('client-product-picker-body').addEventListener('input', function (event) {{
       var index = parseInt(event.target.getAttribute('data-index'), 10);
       if (Number.isNaN(index) || !rows[index]) return;
@@ -1838,7 +1872,7 @@ def configure_client_portal_website_script():
       limit_page_length: 5000
     }}).then(function (response) {{
       products = (response.message || []).filter(function (product) {{ return product.item_code; }});
-      renderProductOptions();
+      renderProductMatches('');
       if (!products.length) {{
         document.getElementById('client-product-picker').insertAdjacentHTML('beforeend', '<div class="text-danger small mt-2">No synced active products found. Create or import products first.</div>');
       }}

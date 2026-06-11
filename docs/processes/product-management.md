@@ -51,6 +51,7 @@ Client-facing operational forms now use these product cards as their product sou
 
 - Receiving Notice product rows are selected from active synced client products and are expanded into `Inbound Shipment Notice Item` child rows.
 - Shipment Request product rows are selected from active synced client products and are expanded into `Three PL Shipment Request Item` child rows.
+- The portal product picker uses SKU/name search instead of a long dropdown, so clients can work with larger product catalogs.
 - The older free-text `portal_items_description` field is kept as a compatibility/storage field for structured JSON payloads and legacy records.
 
 ## Identity Rule

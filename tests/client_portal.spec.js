@@ -185,7 +185,8 @@ test("receiving notice form auto-fills client reference", async ({ page }) => {
   await expect(referenceInput).toBeVisible();
   await expect(referenceInput).toHaveValue(/^ALPHA-IN-\d{8}-\d{3}$/, { timeout: 10000 });
   await expect(page.locator("#client-product-picker")).toBeVisible({ timeout: 10000 });
-  await expect(page.locator("#client-product-picker-select")).toContainText("ALPHA-001", { timeout: 10000 });
+  await page.locator("#client-product-picker-search").fill("ALPHA-001");
+  await expect(page.locator("#client-product-picker-results")).toContainText("ALPHA-001", { timeout: 10000 });
 
   expect(problems).toEqual([]);
 });
