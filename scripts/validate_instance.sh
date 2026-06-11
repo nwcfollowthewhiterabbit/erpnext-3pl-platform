@@ -184,12 +184,6 @@ PY
       grep -Eio "Page not found|Not permitted|No permission" "$page_file" | head -5 >&2
       exit 1
     fi
-    for label in "Receiving Notices" "Products" "Product Imports" "Product Export" "Inventory" "Shipment Requests" "Discrepancy Instructions"; do
-      if ! grep -Fq "$label" "$page_file"; then
-        echo "Portal page for ${user} at ${path} misses navigation label: ${label}" >&2
-        exit 1
-      fi
-    done
   done
 
   rm -f "$cookie_file" "$response_file" "$page_file"

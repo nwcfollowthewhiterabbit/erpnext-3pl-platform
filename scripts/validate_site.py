@@ -526,7 +526,6 @@ def main():
         require(web_form.hide_navbar == 1, f"Client Web Form must hide standard navbar: {title}")
         require(web_form.hide_footer == 1, f"Client Web Form must hide standard footer: {title}")
         require({row.fieldname for row in web_form.web_form_fields} >= expected_fields, f"Client Web Form misses required fields: {title}")
-        require("Receiving Notices" in web_form.introduction_text, f"Client Web Form misses portal nav: {title}")
         customer_field = next((row for row in web_form.web_form_fields if row.fieldname == "customer"), None)
         require(customer_field, f"Client Web Form misses customer field: {title}")
         require(customer_field.hidden == 1, f"Client Web Form customer field must be hidden: {title}")
@@ -538,6 +537,10 @@ def main():
     require(
         CLIENT_PORTAL_RECEIVING_REF_PREFIX in (website_script.javascript or ""),
         "Client portal Website Script misses receiving notice auto reference logic",
+    )
+    require(
+        "data-client-portal-nav" in (website_script.javascript or "") and "three-pl-portal-link" in (website_script.javascript or ""),
+        "Client portal Website Script misses consolidated portal navigation",
     )
     require(
         CLIENT_PORTAL_SHIPMENT_REF_PREFIX in (website_script.javascript or ""),

@@ -1502,7 +1502,6 @@ def configure_custom_fields():
 
 
 def configure_client_portal():
-    portal_nav = build_client_portal_nav()
     for form in CLIENT_PORTAL_FORMS:
         configure_portal_web_form(
             form_name=form["form_name"],
@@ -1510,7 +1509,7 @@ def configure_client_portal():
             doc_type=form["doc_type"],
             list_title=form["list_title"],
             button_label=form["button_label"],
-            introduction_text=f"{portal_nav}{form['introduction_text']}",
+            introduction_text=form["introduction_text"],
             success_title=form["success_title"],
             success_message=form["success_message"],
             fields=form["fields"],
@@ -1528,11 +1527,11 @@ def build_client_portal_nav():
     links = []
     for form in CLIENT_PORTAL_FORMS:
         label = frappe.utils.escape_html(form["menu_title"])
-        links.append(f'<a class="btn btn-sm btn-default" href="/{portal_list_route(form["route"])}">{label}</a>')
-    links.append('<a class="btn btn-sm btn-default" href="/client/product-export">Product Export</a>')
-    links.append('<a class="btn btn-sm btn-default" href="/client/discrepancies">Discrepancies</a>')
-    links.append('<a class="btn btn-sm btn-default" href="/client/shipment-tracking">Shipment Tracking</a>')
-    return f'<div class="mb-4 d-flex flex-wrap gap-2">{" ".join(links)}</div>'
+        links.append(f'<a class="three-pl-portal-link" href="/{portal_list_route(form["route"])}">{label}</a>')
+    links.append('<a class="three-pl-portal-link" href="/client/product-export">Product Export</a>')
+    links.append('<a class="three-pl-portal-link" href="/client/discrepancies">Discrepancies</a>')
+    links.append('<a class="three-pl-portal-link" href="/client/shipment-tracking">Shipment Tracking</a>')
+    return f'<nav class="three-pl-portal-nav" aria-label="Client portal navigation">{" ".join(links)}</nav>'
 
 
 def portal_list_route(route):
@@ -1549,6 +1548,7 @@ def configure_client_portal_website_script():
 
   function tuneClientPortalBoot() {{
     if (!isClientPortal()) return;
+    document.body.classList.add('three-pl-client-portal');
 
     if (window.frappe && frappe.boot && frappe.boot.apps_data) {{
       frappe.boot.apps_data.is_desk_apps = 0;
@@ -1560,6 +1560,26 @@ def configure_client_portal_website_script():
         if (callback) callback({{message: {{has_permission: false}}}});
       }};
       frappe.has_permission.__client_portal_patched = true;
+    }}
+
+    if (!document.getElementById('three-pl-client-portal-style')) {{
+      var style = document.createElement('style');
+      style.id = 'three-pl-client-portal-style';
+      style.textContent = [
+        'body.three-pl-client-portal {{ background: #f7f8fa; color: #1f2933; }}',
+        'body.three-pl-client-portal footer, body.three-pl-client-portal .web-footer {{ display: none !important; }}',
+        'body.three-pl-client-portal .navbar {{ border-bottom: 1px solid #e5e7eb; background: #fff; min-height: 56px; }}',
+        'body.three-pl-client-portal .page_content, body.three-pl-client-portal .web-form-container {{ max-width: 1200px; margin: 28px auto 56px; padding: 0 24px; }}',
+        'body.three-pl-client-portal .web-form, body.three-pl-client-portal .page_content section.container, body.three-pl-client-portal main section.container {{ max-width: 1200px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 28px 32px; box-shadow: 0 1px 2px rgba(16, 24, 40, .04); }}',
+        'body.three-pl-client-portal h1 {{ font-size: 28px; line-height: 1.2; margin-bottom: 10px; }}',
+        '.three-pl-portal-nav-wrap {{ background: #fff; border-bottom: 1px solid #e5e7eb; }}',
+        '.three-pl-portal-nav {{ max-width: 1320px; margin: 0 auto; padding: 10px 24px; display: flex; flex-wrap: wrap; gap: 6px; }}',
+        '.three-pl-portal-link {{ display: inline-flex; align-items: center; min-height: 32px; padding: 6px 10px; border-radius: 6px; color: #374151; text-decoration: none; font-size: 14px; line-height: 1.2; }}',
+        '.three-pl-portal-link:hover {{ background: #f3f4f6; color: #111827; text-decoration: none; }}',
+        '.three-pl-portal-link.active {{ background: #111827; color: #fff; }}',
+        '@media (max-width: 720px) {{ body.three-pl-client-portal .page_content, body.three-pl-client-portal .web-form-container {{ margin-top: 16px; padding: 0 12px; }} body.three-pl-client-portal .web-form, body.three-pl-client-portal .page_content section.container, body.three-pl-client-portal main section.container {{ padding: 20px 16px; }} .three-pl-portal-nav {{ padding: 8px 12px; overflow-x: auto; flex-wrap: nowrap; }} .three-pl-portal-link {{ white-space: nowrap; }} }}'
+      ].join('\\n');
+      document.head.appendChild(style);
     }}
   }}
 
@@ -1576,14 +1596,33 @@ def configure_client_portal_website_script():
     var deskLink = document.querySelector('.switch-to-desk');
     if (deskLink) deskLink.remove();
 
+    document.querySelectorAll('[data-client-portal-nav]').forEach(function (node, index) {{
+      if (index > 0) node.remove();
+    }});
+
     if (!document.querySelector('[data-client-portal-nav]')) {{
-      var nav = document.createElement('div');
-      nav.setAttribute('data-client-portal-nav', '1');
-      nav.innerHTML = '{nav_html}';
-      var target = document.querySelector('.web-list-actions') || document.querySelector('.web-form-container') || document.querySelector('.page_content');
-      if (target && target.parentNode) {{
-        target.parentNode.insertBefore(nav, target);
+      var navWrap = document.createElement('div');
+      navWrap.setAttribute('data-client-portal-nav', '1');
+      navWrap.className = 'three-pl-portal-nav-wrap';
+      navWrap.innerHTML = '{nav_html}';
+      var navbar = document.querySelector('.navbar');
+      if (navbar && navbar.parentNode) {{
+        navbar.parentNode.insertBefore(navWrap, navbar.nextSibling);
+      }} else {{
+        document.body.insertBefore(navWrap, document.body.firstChild);
       }}
+    }}
+
+    var currentPath = window.location.pathname.replace(/\\/$/, '');
+    document.querySelectorAll('.three-pl-portal-link').forEach(function (link) {{
+      var href = (link.getAttribute('href') || '').replace(/\\/$/, '');
+      var isActive = href === currentPath || (href.endsWith('/list') && href.slice(0, -5) === currentPath);
+      link.classList.toggle('active', isActive);
+    }});
+
+    var pageTitle = document.querySelector('h1');
+    if (pageTitle) {{
+      pageTitle.scrollIntoView = function () {{}};
     }}
   }}
 
@@ -1964,14 +2003,12 @@ def configure_client_portal_website_script():
 
 
 def configure_client_status_pages():
-    portal_nav = build_client_portal_nav()
     pages = [
         {
             "route": "client/product-export",
             "title": "Product Export",
             "html": f"""
 <section class="container py-4">
-  {portal_nav}
   <h1 class="h3 mb-3">Product Export</h1>
   <div class="d-flex flex-wrap gap-2 mb-3">
     <button class="btn btn-primary btn-sm" id="download-products" type="button">Download Products CSV</button>
@@ -2085,7 +2122,6 @@ def configure_client_status_pages():
             "title": "Discrepancies",
             "html": f"""
 <section class="container py-4">
-  {portal_nav}
   <h1 class="h3 mb-3">Discrepancies</h1>
   <div class="text-muted small mb-3">Review receiving discrepancies recorded by the warehouse and submit instructions when needed.</div>
   <div class="table-responsive">
@@ -2203,7 +2239,6 @@ def configure_client_status_pages():
             "title": "Shipment Tracking",
             "html": f"""
 <section class="container py-4">
-  {portal_nav}
   <h1 class="h3 mb-3">Shipment Tracking</h1>
   <div class="text-muted small mb-3">Track client shipment request status from submission through warehouse processing.</div>
   <div class="table-responsive">

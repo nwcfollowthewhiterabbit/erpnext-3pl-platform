@@ -104,6 +104,11 @@ async function assertPortalPage(page, path, problems) {
       problems.push(`body ${path}: nav label ${label} points to ${href}`);
     }
   }
+
+  const navCount = await page.locator("[data-client-portal-nav]").count();
+  if (navCount !== 1) {
+    problems.push(`body ${path}: expected one portal nav, found ${navCount}`);
+  }
 }
 
 test("client portal pages render without permission errors", async ({ page }) => {
