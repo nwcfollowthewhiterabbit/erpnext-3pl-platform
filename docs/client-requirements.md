@@ -32,12 +32,14 @@ Initial reporting scope:
 
 ## Stage MVP2 Requirement: Product Card Management
 
-The next-stage client requirement is product master data ownership:
+The next-stage client requirement is product master data ownership. The base portal flow is now implemented; Excel import/export remains pending.
 
-1. The client creates new product cards.
-2. The client updates existing product cards.
+1. The client creates new product cards through the client portal.
+2. The client updates existing product cards through the client portal.
 3. Each product card can have a photo.
-4. Product data can be exported and imported through an Excel table.
+4. The client deactivates products instead of deleting master records.
+5. Product changes are logged.
+6. Product data should later be exported and imported through an Excel table.
 
 Expected direction:
 

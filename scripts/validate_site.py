@@ -45,6 +45,8 @@ REQUIRED_DOCTYPES = [
     "Three PL Stocktake",
     "Three PL Inventory Snapshot",
     "Three PL Inventory Balance Snapshot",
+    "Three PL Client Product",
+    "Three PL Client Product Change Log",
     "Three PL Shipment Request",
     "Three PL Shipment Request Item",
     "Three PL Client Instruction",
@@ -181,6 +183,33 @@ REQUIRED_INVENTORY_BALANCE_SNAPSHOT_FIELDS = {
     "status",
     "source_snapshot",
     "captured_at",
+}
+REQUIRED_CLIENT_PRODUCT_FIELDS = {
+    "customer",
+    "client_sku",
+    "product_name",
+    "product_description",
+    "uom",
+    "barcode",
+    "product_image",
+    "status",
+    "item_code",
+    "sync_status",
+    "last_synced_at",
+    "sync_error",
+    "last_synced_snapshot",
+    "notes",
+}
+REQUIRED_CLIENT_PRODUCT_LOG_FIELDS = {
+    "product",
+    "customer",
+    "item_code",
+    "action",
+    "changed_by",
+    "change_datetime",
+    "old_values",
+    "new_values",
+    "notes",
 }
 REQUIRED_REPORTS = [
     "3PL ASN vs Received",
@@ -359,6 +388,12 @@ def main():
         balance_snapshot_fields >= REQUIRED_INVENTORY_BALANCE_SNAPSHOT_FIELDS,
         "Three PL Inventory Balance Snapshot misses required fields",
     )
+    client_product_meta = frappe.get_meta("Three PL Client Product")
+    client_product_fields = {field.fieldname for field in client_product_meta.fields}
+    require(client_product_fields >= REQUIRED_CLIENT_PRODUCT_FIELDS, "Three PL Client Product misses required fields")
+    client_product_log_meta = frappe.get_meta("Three PL Client Product Change Log")
+    client_product_log_fields = {field.fieldname for field in client_product_log_meta.fields}
+    require(client_product_log_fields >= REQUIRED_CLIENT_PRODUCT_LOG_FIELDS, "Three PL Client Product Change Log misses required fields")
 
     for report in REQUIRED_REPORTS:
         require(frappe.db.exists("Report", report), f"Missing Report: {report}")
@@ -510,6 +545,8 @@ def main():
     require_role_perm("Three PL Repack Item", "3PL Client", read=1)
     require_role_perm("Three PL Inventory Snapshot", "3PL Client", read=1)
     require_role_perm("Three PL Inventory Balance Snapshot", "3PL Client", read=1)
+    require_role_perm("Three PL Client Product", "3PL Client", read=1, write=1, create=1)
+    require_role_perm("Three PL Client Product Change Log", "3PL Client", read=1)
     require_role_perm("Three PL Shipment Request", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Three PL Shipment Request Item", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Three PL Client Instruction", "3PL Client", read=1, write=1, create=1)
@@ -1781,6 +1818,8 @@ def validate_client_portal_permissions():
     forbidden_ref = "PORTAL-VALIDATION-BETA"
     shipment_ref = "PORTAL-SHIPMENT-ALPHA"
     forbidden_shipment_ref = "PORTAL-SHIPMENT-BETA"
+    product_sku = "PORTAL-PRODUCT-ALPHA"
+    forbidden_product_sku = "PORTAL-PRODUCT-BETA"
     frappe.set_user("Administrator")
     for reference in (allowed_ref, forbidden_ref):
         existing = frappe.db.get_value("Inbound Shipment Notice", {"external_reference": reference}, "name")
@@ -1792,6 +1831,13 @@ def validate_client_portal_permissions():
             frappe.delete_doc("Three PL Shipment Request", existing, ignore_permissions=True, force=True)
     for existing in frappe.get_all("Three PL Client Instruction", filters={"instruction_text": ("like", "Portal validation%")}, pluck="name"):
         frappe.delete_doc("Three PL Client Instruction", existing, ignore_permissions=True, force=True)
+    for sku in (product_sku, forbidden_product_sku):
+        for product_name in frappe.get_all("Three PL Client Product", filters={"client_sku": sku}, pluck="name"):
+            for log_name in frappe.get_all("Three PL Client Product Change Log", filters={"product": product_name}, pluck="name"):
+                frappe.delete_doc("Three PL Client Product Change Log", log_name, ignore_permissions=True, force=True)
+            frappe.delete_doc("Three PL Client Product", product_name, ignore_permissions=True, force=True)
+        for item_name in frappe.get_all("Item", filters={"client_sku": sku}, pluck="name"):
+            frappe.delete_doc("Item", item_name, ignore_permissions=True, force=True)
 
     frappe.set_user(CLIENT_PORTAL_USER)
     allowed = frappe.get_doc(
@@ -1901,6 +1947,74 @@ def validate_client_portal_permissions():
     instruction.insert()
     require(instruction.owner == CLIENT_PORTAL_USER, f"Client-created instruction has wrong owner: {instruction.owner}")
 
+    product = frappe.get_doc(
+        {
+            "doctype": "Three PL Client Product",
+            "customer": CLIENT_PORTAL_CUSTOMER,
+            "client_sku": product_sku,
+            "product_name": "Portal Validation Product",
+            "product_description": "Created by portal validation.",
+            "uom": "Nos",
+            "barcode": "PORTAL-PRODUCT-ALPHA-BARCODE",
+            "status": "Active",
+            "notes": "Portal validation product card.",
+        }
+    )
+    product.insert()
+    require(product.owner == CLIENT_PORTAL_USER, f"Client-created product has wrong owner: {product.owner}")
+
+    try:
+        forbidden_product = frappe.get_doc(
+            {
+                "doctype": "Three PL Client Product",
+                "customer": "Demo Client Beta",
+                "client_sku": forbidden_product_sku,
+                "product_name": "Forbidden Portal Product",
+                "uom": "Nos",
+                "status": "Active",
+            }
+        )
+        forbidden_product.insert()
+    except frappe.PermissionError:
+        pass
+    else:
+        raise RuntimeError("Client user can create product for another customer")
+
+    frappe.set_user("Administrator")
+    product_sync = load_tmp_module("sync_client_products")
+    item_code = product_sync.sync_product(product.name)
+    item = frappe.get_doc("Item", item_code)
+    product.reload()
+    require(product.sync_status == "Synced", "Client product was not synchronized")
+    require(product.item_code == item.name, "Client product is not linked to synced Item")
+    require(item.owner_client == CLIENT_PORTAL_CUSTOMER, "Synced Item has wrong owner_client")
+    require(item.client_sku == product_sku, "Synced Item has wrong client_sku")
+    require(item.item_name == "Portal Validation Product", "Synced Item has wrong item_name")
+    require(item.disabled == 0, "Active client product created disabled Item")
+    require(
+        frappe.db.exists("Three PL Client Product Change Log", {"product": product.name, "action": "Created"}),
+        "Client product creation was not logged",
+    )
+
+    frappe.set_user(CLIENT_PORTAL_USER)
+    product = frappe.get_doc("Three PL Client Product", product.name)
+    product.product_name = "Portal Validation Product Updated"
+    product.status = "Inactive"
+    product.save()
+
+    frappe.set_user("Administrator")
+    item_code = product_sync.sync_product(product.name)
+    item = frappe.get_doc("Item", item_code)
+    product.reload()
+    require(item.item_name == "Portal Validation Product Updated", "Client product update did not sync to Item")
+    require(item.disabled == 1, "Inactive client product did not disable Item")
+    require(
+        frappe.db.exists("Three PL Client Product Change Log", {"product": product.name, "action": "Deactivated"}),
+        "Client product deactivation was not logged",
+    )
+
+    frappe.set_user(CLIENT_PORTAL_USER)
+
     inventory = frappe.get_doc("Three PL Inventory Snapshot", frappe.db.get_value("Three PL Inventory Snapshot", {"customer": CLIENT_PORTAL_CUSTOMER, "item_code": "SKU-ALPHA-001"}))
     require(inventory.customer == CLIENT_PORTAL_CUSTOMER, "Client could not read own inventory snapshot")
     balance_snapshot = frappe.get_doc(
@@ -1911,6 +2025,7 @@ def validate_client_portal_permissions():
 
     forbidden_docs = [
         ("Item", frappe.db.get_value("Item", {"item_code": "SKU-BETA-001"})),
+        ("Three PL Client Product", frappe.db.get_value("Three PL Client Product", {"customer": "Demo Client Beta", "client_sku": "BETA-001"})),
         ("Inbound Shipment Notice", frappe.db.get_value("Inbound Shipment Notice", {"customer": "Demo Client Beta", "external_reference": "ASN-BETA-001"})),
         ("Three PL Inventory Snapshot", frappe.db.get_value("Three PL Inventory Snapshot", {"customer": "Demo Client Beta", "item_code": "SKU-BETA-001"})),
         ("Three PL Inventory Balance Snapshot", frappe.db.get_value("Three PL Inventory Balance Snapshot", {"customer": "Demo Client Beta", "item_code": "SKU-BETA-001"})),

@@ -118,12 +118,12 @@ Status: pending.
 
 ## Stage MVP2 - Client Product Card Management
 
-Status: captured, not implemented.
+Status: base implemented; bulk Excel workflow pending.
 
 Client-confirmed future requirement:
 
-- Clients should create new product cards themselves.
-- Clients should update existing product cards themselves.
+- Clients should create new product cards themselves. Base portal flow is implemented through `Three PL Client Product`.
+- Clients should update existing product cards themselves. Base portal flow is implemented through `Three PL Client Product`.
 - Each product card should support at least:
   - owner client;
   - client SKU;
@@ -131,23 +131,24 @@ Client-confirmed future requirement:
   - unit of measure;
   - product photo.
 - The business identity should remain `Owner Client + Client SKU`, not global SKU alone.
-- The client portal should provide a safe product management flow, without giving clients Desk access.
-- Excel export/import should be available for bulk product maintenance.
+- The client portal provides a safe product management flow, without giving clients Desk access.
+- Excel export/import should be available for bulk product maintenance. This remains pending.
 
 Implementation direction:
 
 - Build this on top of standard ERPNext `Item`.
 - Keep custom ownership fields (`owner_client`, `client_sku`, `client_product_name`) as the 3PL layer.
-- Add portal pages or Web Forms for client-safe create/update.
-- Add validation so a client can only create or update products for their own customer account.
+- Add portal pages or Web Forms for client-safe create/update. Base implemented at `/client/products/list`.
+- Add validation so a client can only create or update products for their own customer account. Base server validation implemented.
 - Add import/export templates with clear required columns and validation errors.
 - Store product photos using ERPNext file attachments or item image fields.
+- Record client product changes in `Three PL Client Product Change Log`.
 
 Open design questions:
 
-- Exact required product fields for the client's operational catalog.
+- Exact final required product fields for the client's operational catalog.
 - Whether product approval by warehouse/admin is needed before the item becomes usable.
-- Whether clients may deactivate products themselves.
+- Whether clients may reactivate inactive products themselves.
 - Whether Excel import should create products immediately or stage them for review.
 
 ## Phase 5 - Multi-Client Stock Model

@@ -107,6 +107,33 @@ def ensure_item(item_code, item_name, client, client_sku, client_product_name, b
     return item
 
 
+def ensure_client_product(item_code, item_name, client, client_sku, client_product_name, barcode):
+    existing = frappe.db.get_value(
+        "Three PL Client Product",
+        {"customer": client, "client_sku": client_sku},
+        "name",
+    )
+    product = frappe.get_doc("Three PL Client Product", existing) if existing else frappe.new_doc("Three PL Client Product")
+    tracked_fields = ("customer", "client_sku", "product_name", "product_description", "uom", "barcode", "status", "item_code", "notes")
+    before = {field: product.get(field) for field in tracked_fields}
+    product.customer = client
+    product.client_sku = client_sku
+    product.product_name = client_product_name or item_name
+    product.product_description = item_name
+    product.uom = "Nos"
+    product.barcode = barcode
+    product.status = "Active"
+    product.item_code = item_code
+    product.notes = "Demo product card managed through the client portal layer."
+    after = {field: product.get(field) for field in tracked_fields}
+    if product.is_new() or before != after or not product.sync_status:
+        product.sync_status = "Pending"
+    product.save(ignore_permissions=True)
+    if client == "Demo Client Alpha":
+        set_owner_after_save(product, CLIENT_PORTAL_USER)
+    return product
+
+
 def ensure_inbound_notice():
     external_reference = "ASN-ALPHA-001"
     existing = frappe.db.get_value(
@@ -808,6 +835,7 @@ def main():
 
     for item in DEMO_ITEMS:
         ensure_item(**item)
+        ensure_client_product(**item)
 
     notice = ensure_inbound_notice()
     ensure_beta_inbound_notice()
