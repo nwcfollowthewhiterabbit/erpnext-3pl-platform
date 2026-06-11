@@ -58,6 +58,39 @@ This walkthrough covers the current MVP boundary: client portal input, customer 
 
 The deploy validator now checks these same boundaries automatically: internal warehouse logins, business-owner master-data pages, client portal routes, demo records, and Alpha-vs-Beta data isolation.
 
+## Pre-Client Golden Path Validation
+
+Before giving the instance to a customer for testing, run:
+
+```bash
+./scripts/validate_mvp_e2e.sh
+```
+
+This server-side validation creates temporary MVP test data, runs the core flow, and removes the temporary records afterward.
+
+Covered flow:
+
+1. Client creates a product card.
+2. Product card synchronizes into ERPNext `Item`.
+3. Client creates a structured Receiving Notice.
+4. Warehouse receives goods into `Temporary Receiving - 3`.
+5. Receiving Notice is compared and marked received.
+6. Warehouse creates/uses a container box.
+7. Container is put away into storage.
+8. Warehouse runs a no-difference stocktake.
+9. Client creates a Shipment Request.
+10. System creates a Pick List and allocates stock.
+11. Warehouse confirms picking.
+12. Warehouse packs the shipment.
+13. Warehouse ships the shipment.
+14. Client visibility for own product and shipped request is verified.
+
+Expected result:
+
+- Command ends with `MVP E2E validation passed`.
+- No temporary `MVP-E2E-*` records remain after cleanup.
+- Existing demo data remains available for manual customer review.
+
 ### Client Portal
 
 Open `https://erpnext.77.237.244.169.sslip.io/client/receiving-notice`.
