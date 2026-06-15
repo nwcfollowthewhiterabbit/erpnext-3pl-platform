@@ -1672,14 +1672,39 @@ def validate_putaway_operation():
 def cleanup_picking_validation_docs():
     frappe.set_user("Administrator")
     reference = "PICK-VALIDATION-ALPHA"
+    delete_stock_entries({"remarks": ("like", "PICKING-VALIDATION-STOCK%")})
     request_names = frappe.get_all("Three PL Shipment Request", filters={"external_reference": reference}, pluck="name")
+    pick_names = frappe.get_all("Pick List", filters={"shipment_request": ("in", request_names or [""])}, pluck="name")
+    allocated_containers = set()
+    for pick_name in pick_names:
+        allocated_containers.update(
+            row.container_code
+            for row in frappe.get_all(
+                "Pick List Item",
+                filters={"parent": pick_name, "container_code": ("is", "set")},
+                fields=["container_code"],
+            )
+            if row.container_code
+        )
+    for movement_name in frappe.get_all(
+        "Three PL Container Movement",
+        filters={"reference_doctype": "Pick List", "reference_name": ("in", pick_names or [""])},
+        pluck="name",
+    ):
+        frappe.delete_doc("Three PL Container Movement", movement_name, ignore_permissions=True, force=True)
+    for container_name in allocated_containers:
+        if frappe.db.exists("Three PL Container", container_name):
+            container = frappe.get_doc("Three PL Container", container_name)
+            if container.status == "Picking":
+                container.status = "Stored"
+                container.save(ignore_permissions=True)
     for movement_name in frappe.get_all(
         "Three PL Container Movement",
         filters={"container_code": "BOX-PICKING-VALIDATION"},
         pluck="name",
     ):
         frappe.delete_doc("Three PL Container Movement", movement_name, ignore_permissions=True, force=True)
-    for pick_name in frappe.get_all("Pick List", filters={"shipment_request": ("in", request_names or [""])}, pluck="name"):
+    for pick_name in pick_names:
         pick_list = frappe.get_doc("Pick List", pick_name)
         if pick_list.docstatus == 1:
             pick_list.cancel()
@@ -1692,6 +1717,67 @@ def cleanup_picking_validation_docs():
         frappe.delete_doc("Three PL Container", "BOX-PICKING-VALIDATION", ignore_permissions=True, force=True)
 
 
+def ensure_picking_validation_item():
+    item_code = "SKU-PICKING-VALIDATION"
+    if frappe.db.exists("Item", item_code):
+        item = frappe.get_doc("Item", item_code)
+    else:
+        item = frappe.get_doc(
+            {
+                "doctype": "Item",
+                "item_code": item_code,
+                "item_name": "Picking Validation Product",
+                "item_group": "Products",
+                "stock_uom": "Nos",
+                "is_stock_item": 1,
+            }
+        )
+    item.item_name = "Picking Validation Product"
+    item.item_group = "Products"
+    item.stock_uom = "Nos"
+    if item.meta.has_field("owner_client"):
+        item.owner_client = "Demo Client Alpha"
+    if item.meta.has_field("client_sku"):
+        item.client_sku = "PICK-VALIDATION"
+    if item.meta.has_field("client_product_name"):
+        item.client_product_name = "Picking Validation Product"
+    item.save(ignore_permissions=True)
+    return item_code
+
+
+def ensure_picking_validation_stock(item_code):
+    entry = frappe.get_doc(
+        {
+            "doctype": "Stock Entry",
+            "stock_entry_type": "3PL Inbound Receipt",
+            "purpose": "Material Receipt",
+            "company": "3pl",
+            "posting_date": nowdate(),
+            "client": "Demo Client Alpha",
+            "warehouse_flow": "Inbound Receipt",
+            "scanned_location": "Temporary Receiving - 3",
+            "container_code": "BOX-PICKING-VALIDATION",
+            "remarks": "PICKING-VALIDATION-STOCK temporary stock for picking validation.",
+            "items": [
+                {
+                    "item_code": item_code,
+                    "qty": 2,
+                    "t_warehouse": "Temporary Receiving - 3",
+                    "uom": "Nos",
+                    "stock_uom": "Nos",
+                    "conversion_factor": 1,
+                    "basic_rate": 1,
+                    "scanned_location": "Temporary Receiving - 3",
+                    "container_code": "BOX-PICKING-VALIDATION",
+                }
+            ],
+        }
+    )
+    entry.insert(ignore_permissions=True)
+    entry.submit()
+    return entry.name
+
+
 def validate_picking_confirmation():
     from sync_inventory_snapshots import sync_inventory_snapshots
     from sync_picking_confirmations import sync_pick_list
@@ -1699,6 +1785,7 @@ def validate_picking_confirmation():
 
     cleanup_picking_validation_docs()
     frappe.set_user("Administrator")
+    item_code = ensure_picking_validation_item()
 
     container = frappe.get_doc(
         {
@@ -1711,8 +1798,8 @@ def validate_picking_confirmation():
             "status": "Stored",
             "items": [
                 {
-                    "item_code": "SKU-ALPHA-001",
-                    "client_sku": "ALPHA-001",
+                    "item_code": item_code,
+                    "client_sku": "PICK-VALIDATION",
                     "qty": 2,
                     "uom": "Nos",
                     "condition_status": "OK",
@@ -1721,6 +1808,7 @@ def validate_picking_confirmation():
         }
     )
     container.insert(ignore_permissions=True)
+    ensure_picking_validation_stock(item_code)
     sync_inventory_snapshots()
 
     request = frappe.get_doc(
@@ -1734,8 +1822,8 @@ def validate_picking_confirmation():
             "portal_source": 1,
             "items": [
                 {
-                    "item_code": "SKU-ALPHA-001",
-                    "client_sku": "ALPHA-001",
+                    "item_code": item_code,
+                    "client_sku": "PICK-VALIDATION",
                     "qty": 2,
                     "uom": "Nos",
                 }
