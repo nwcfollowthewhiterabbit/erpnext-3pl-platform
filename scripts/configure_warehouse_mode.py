@@ -1523,6 +1523,196 @@ def configure_client_portal():
     configure_client_portal_website_script()
 
 
+def configure_server_scripts():
+    script_name = "3PL Client Product Immediate Sync"
+    script = """
+if frappe.flags.get("three_pl_client_product_sync"):
+    pass
+else:
+    frappe.flags.three_pl_client_product_sync = True
+    try:
+        def snapshot_for(product):
+            return {
+                "customer": product.get("customer"),
+                "client_sku": product.get("client_sku"),
+                "product_name": product.get("product_name"),
+                "product_description": product.get("product_description"),
+                "uom": product.get("uom"),
+                "barcode": product.get("barcode"),
+                "product_image": product.get("product_image"),
+                "status": product.get("status"),
+            }
+
+        def set_if_field(target, fieldname, value):
+            if target.meta.has_field(fieldname):
+                target.set(fieldname, value)
+
+        def ensure_barcode(item, barcode):
+            if not barcode:
+                return
+            for row in item.get("barcodes", []):
+                if row.barcode == barcode:
+                    return
+            item.append("barcodes", {"barcode": barcode})
+
+        def generated_item_code(product):
+            existing = frappe.db.get_value(
+                "Item",
+                {"owner_client": product.get("customer"), "client_sku": product.get("client_sku")},
+                "name",
+            )
+            if existing:
+                return existing
+
+            customer_parts = []
+            current_part = ""
+            for customer_char in str(product.get("customer") or ""):
+                if customer_char.isalnum():
+                    current_part = current_part + customer_char
+                else:
+                    if current_part:
+                        customer_parts.append(current_part)
+                    current_part = ""
+            if current_part:
+                customer_parts.append(current_part)
+            filtered_parts = [part for part in customer_parts if part.lower() not in ("demo", "client", "customer")]
+            prefix_source = filtered_parts[-1] if filtered_parts else product.get("customer")
+            prefix_source = str(prefix_source or "").upper()
+            prefix = ""
+            prefix_previous_dash = False
+            for prefix_char in prefix_source:
+                if prefix_char.isalnum():
+                    prefix = prefix + prefix_char
+                    prefix_previous_dash = False
+                elif not prefix_previous_dash:
+                    prefix = prefix + "-"
+                    prefix_previous_dash = True
+            prefix = (prefix.strip("-") or "ITEM")[:12]
+
+            sku_source = str(product.get("client_sku") or "").upper()
+            sku_code = ""
+            sku_previous_dash = False
+            for sku_char in sku_source:
+                if sku_char.isalnum():
+                    sku_code = sku_code + sku_char
+                    sku_previous_dash = False
+                elif not sku_previous_dash:
+                    sku_code = sku_code + "-"
+                    sku_previous_dash = True
+            sku_code = sku_code.strip("-") or "ITEM"
+
+            base = prefix + "-" + sku_code
+            if not frappe.db.exists("Item", base):
+                return base
+
+            counter = 2
+            while frappe.db.exists("Item", base + "-" + str(counter)):
+                counter = counter + 1
+            return base + "-" + str(counter)
+
+        def find_existing_item(product):
+            if product.get("item_code") and frappe.db.exists("Item", product.get("item_code")):
+                return product.get("item_code")
+            return frappe.db.get_value(
+                "Item",
+                {"owner_client": product.get("customer"), "client_sku": product.get("client_sku")},
+                "name",
+            )
+
+        def insert_log(product, action, old_values, new_values, notes):
+            log = frappe.new_doc("Three PL Client Product Change Log")
+            log.product = product.name
+            log.customer = product.get("customer")
+            log.item_code = product.get("item_code")
+            log.action = action
+            log.changed_by = product.get("modified_by") or frappe.session.user
+            log.change_datetime = product.get("modified") or frappe.utils.now()
+            log.old_values = old_values or "{}"
+            log.new_values = new_values or "{}"
+            log.notes = notes
+            log.insert(ignore_permissions=True)
+
+        current_snapshot = json.dumps(snapshot_for(doc), sort_keys=True, indent=2)
+        previous_snapshot = doc.get("last_synced_snapshot") or "{}"
+
+        if doc.get("sync_status") == "Synced" and doc.get("item_code") and previous_snapshot == current_snapshot:
+            pass
+        else:
+            item_code = find_existing_item(doc) or generated_item_code(doc)
+            item = frappe.get_doc("Item", item_code) if frappe.db.exists("Item", item_code) else frappe.new_doc("Item")
+
+            is_new_item = item.is_new()
+            if is_new_item:
+                item.item_code = item_code
+                item.item_group = "Products"
+                item.is_stock_item = 1
+
+            item.item_name = doc.get("product_name")
+            item.description = doc.get("product_description") or doc.get("product_name")
+            item.item_group = item.get("item_group") or "Products"
+            item.stock_uom = doc.get("uom") or "Nos"
+            item.disabled = 1 if doc.get("status") == "Inactive" else 0
+            set_if_field(item, "owner_client", doc.get("customer"))
+            set_if_field(item, "client_sku", doc.get("client_sku"))
+            set_if_field(item, "client_product_name", doc.get("product_name"))
+            set_if_field(item, "image", doc.get("product_image"))
+            ensure_barcode(item, doc.get("barcode"))
+            item.save(ignore_permissions=True)
+
+            action = "Created"
+            if doc.get("item_code") or previous_snapshot not in ("", "{}"):
+                action = "Deactivated" if doc.get("status") == "Inactive" else "Updated"
+
+            frappe.db.set_value(
+                doc.doctype,
+                doc.name,
+                {
+                    "item_code": item.name,
+                    "sync_status": "Synced",
+                    "sync_error": "",
+                    "last_synced_at": frappe.utils.now(),
+                    "last_synced_snapshot": current_snapshot,
+                },
+                update_modified=False,
+            )
+            doc.item_code = item.name
+            doc.sync_status = "Synced"
+            doc.sync_error = ""
+            doc.last_synced_snapshot = current_snapshot
+            insert_log(doc, action, previous_snapshot, current_snapshot, "Product card synchronized immediately to ERPNext Item.")
+    except Exception as exc:
+        frappe.db.set_value(
+            doc.doctype,
+            doc.name,
+            {
+                "sync_status": "Failed",
+                "sync_error": str(exc),
+            },
+            update_modified=False,
+        )
+        try:
+            insert_log(doc, "Sync Failed", doc.get("last_synced_snapshot") or "{}", json.dumps(snapshot_for(doc), sort_keys=True, indent=2), str(exc))
+        except Exception:
+            pass
+    finally:
+        frappe.flags.three_pl_client_product_sync = False
+""".strip()
+
+    if frappe.db.exists("Server Script", script_name):
+        server_script = frappe.get_doc("Server Script", script_name)
+    else:
+        server_script = frappe.new_doc("Server Script")
+        server_script.name = script_name
+
+    server_script.script_type = "DocType Event"
+    server_script.reference_doctype = "Three PL Client Product"
+    server_script.doctype_event = "After Save"
+    server_script.module = "Stock"
+    server_script.disabled = 0
+    server_script.script = script
+    server_script.save(ignore_permissions=True)
+
+
 def build_client_portal_nav():
     form_links = {
         form["menu_title"]: f"/{portal_list_route(form['route'])}"
@@ -6213,6 +6403,7 @@ def main():
     configure_stock_entry_types()
     configure_custom_doctypes()
     configure_custom_fields()
+    configure_server_scripts()
     configure_client_portal()
     configure_reports()
     configure_workspaces()

@@ -27,6 +27,7 @@ from project_config import (
 
 
 REQUIRED_WORKSPACES = ["3PL Warehouse", "Stock Reference"]
+REQUIRED_SERVER_SCRIPTS = ["3PL Client Product Immediate Sync"]
 REQUIRED_USERS = {
     WAREHOUSE_OPERATOR_USER: ["Stock User", "3PL Warehouse User"],
     WAREHOUSE_MANAGER_USER: ["Stock User", "Stock Manager", "3PL Warehouse Manager"],
@@ -430,6 +431,18 @@ def main():
     client_product_import_meta = frappe.get_meta("Three PL Client Product Import")
     client_product_import_fields = {field.fieldname for field in client_product_import_meta.fields}
     require(client_product_import_fields >= REQUIRED_CLIENT_PRODUCT_IMPORT_FIELDS, "Three PL Client Product Import misses required fields")
+
+    require(
+        frappe.conf.get("server_script_enabled") in (1, "1", True),
+        "Server Scripts must be enabled for immediate client product synchronization",
+    )
+    for script_name in REQUIRED_SERVER_SCRIPTS:
+        require(frappe.db.exists("Server Script", script_name), f"Missing Server Script: {script_name}")
+        server_script = frappe.get_doc("Server Script", script_name)
+        require(server_script.disabled == 0, f"Server Script is disabled: {script_name}")
+        require(server_script.script_type == "DocType Event", f"Server Script has wrong type: {script_name}")
+        require(server_script.reference_doctype == "Three PL Client Product", f"Server Script has wrong reference doctype: {script_name}")
+        require(server_script.doctype_event == "After Save", f"Server Script has wrong event: {script_name}")
 
     for report in REQUIRED_REPORTS:
         require(frappe.db.exists("Report", report), f"Missing Report: {report}")

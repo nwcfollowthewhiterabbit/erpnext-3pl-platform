@@ -50,6 +50,9 @@ project_env=(
 docker exec -u root "$backend_cid" bash -lc \
   "mkdir -p /home/frappe/logs /home/frappe/frappe-bench/sites/${site_name}/logs && chown -R frappe:frappe /home/frappe/logs /home/frappe/frappe-bench/sites/${site_name}/logs"
 
+docker exec "$backend_cid" bash -lc \
+  "cd /home/frappe/frappe-bench && bench set-config -g server_script_enabled 1"
+
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/configure_warehouse_mode.py 1"
 docker exec "${project_env[@]}" "$backend_cid" bash -lc \

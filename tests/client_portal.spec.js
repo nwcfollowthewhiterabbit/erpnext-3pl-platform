@@ -264,7 +264,10 @@ test("client can create a product from portal web form", async ({ page }) => {
     page.getByRole("button", { name: /save product|save/i }).first().click(),
   ]);
   await page.waitForLoadState("networkidle");
-  await expect(page.locator("body")).toContainText(sku, { timeout: 15000 });
+  const productRow = page.locator("tr", { hasText: sku }).first();
+  await expect(productRow).toBeVisible({ timeout: 15000 });
+  await expect(productRow).toContainText("Synced", { timeout: 15000 });
+  await expect(productRow).toContainText(/ALPHA-UI-PORTAL/);
 
   expect(problems).toEqual([]);
 });
