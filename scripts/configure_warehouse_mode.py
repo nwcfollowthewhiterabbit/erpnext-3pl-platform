@@ -1592,8 +1592,13 @@ def configure_client_portal_website_script():
     }}
 
     if (window.frappe && frappe.has_permission && !frappe.has_permission.__client_portal_patched) {{
+      var originalHasPermission = frappe.has_permission.bind(frappe);
       frappe.has_permission = function (doctype, docname, perm_type, callback) {{
-        if (callback) callback({{message: {{has_permission: false}}}});
+        if (/^(Page|Workspace)$/i.test(String(doctype || ''))) {{
+          if (callback) callback({{message: {{has_permission: false}}}});
+          return false;
+        }}
+        return originalHasPermission(doctype, docname, perm_type, callback);
       }};
       frappe.has_permission.__client_portal_patched = true;
     }}
@@ -1616,6 +1621,8 @@ def configure_client_portal_website_script():
         '.three-pl-portal-link {{ display: inline-flex; align-items: center; min-height: 32px; padding: 6px 8px; border-radius: 6px; color: #374151; text-decoration: none; font-size: 14px; line-height: 1.2; }}',
         '.three-pl-portal-link:hover {{ background: #f3f4f6; color: #111827; text-decoration: none; }}',
         '.three-pl-portal-link.active {{ background: #111827; color: #fff; }}',
+        '.three-pl-portal-logout {{ min-height: 32px; margin-left: 12px; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; color: #374151; font-size: 13px; line-height: 1.2; }}',
+        '.three-pl-portal-logout:hover {{ background: #f3f4f6; color: #111827; }}',
         '.three-pl-import-template-action {{ display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 12px 0 18px; padding: 12px 14px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; }}',
         '.three-pl-import-template-action .three-pl-import-template-copy {{ color: #6b7280; font-size: 13px; }}',
         '.three-pl-import-template-action button {{ min-height: 32px; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; color: #111827; font-size: 13px; }}',
@@ -1666,6 +1673,57 @@ def configure_client_portal_website_script():
     var pageTitle = document.querySelector('h1');
     if (pageTitle) {{
       pageTitle.scrollIntoView = function () {{}};
+    }}
+  }}
+
+  function logoutClientPortal() {{
+    if (window.__threePlClientLogoutInProgress) return;
+    window.__threePlClientLogoutInProgress = true;
+    fetch('/api/method/logout', {{
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {{'Content-Type': 'application/x-www-form-urlencoded'}}
+    }}).catch(function () {{
+      return null;
+    }}).finally(function () {{
+      window.location.href = '/login';
+    }});
+  }}
+
+  function installClientPortalLogout() {{
+    if (!isClientPortal()) return;
+
+    if (!document.__threePlClientLogoutHandlerInstalled) {{
+      document.addEventListener('click', function (event) {{
+        var link = event.target.closest('a, button');
+        if (!link) return;
+        var label = ((link.textContent || '') + ' ' + (link.getAttribute('href') || '') + ' ' + (link.id || '')).toLowerCase();
+        if (label.indexOf('logout') === -1 && label.indexOf('log out') === -1) return;
+        event.preventDefault();
+        logoutClientPortal();
+      }}, true);
+      document.__threePlClientLogoutHandlerInstalled = true;
+    }}
+
+    if (document.getElementById('three-pl-client-logout')) return;
+    var target = document.querySelector('.navbar .navbar-nav') || document.querySelector('.navbar .container') || document.querySelector('.navbar');
+    if (!target) return;
+    var button = document.createElement('button');
+    button.id = 'three-pl-client-logout';
+    button.className = 'three-pl-portal-logout';
+    button.type = 'button';
+    button.textContent = 'Log out';
+    button.addEventListener('click', function (event) {{
+      event.preventDefault();
+      logoutClientPortal();
+    }});
+    if (target.classList && target.classList.contains('navbar-nav')) {{
+      var item = document.createElement('li');
+      item.className = 'nav-item';
+      item.appendChild(button);
+      target.appendChild(item);
+    }} else {{
+      target.appendChild(button);
     }}
   }}
 
@@ -1787,7 +1845,7 @@ def configure_client_portal_website_script():
     if (window.frappe && frappe.web_form && frappe.web_form.get_value) {{
       return frappe.web_form.get_value(fieldname);
     }}
-    var input = document.querySelector('[data-fieldname="' + fieldname + '"] input, [data-fieldname="' + fieldname + '"] textarea, [name="' + fieldname + '"], input[data-fieldname="' + fieldname + '"], textarea[data-fieldname="' + fieldname + '"]');
+    var input = document.querySelector('[data-fieldname="' + fieldname + '"] input, [data-fieldname="' + fieldname + '"] textarea, [data-fieldname="' + fieldname + '"] select, [name="' + fieldname + '"], input[data-fieldname="' + fieldname + '"], textarea[data-fieldname="' + fieldname + '"], select[data-fieldname="' + fieldname + '"]');
     return input ? input.value : '';
   }}
 
@@ -1796,7 +1854,7 @@ def configure_client_portal_website_script():
       frappe.web_form.set_value(fieldname, value);
       return;
     }}
-    var input = document.querySelector('[data-fieldname="' + fieldname + '"] input, [data-fieldname="' + fieldname + '"] textarea, [name="' + fieldname + '"], input[data-fieldname="' + fieldname + '"], textarea[data-fieldname="' + fieldname + '"]');
+    var input = document.querySelector('[data-fieldname="' + fieldname + '"] input, [data-fieldname="' + fieldname + '"] textarea, [data-fieldname="' + fieldname + '"] select, [name="' + fieldname + '"], input[data-fieldname="' + fieldname + '"], textarea[data-fieldname="' + fieldname + '"], select[data-fieldname="' + fieldname + '"]');
     if (input) {{
       input.value = value;
       input.dispatchEvent(new Event('change', {{ bubbles: true }}));
@@ -1820,6 +1878,73 @@ def configure_client_portal_website_script():
         return payload;
       }});
     }});
+  }}
+
+  function showClientPortalFormMessage(message, isError) {{
+    var target = document.getElementById('three-pl-client-form-message');
+    if (!target) {{
+      var form = document.querySelector('form.web-form, .web-form');
+      target = document.createElement('div');
+      target.id = 'three-pl-client-form-message';
+      target.className = 'alert mt-3';
+      if (form) form.insertBefore(target, form.firstChild);
+    }}
+    if (!target) return;
+    target.className = isError ? 'alert alert-danger mt-3' : 'alert alert-success mt-3';
+    target.textContent = message || (isError ? 'Could not save the product.' : 'Product Saved');
+  }}
+
+  function installClientProductSubmit() {{
+    if (window.location.pathname !== '/client/products/new') return;
+    if (document.__threePlProductSubmitInstalled) return;
+    document.__threePlProductSubmitInstalled = true;
+
+    function submitProduct(event) {{
+      var trigger = event.target.closest ? event.target.closest('button, input[type="submit"]') : null;
+      var triggerText = trigger ? ((trigger.textContent || trigger.value || '').toLowerCase()) : '';
+      if (event.type === 'click' && triggerText.indexOf('save product') === -1 && triggerText.indexOf('save') === -1) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+
+      var clientSku = String(getWebFormValue('client_sku') || '').trim();
+      var productName = String(getWebFormValue('product_name') || '').trim();
+      var uom = String(getWebFormValue('uom') || 'Nos').trim() || 'Nos';
+      var status = String(getWebFormValue('status') || 'Active').trim() || 'Active';
+      if (!clientSku || !productName) {{
+        showClientPortalFormMessage('Client SKU and Product Name are required.', true);
+        return false;
+      }}
+
+      if (trigger) trigger.setAttribute('disabled', 'disabled');
+      portalApi('frappe.client.insert', {{
+        doc: {{
+          doctype: 'Three PL Client Product',
+          customer: '{CLIENT_PORTAL_CUSTOMER}',
+          client_sku: clientSku,
+          product_name: productName,
+          product_description: getWebFormValue('product_description'),
+          uom: uom,
+          barcode: getWebFormValue('barcode'),
+          product_image: getWebFormValue('product_image'),
+          status: status,
+          notes: getWebFormValue('notes')
+        }}
+      }}).then(function () {{
+        showClientPortalFormMessage('Product Saved', false);
+        window.location.href = '/client/products/list';
+      }}).catch(function (error) {{
+        showClientPortalFormMessage(error.message || 'Could not save the product.', true);
+        if (trigger) trigger.removeAttribute('disabled');
+      }});
+      return false;
+    }}
+
+    document.addEventListener('click', submitProduct, true);
+    document.addEventListener('submit', function (event) {{
+      if (window.location.pathname === '/client/products/new') submitProduct(event);
+    }}, true);
   }}
 
   function padReferencePart(value, width) {{
@@ -2058,18 +2183,24 @@ def configure_client_portal_website_script():
     frappe.ready(function () {{
       tuneClientPortalBoot();
       installClientPortalNav();
+      installClientPortalLogout();
       renderClientPortalList();
       installProductImportTemplateAction();
+      installClientProductSubmit();
       autoFillClientReference();
       installClientProductPicker();
       removeDeskPermissionNoise();
       setTimeout(renderClientPortalList, 250);
+      setTimeout(installClientPortalLogout, 250);
       setTimeout(installProductImportTemplateAction, 250);
+      setTimeout(installClientProductSubmit, 250);
       setTimeout(autoFillClientReference, 250);
       setTimeout(installClientProductPicker, 250);
       setTimeout(removeDeskPermissionNoise, 250);
       setTimeout(renderClientPortalList, 1000);
+      setTimeout(installClientPortalLogout, 1000);
       setTimeout(installProductImportTemplateAction, 1000);
+      setTimeout(installClientProductSubmit, 1000);
       setTimeout(autoFillClientReference, 1000);
       setTimeout(installClientProductPicker, 1000);
       setTimeout(removeDeskPermissionNoise, 1000);
@@ -2078,8 +2209,10 @@ def configure_client_portal_website_script():
     document.addEventListener('DOMContentLoaded', function () {{
       tuneClientPortalBoot();
       installClientPortalNav();
+      installClientPortalLogout();
       renderClientPortalList();
       installProductImportTemplateAction();
+      installClientProductSubmit();
       autoFillClientReference();
       installClientProductPicker();
       removeDeskPermissionNoise();

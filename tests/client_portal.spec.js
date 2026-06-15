@@ -230,3 +230,62 @@ test("shipment request form auto-fills client reference", async ({ page }) => {
 
   expect(problems).toEqual([]);
 });
+
+test("client can create a product from portal web form", async ({ page }) => {
+  const problems = [];
+  await collectPortalProblems(page, problems);
+
+  const loginResponse = await page.context().request.post(`${baseURL}/api/method/login`, {
+    form: { usr: clientUser, pwd: clientPassword },
+  });
+  expect(loginResponse.ok()).toBeTruthy();
+
+  const sku = `UI-PORTAL-${Date.now()}`;
+  await page.goto(`${baseURL}/client/products/new`);
+  await page.waitForLoadState("networkidle");
+
+  await page
+    .locator('[data-fieldname="client_sku"] input, input[name="client_sku"], input[data-fieldname="client_sku"]')
+    .first()
+    .fill(sku);
+  await page
+    .locator('[data-fieldname="product_name"] input, input[name="product_name"], input[data-fieldname="product_name"]')
+    .first()
+    .fill("Portal UI Test Product");
+
+  const uomInput = page.locator('[data-fieldname="uom"] input, input[name="uom"], input[data-fieldname="uom"]').first();
+  await expect(uomInput).toBeVisible();
+  if (!(await uomInput.inputValue())) {
+    await uomInput.fill("Nos");
+  }
+
+  await Promise.all([
+    page.waitForURL((url) => url.pathname === "/client/products/list", { timeout: 15000 }),
+    page.getByRole("button", { name: /save product|save/i }).first().click(),
+  ]);
+  await page.waitForLoadState("networkidle");
+  await expect(page.locator("body")).toContainText(sku, { timeout: 15000 });
+
+  expect(problems).toEqual([]);
+});
+
+test("client can log out from portal", async ({ page, context }) => {
+  const loginResponse = await page.context().request.post(`${baseURL}/api/method/login`, {
+    form: { usr: clientUser, pwd: clientPassword },
+  });
+  expect(loginResponse.ok()).toBeTruthy();
+
+  await page.goto(`${baseURL}/client/products/list`);
+  await page.waitForLoadState("networkidle");
+
+  await expect(page.locator("#three-pl-client-logout")).toBeVisible({ timeout: 10000 });
+  await page.locator("#three-pl-client-logout").click();
+  await page.waitForURL((url) => url.pathname === "/login", { timeout: 15000 });
+
+  const sidCookie = (await context.cookies(baseURL)).find((cookie) => cookie.name === "sid");
+  expect(sidCookie?.value === "Guest" || !sidCookie).toBeTruthy();
+
+  await page.goto(`${baseURL}/client/products/list`);
+  await page.waitForLoadState("networkidle");
+  await expect(page.locator("body")).toContainText(/login|not permitted/i);
+});
