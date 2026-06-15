@@ -1,8 +1,10 @@
 import frappe
+from frappe.desk.query_report import run as run_query_report
 from frappe.utils import now_datetime, nowdate
 
 from project_config import CLIENT_PORTAL_CUSTOMER, COMPANY, WAREHOUSE_MANAGER_USER
 from validate_site import (
+    REQUIRED_REPORTS,
     require,
     validate_outbound_fulfillment,
     validate_partial_repack,
@@ -326,8 +328,18 @@ def validate_warehouse_role_access():
         require(frappe.has_permission(doctype, "read"), f"Warehouse manager cannot read {doctype}")
 
 
+def validate_warehouse_manager_reports():
+    frappe.set_user(WAREHOUSE_MANAGER_USER)
+    for report_name in REQUIRED_REPORTS:
+        try:
+            run_query_report(report_name, filters={})
+        except Exception as exc:
+            raise AssertionError(f"Warehouse manager cannot run report {report_name}: {exc}") from exc
+
+
 def main():
     validate_warehouse_role_access()
+    validate_warehouse_manager_reports()
     validate_container_move()
     validate_putaway_operation()
     validate_full_repack()
