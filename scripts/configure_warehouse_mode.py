@@ -1712,6 +1712,105 @@ else:
     server_script.script = script
     server_script.save(ignore_permissions=True)
 
+    script_name = "3PL Receiving Notice Discrepancy Sync"
+    script = """
+if frappe.flags.get("three_pl_receiving_discrepancy_sync"):
+    pass
+else:
+    frappe.flags.three_pl_receiving_discrepancy_sync = True
+    try:
+        received_total = 0
+        expected_total = 0
+        has_auto_discrepancy = False
+        for existing_discrepancy in doc.get("discrepancies", []):
+            if existing_discrepancy.get("auto_generated"):
+                has_auto_discrepancy = True
+
+        for item_row in doc.get("items", []):
+            expected_total = expected_total + frappe.utils.flt(item_row.get("expected_qty"))
+            received_total = received_total + frappe.utils.flt(item_row.get("received_qty"))
+
+        should_recalculate = has_auto_discrepancy or received_total > 0 or doc.get("status") != "Draft"
+        if should_recalculate:
+            expected_keys = []
+            retained_auto_discrepancies = []
+            for item_row in doc.get("items", []):
+                expected_keys.append((item_row.get("item_code"), item_row.get("client_sku")))
+
+            manual_discrepancies = []
+            for discrepancy_row in doc.get("discrepancies", []):
+                if not discrepancy_row.get("auto_generated"):
+                    manual_discrepancies.append(discrepancy_row.as_dict())
+                elif (
+                    discrepancy_row.get("discrepancy_type") == "Unexpected Product"
+                    and (discrepancy_row.get("item_code"), discrepancy_row.get("client_sku")) not in expected_keys
+                ):
+                    retained_auto_discrepancies.append(discrepancy_row.as_dict())
+
+            doc.set("discrepancies", [])
+            for manual_row in manual_discrepancies:
+                doc.append("discrepancies", manual_row)
+            for retained_row in retained_auto_discrepancies:
+                doc.append("discrepancies", retained_row)
+
+            for item_row in doc.get("items", []):
+                expected_qty = frappe.utils.flt(item_row.get("expected_qty"))
+                actual_qty = frappe.utils.flt(item_row.get("received_qty"))
+                variance_qty = actual_qty - expected_qty
+                item_row.variance_qty = variance_qty
+                if variance_qty:
+                    discrepancy_type = "Quantity Difference"
+                    if expected_qty == 0:
+                        discrepancy_type = "Unexpected Product"
+                    elif actual_qty == 0:
+                        discrepancy_type = "Missing Product"
+                    doc.append(
+                        "discrepancies",
+                        {
+                            "discrepancy_type": discrepancy_type,
+                            "item_code": item_row.get("item_code"),
+                            "client_sku": item_row.get("client_sku"),
+                            "expected_qty": expected_qty,
+                            "actual_qty": actual_qty,
+                            "variance_qty": variance_qty,
+                            "status": "Open",
+                            "auto_generated": 1,
+                            "notes": "Generated from Inbound Shipment Notice received quantities.",
+                        },
+                    )
+
+            has_open_discrepancy = False
+            for discrepancy_row in doc.get("discrepancies", []):
+                if discrepancy_row.get("status") != "Resolved":
+                    has_open_discrepancy = True
+
+            if has_open_discrepancy:
+                doc.status = "Discrepancy Review"
+            elif received_total <= 0:
+                doc.status = "Draft"
+            elif received_total < expected_total:
+                doc.status = "Partially Received"
+            else:
+                doc.status = "Received"
+
+    finally:
+        frappe.flags.three_pl_receiving_discrepancy_sync = False
+""".strip()
+
+    if frappe.db.exists("Server Script", script_name):
+        server_script = frappe.get_doc("Server Script", script_name)
+    else:
+        server_script = frappe.new_doc("Server Script")
+        server_script.name = script_name
+
+    server_script.script_type = "DocType Event"
+    server_script.reference_doctype = "Inbound Shipment Notice"
+    server_script.doctype_event = "Before Save"
+    server_script.module = "Stock"
+    server_script.disabled = 0
+    server_script.script = script
+    server_script.save(ignore_permissions=True)
+
 
 def build_client_portal_nav():
     form_links = {

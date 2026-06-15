@@ -27,7 +27,10 @@ from project_config import (
 
 
 REQUIRED_WORKSPACES = ["3PL Warehouse", "Stock Reference"]
-REQUIRED_SERVER_SCRIPTS = ["3PL Client Product Immediate Sync"]
+REQUIRED_SERVER_SCRIPTS = {
+    "3PL Client Product Immediate Sync": ("Three PL Client Product", "After Save"),
+    "3PL Receiving Notice Discrepancy Sync": ("Inbound Shipment Notice", "Before Save"),
+}
 REQUIRED_USERS = {
     WAREHOUSE_OPERATOR_USER: ["Stock User", "3PL Warehouse User"],
     WAREHOUSE_MANAGER_USER: ["Stock User", "Stock Manager", "3PL Warehouse Manager"],
@@ -436,13 +439,13 @@ def main():
         frappe.conf.get("server_script_enabled") in (1, "1", True),
         "Server Scripts must be enabled for immediate client product synchronization",
     )
-    for script_name in REQUIRED_SERVER_SCRIPTS:
+    for script_name, (reference_doctype, doctype_event) in REQUIRED_SERVER_SCRIPTS.items():
         require(frappe.db.exists("Server Script", script_name), f"Missing Server Script: {script_name}")
         server_script = frappe.get_doc("Server Script", script_name)
         require(server_script.disabled == 0, f"Server Script is disabled: {script_name}")
         require(server_script.script_type == "DocType Event", f"Server Script has wrong type: {script_name}")
-        require(server_script.reference_doctype == "Three PL Client Product", f"Server Script has wrong reference doctype: {script_name}")
-        require(server_script.doctype_event == "After Save", f"Server Script has wrong event: {script_name}")
+        require(server_script.reference_doctype == reference_doctype, f"Server Script has wrong reference doctype: {script_name}")
+        require(server_script.doctype_event == doctype_event, f"Server Script has wrong event: {script_name}")
 
     for report in REQUIRED_REPORTS:
         require(frappe.db.exists("Report", report), f"Missing Report: {report}")
@@ -912,6 +915,33 @@ def validate_receiving_sync():
     require(
         any(row.auto_generated and row.discrepancy_type == "Unexpected Product" and row.item_code == "SKU-ALPHA-002" and row.actual_qty == 3 for row in notice.discrepancies),
         "Receiving validation did not create unexpected product discrepancy",
+    )
+
+    manual_reference = "RECV-VALIDATION-MANUAL-QTY"
+    manual_notice = frappe.get_doc(
+        {
+            "doctype": "Inbound Shipment Notice",
+            "customer": "Demo Client Alpha",
+            "external_reference": manual_reference,
+            "expected_arrival_date": nowdate(),
+            "temporary_warehouse": "Temporary Receiving - 3",
+            "items": [
+                {
+                    "item_code": "SKU-ALPHA-001",
+                    "client_sku": "ALPHA-001",
+                    "expected_qty": 5,
+                    "received_qty": 3,
+                    "uom": "Nos",
+                }
+            ],
+        }
+    )
+    manual_notice.insert(ignore_permissions=True)
+    manual_notice.reload()
+    require(manual_notice.items[0].variance_qty == -2, "Manual received qty save did not update variance_qty")
+    require(
+        any(row.auto_generated and row.discrepancy_type == "Quantity Difference" and row.actual_qty == 3 and row.variance_qty == -2 for row in manual_notice.discrepancies),
+        "Manual received qty save did not update auto discrepancy",
     )
 
     cleanup_receiving_validation_docs()
