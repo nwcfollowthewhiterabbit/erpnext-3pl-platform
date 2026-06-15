@@ -1780,6 +1780,29 @@ if frappe.flags.get("three_pl_receiving_discrepancy_sync"):
 else:
     frappe.flags.three_pl_receiving_discrepancy_sync = True
     try:
+        if not doc.get("items") and doc.get("portal_items_description"):
+            try:
+                payload = json.loads(doc.get("portal_items_description") or "{}")
+            except Exception:
+                payload = {}
+            if isinstance(payload, dict) and payload.get("source") == "client_product_picker":
+                structured_items = payload.get("items") if isinstance(payload.get("items"), list) else []
+                for structured_item in structured_items:
+                    item_code = structured_item.get("item_code")
+                    if not item_code:
+                        continue
+                    doc.append(
+                        "items",
+                        {
+                            "item_code": item_code,
+                            "client_sku": structured_item.get("client_sku") or frappe.db.get_value("Item", item_code, "client_sku"),
+                            "item_name": structured_item.get("item_name") or frappe.db.get_value("Item", item_code, "item_name"),
+                            "expected_qty": structured_item.get("expected_qty") or structured_item.get("qty") or 0,
+                            "uom": structured_item.get("uom") or frappe.db.get_value("Item", item_code, "stock_uom") or "Nos",
+                            "notes": structured_item.get("notes"),
+                        },
+                    )
+
         received_total = 0
         expected_total = 0
         has_auto_discrepancy = False
@@ -1892,6 +1915,569 @@ if doc.get("receiving_notice"):
 
     server_script.script_type = "DocType Event"
     server_script.reference_doctype = "Three PL Client Instruction"
+    server_script.doctype_event = "After Save"
+    server_script.module = "Stock"
+    server_script.disabled = 0
+    server_script.script = script
+    server_script.save(ignore_permissions=True)
+
+    script_name = "3PL Shipment Request Immediate Pick List Sync"
+    script = """
+if frappe.flags.get("three_pl_shipment_request_pick_list_sync"):
+    pass
+else:
+    frappe.flags.three_pl_shipment_request_pick_list_sync = True
+    try:
+        open_statuses = ["Submitted", "Accepted", "Picking"]
+
+        def ensure_structured_request_items(request):
+            if request.get("items"):
+                return False
+            if not request.get("portal_items_description"):
+                return False
+            try:
+                payload = json.loads(request.get("portal_items_description") or "{}")
+            except Exception:
+                payload = {}
+            if not isinstance(payload, dict) or payload.get("source") != "client_product_picker":
+                return False
+            items = payload.get("items") if isinstance(payload.get("items"), list) else []
+            if not items:
+                return False
+            for item in items:
+                item_code = item.get("item_code")
+                if not item_code:
+                    continue
+                request.append(
+                    "items",
+                    {
+                        "item_code": item_code,
+                        "client_sku": item.get("client_sku") or frappe.db.get_value("Item", item_code, "client_sku"),
+                        "qty": item.get("qty") or item.get("expected_qty") or 0,
+                        "uom": item.get("uom") or frappe.db.get_value("Item", item_code, "stock_uom") or "Nos",
+                        "notes": item.get("notes"),
+                    },
+                )
+            return True
+
+        def append_request_note(request, message):
+            if message in (request.get("notes") or ""):
+                return
+            request.notes = ((request.get("notes") or "") + "\\n" + message).strip()
+            request.save(ignore_permissions=True)
+
+        def existing_pick_list(request):
+            return frappe.db.get_value("Pick List", {"shipment_request": request.name}, "name") or frappe.db.get_value(
+                "Pick List",
+                {"client": request.get("customer"), "shipment_reference": request.get("external_reference")},
+                "name",
+            )
+
+        def build_allocations(request):
+            allocations = []
+            if not request.get("items"):
+                raise Exception("Shipment request has no structured item rows")
+            for item_row in request.get("items", []):
+                remaining_qty = frappe.utils.flt(item_row.get("qty"))
+                snapshots = frappe.get_all(
+                    "Three PL Inventory Snapshot",
+                    filters={"customer": request.get("customer"), "item_code": item_row.get("item_code"), "status": "Available", "qty": (">", 0)},
+                    fields=["warehouse", "container_code", "qty", "uom"],
+                    order_by="warehouse asc, container_code asc",
+                )
+                for snapshot in snapshots:
+                    if remaining_qty <= 0:
+                        break
+                    pick_qty = min(remaining_qty, frappe.utils.flt(snapshot.get("qty")))
+                    if pick_qty <= 0:
+                        continue
+                    allocations.append(
+                        {
+                            "item_code": item_row.get("item_code"),
+                            "item_name": frappe.db.get_value("Item", item_row.get("item_code"), "item_name") or item_row.get("item_code"),
+                            "description": frappe.db.get_value("Item", item_row.get("item_code"), "description") or item_row.get("item_code"),
+                            "warehouse": snapshot.get("warehouse"),
+                            "scanned_location": snapshot.get("warehouse"),
+                            "container_code": snapshot.get("container_code"),
+                            "qty": pick_qty,
+                            "stock_qty": pick_qty,
+                            "picked_qty": 0,
+                            "uom": item_row.get("uom"),
+                            "stock_uom": item_row.get("uom"),
+                            "conversion_factor": 1,
+                        }
+                    )
+                    remaining_qty = remaining_qty - pick_qty
+                if remaining_qty > 0:
+                    raise Exception("Shipment request cannot allocate " + str(item_row.get("item_code")) + ": missing " + str(remaining_qty))
+            return allocations
+
+        def mark_allocated_containers(pick_list):
+            container_names = []
+            for row in pick_list.get("locations", []):
+                if row.get("container_code") and row.get("container_code") not in container_names:
+                    container_names.append(row.get("container_code"))
+            for container_name in container_names:
+                container = frappe.get_doc("Three PL Container", container_name)
+                if container.get("status") in ["Shipped", "Closed", "Replaced"]:
+                    raise Exception("Container " + container.name + " cannot be picked from status " + str(container.get("status")))
+                if not frappe.db.exists(
+                    "Three PL Container Movement",
+                    {
+                        "container_code": container.name,
+                        "movement_type": "Picking",
+                        "reference_doctype": "Pick List",
+                        "reference_name": pick_list.name,
+                    },
+                ):
+                    movement = frappe.new_doc("Three PL Container Movement")
+                    movement.movement_datetime = frappe.utils.now()
+                    movement.container_code = container.name
+                    movement.client = container.get("client")
+                    movement.movement_type = "Picking"
+                    movement.from_warehouse = container.get("current_warehouse")
+                    movement.to_warehouse = container.get("current_warehouse")
+                    movement.reference_doctype = "Pick List"
+                    movement.reference_name = pick_list.name
+                    movement.notes = "Allocated for shipment request " + str(pick_list.get("shipment_reference") or pick_list.get("shipment_request") or "")
+                    movement.save(ignore_permissions=True)
+                container.status = "Picking"
+                container.last_moved_at = frappe.utils.now()
+                container.save(ignore_permissions=True)
+
+        if ensure_structured_request_items(doc):
+            doc.save(ignore_permissions=True)
+
+        if doc.get("status") in open_statuses:
+            pick_list_name = existing_pick_list(doc)
+            pick_list = frappe.get_doc("Pick List", pick_list_name) if pick_list_name else frappe.new_doc("Pick List")
+            if pick_list.docstatus == 0:
+                allocations = build_allocations(doc)
+                pick_list.purpose = "Delivery"
+                pick_list.pick_manually = 1
+                pick_list.customer = doc.get("customer")
+                pick_list.client = doc.get("customer")
+                pick_list.shipment_reference = doc.get("external_reference")
+                pick_list.shipment_request = doc.name
+                pick_list.set("locations", [])
+                for allocation in allocations:
+                    pick_list.append("locations", allocation)
+                pick_list.save(ignore_permissions=True)
+            mark_allocated_containers(pick_list)
+            frappe.db.set_value(doc.doctype, doc.name, "status", "Picking", update_modified=False)
+            doc.status = "Picking"
+    except Exception as exc:
+        try:
+            append_request_note(doc, "Automatic pick allocation failed: " + str(exc))
+        except Exception:
+            pass
+    finally:
+        frappe.flags.three_pl_shipment_request_pick_list_sync = False
+""".strip()
+
+    if frappe.db.exists("Server Script", script_name):
+        server_script = frappe.get_doc("Server Script", script_name)
+    else:
+        server_script = frappe.new_doc("Server Script")
+        server_script.name = script_name
+
+    server_script.script_type = "DocType Event"
+    server_script.reference_doctype = "Three PL Shipment Request"
+    server_script.doctype_event = "After Save"
+    server_script.module = "Stock"
+    server_script.disabled = 0
+    server_script.script = script
+    server_script.save(ignore_permissions=True)
+
+    script_name = "3PL Pick List Immediate Picked Sync"
+    script = """
+if frappe.flags.get("three_pl_pick_list_picked_sync"):
+    pass
+else:
+    frappe.flags.three_pl_pick_list_picked_sync = True
+    try:
+        picked_containers = []
+        for row in doc.get("locations", []):
+            required_qty = frappe.utils.flt(row.get("stock_qty") or row.get("qty"))
+            picked_qty = frappe.utils.flt(row.get("picked_qty"))
+            if row.get("container_code") and required_qty > 0 and picked_qty >= required_qty and row.get("container_code") not in picked_containers:
+                picked_containers.append(row.get("container_code"))
+
+        for container_name in picked_containers:
+            container = frappe.get_doc("Three PL Container", container_name)
+            if container.get("status") in ["Shipped", "Closed", "Replaced"]:
+                continue
+            if not frappe.db.exists(
+                "Three PL Container Movement",
+                {
+                    "container_code": container.name,
+                    "movement_type": "Picked",
+                    "reference_doctype": "Pick List",
+                    "reference_name": doc.name,
+                },
+            ):
+                movement = frappe.new_doc("Three PL Container Movement")
+                movement.movement_datetime = frappe.utils.now()
+                movement.container_code = container.name
+                movement.client = container.get("client")
+                movement.movement_type = "Picked"
+                movement.from_warehouse = container.get("current_warehouse")
+                movement.to_warehouse = container.get("current_warehouse")
+                movement.reference_doctype = "Pick List"
+                movement.reference_name = doc.name
+                movement.notes = "Picked for shipment request " + str(doc.get("shipment_reference") or doc.get("shipment_request") or "")
+                movement.save(ignore_permissions=True)
+            container.status = "Picked"
+            container.last_moved_at = frappe.utils.now()
+            container.save(ignore_permissions=True)
+    finally:
+        frappe.flags.three_pl_pick_list_picked_sync = False
+""".strip()
+
+    if frappe.db.exists("Server Script", script_name):
+        server_script = frappe.get_doc("Server Script", script_name)
+    else:
+        server_script = frappe.new_doc("Server Script")
+        server_script.name = script_name
+
+    server_script.script_type = "DocType Event"
+    server_script.reference_doctype = "Pick List"
+    server_script.doctype_event = "After Save"
+    server_script.module = "Stock"
+    server_script.disabled = 0
+    server_script.script = script
+    server_script.save(ignore_permissions=True)
+
+    script_name = "3PL Stock Entry Immediate Flow Sync"
+    script = """
+if frappe.flags.get("three_pl_stock_entry_flow_sync"):
+    pass
+else:
+    frappe.flags.three_pl_stock_entry_flow_sync = True
+    try:
+        def sync_inbound_receipt(entry):
+            notice_name = entry.get("inbound_shipment_notice")
+            if not notice_name:
+                return
+            notice = frappe.get_doc("Inbound Shipment Notice", notice_name)
+            expected_by_key = {}
+            source_rows = {}
+            for item_row in notice.get("items", []):
+                key = (item_row.get("item_code"), item_row.get("uom") or "")
+                expected_by_key[key] = expected_by_key.get(key, 0) + frappe.utils.flt(item_row.get("expected_qty"))
+                source_rows.setdefault(key, []).append(item_row)
+
+            actual_by_key = {}
+            source_by_key = {}
+            for entry_name in frappe.get_all(
+                "Stock Entry",
+                filters={"docstatus": 1, "warehouse_flow": "Inbound Receipt", "inbound_shipment_notice": notice.name},
+                pluck="name",
+            ):
+                receipt = frappe.get_doc("Stock Entry", entry_name)
+                for receipt_row in receipt.get("items", []):
+                    key = (receipt_row.get("item_code"), receipt_row.get("uom") or receipt_row.get("stock_uom") or "")
+                    actual_by_key[key] = actual_by_key.get(key, 0) + frappe.utils.flt(receipt_row.get("qty"))
+                    source_by_key[key] = receipt.name
+
+            for item_row in notice.get("items", []):
+                key = (item_row.get("item_code"), item_row.get("uom") or "")
+                expected_qty = frappe.utils.flt(item_row.get("expected_qty"))
+                received_qty = actual_by_key.get(key, 0)
+                item_row.received_qty = received_qty
+                item_row.variance_qty = received_qty - expected_qty
+
+            manual_rows = []
+            for discrepancy_row in notice.get("discrepancies", []):
+                if not discrepancy_row.get("auto_generated"):
+                    manual_rows.append(discrepancy_row.as_dict())
+            notice.set("discrepancies", [])
+            for manual_row in manual_rows:
+                notice.append("discrepancies", manual_row)
+
+            all_keys = []
+            for key in expected_by_key:
+                if key not in all_keys:
+                    all_keys.append(key)
+            for key in actual_by_key:
+                if key not in all_keys:
+                    all_keys.append(key)
+            for key in all_keys:
+                expected_qty = expected_by_key.get(key, 0)
+                actual_qty = actual_by_key.get(key, 0)
+                variance_qty = actual_qty - expected_qty
+                if variance_qty == 0:
+                    continue
+                discrepancy_type = "Quantity Difference"
+                if expected_qty == 0:
+                    discrepancy_type = "Unexpected Product"
+                elif actual_qty == 0:
+                    discrepancy_type = "Missing Product"
+                notice.append(
+                    "discrepancies",
+                    {
+                        "discrepancy_type": discrepancy_type,
+                        "item_code": key[0],
+                        "expected_qty": expected_qty,
+                        "actual_qty": actual_qty,
+                        "variance_qty": variance_qty,
+                        "status": "Open",
+                        "auto_generated": 1,
+                        "source_stock_entry": source_by_key.get(key),
+                        "notes": "Generated from submitted inbound Stock Entry quantities.",
+                    },
+                )
+
+            total_expected = 0
+            for key in expected_by_key:
+                total_expected = total_expected + expected_by_key.get(key, 0)
+            total_actual = 0
+            for key in actual_by_key:
+                total_actual = total_actual + actual_by_key.get(key, 0)
+            has_open_discrepancy = False
+            for discrepancy_row in notice.get("discrepancies", []):
+                if discrepancy_row.get("status") != "Resolved":
+                    has_open_discrepancy = True
+            if not total_actual:
+                notice.status = "Draft"
+            elif has_open_discrepancy:
+                notice.status = "Discrepancy Review"
+            elif total_actual < total_expected:
+                notice.status = "Partially Received"
+            else:
+                notice.status = "Received"
+            notice.save(ignore_permissions=True)
+
+        def sync_outbound_entry(entry):
+            flow_status = {"Packing": ("Packed", "Packed"), "Shipping": ("Shipped", "Shipped")}
+            if entry.get("warehouse_flow") not in flow_status:
+                return
+            request_name = entry.get("shipment_request")
+            if not request_name and entry.get("shipment_reference"):
+                request_name = frappe.db.get_value(
+                    "Three PL Shipment Request",
+                    {"customer": entry.get("client"), "external_reference": entry.get("shipment_reference")},
+                    "name",
+                )
+            if not request_name:
+                return
+            statuses = flow_status.get(entry.get("warehouse_flow"))
+            request_status = statuses[0]
+            container_status = statuses[1]
+            from_warehouse = None
+            to_warehouse = None
+            containers = []
+            if entry.get("container_code"):
+                containers.append(entry.get("container_code"))
+            for item_row in entry.get("items", []):
+                if not from_warehouse:
+                    from_warehouse = item_row.get("s_warehouse")
+                if not to_warehouse:
+                    to_warehouse = item_row.get("t_warehouse")
+                if item_row.get("container_code") and item_row.get("container_code") not in containers:
+                    containers.append(item_row.get("container_code"))
+            for container_name in containers:
+                container = frappe.get_doc("Three PL Container", container_name)
+                if entry.get("client") and container.get("client") != entry.get("client"):
+                    raise Exception("Container " + container.name + " belongs to " + str(container.get("client")) + ", not " + str(entry.get("client")))
+                if not frappe.db.exists(
+                    "Three PL Container Movement",
+                    {
+                        "container_code": container.name,
+                        "movement_type": request_status,
+                        "reference_doctype": "Stock Entry",
+                        "reference_name": entry.name,
+                    },
+                ):
+                    movement = frappe.new_doc("Three PL Container Movement")
+                    movement.movement_datetime = frappe.utils.now()
+                    movement.container_code = container.name
+                    movement.client = container.get("client")
+                    movement.movement_type = request_status
+                    movement.from_warehouse = from_warehouse
+                    movement.to_warehouse = to_warehouse
+                    movement.reference_doctype = "Stock Entry"
+                    movement.reference_name = entry.name
+                    movement.notes = "Synced from " + str(entry.get("stock_entry_type") or entry.name) + " for shipment " + str(entry.get("shipment_reference") or entry.get("shipment_request") or "")
+                    movement.save(ignore_permissions=True)
+                if to_warehouse:
+                    container.current_warehouse = to_warehouse
+                container.status = container_status
+                container.last_moved_at = frappe.utils.now()
+                container.save(ignore_permissions=True)
+            request = frappe.get_doc("Three PL Shipment Request", request_name)
+            request.status = request_status
+            request.save(ignore_permissions=True)
+
+        if doc.get("warehouse_flow") == "Inbound Receipt":
+            sync_inbound_receipt(doc)
+        elif doc.get("warehouse_flow") in ["Packing", "Shipping"]:
+            sync_outbound_entry(doc)
+    finally:
+        frappe.flags.three_pl_stock_entry_flow_sync = False
+""".strip()
+
+    if frappe.db.exists("Server Script", script_name):
+        server_script = frappe.get_doc("Server Script", script_name)
+    else:
+        server_script = frappe.new_doc("Server Script")
+        server_script.name = script_name
+
+    server_script.script_type = "DocType Event"
+    server_script.reference_doctype = "Stock Entry"
+    server_script.doctype_event = "After Submit"
+    server_script.module = "Stock"
+    server_script.disabled = 0
+    server_script.script = script
+    server_script.save(ignore_permissions=True)
+
+    script_name = "3PL Product Import Immediate Sync"
+    script = """
+if frappe.flags.get("three_pl_product_import_sync"):
+    pass
+else:
+    frappe.flags.three_pl_product_import_sync = True
+    try:
+        if doc.get("status") == "Pending" and doc.get("import_file"):
+            file_name = frappe.db.get_value("File", {"file_url": doc.get("import_file")}, "name")
+            if not file_name:
+                raise Exception("Import file not found: " + str(doc.get("import_file")))
+            file_doc = frappe.get_doc("File", file_name)
+            content = file_doc.get_content()
+            if isinstance(content, bytes):
+                content = content.decode("utf-8-sig")
+            content = str(content or "").replace("\\r\\n", "\\n").replace("\\r", "\\n")
+            lines = [line for line in content.split("\\n") if line.strip()]
+            if len(lines) < 2:
+                raise Exception("Import file has no product rows.")
+
+            def parse_csv_line(line):
+                values = []
+                current = ""
+                in_quotes = False
+                index = 0
+                while index < len(line):
+                    char = line[index]
+                    if char == '"':
+                        if in_quotes and index + 1 < len(line) and line[index + 1] == '"':
+                            current = current + '"'
+                            index = index + 1
+                        else:
+                            in_quotes = not in_quotes
+                    elif char == "," and not in_quotes:
+                        values.append(current)
+                        current = ""
+                    else:
+                        current = current + char
+                    index = index + 1
+                values.append(current)
+                return [value.strip() for value in values]
+
+            headers = parse_csv_line(lines[0])
+            missing = []
+            for required_header in ["client_sku", "product_name"]:
+                if required_header not in headers:
+                    missing.append(required_header)
+            if missing:
+                raise Exception("Import file misses required columns: " + ", ".join(missing))
+            header_index = {}
+            header_position = 0
+            while header_position < len(headers):
+                header_index[headers[header_position]] = header_position
+                header_position = header_position + 1
+
+            def normalize_status(value):
+                value = str(value or "Active").strip() or "Active"
+                lowered = value.lower()
+                if lowered in ["active", "enabled", "1", "yes", "y"]:
+                    return "Active"
+                if lowered in ["inactive", "disabled", "0", "no", "n"]:
+                    return "Inactive"
+                raise Exception("Unsupported product status: " + value)
+
+            errors = []
+            applied = []
+            total = 0
+            line_number = 2
+            for line in lines[1:]:
+                row = parse_csv_line(line)
+                if not any(row):
+                    line_number = line_number + 1
+                    continue
+                total = total + 1
+                try:
+                    client_sku = (row[header_index.get("client_sku")] if header_index.get("client_sku") is not None and header_index.get("client_sku") < len(row) else "").strip()
+                    product_name = (row[header_index.get("product_name")] if header_index.get("product_name") is not None and header_index.get("product_name") < len(row) else "").strip()
+                    if not client_sku:
+                        raise Exception("Row " + str(line_number) + ": client_sku is required")
+                    if not product_name:
+                        raise Exception("Row " + str(line_number) + ": product_name is required")
+                    existing = frappe.db.get_value(
+                        "Three PL Client Product",
+                        {"customer": doc.get("customer"), "client_sku": client_sku},
+                        "name",
+                    )
+                    product = frappe.get_doc("Three PL Client Product", existing) if existing else frappe.new_doc("Three PL Client Product")
+                    product.customer = doc.get("customer")
+                    product.client_sku = client_sku
+                    product.product_name = product_name
+                    product.product_description = (row[header_index.get("product_description")] if header_index.get("product_description") is not None and header_index.get("product_description") < len(row) else "").strip()
+                    product.uom = (row[header_index.get("uom")] if header_index.get("uom") is not None and header_index.get("uom") < len(row) else "").strip() or "Nos"
+                    product.barcode = (row[header_index.get("barcode")] if header_index.get("barcode") is not None and header_index.get("barcode") < len(row) else "").strip()
+                    product.product_image = (row[header_index.get("product_image")] if header_index.get("product_image") is not None and header_index.get("product_image") < len(row) else "").strip()
+                    product.status = normalize_status(row[header_index.get("status")] if header_index.get("status") is not None and header_index.get("status") < len(row) else "")
+                    product.notes = (row[header_index.get("notes")] if header_index.get("notes") is not None and header_index.get("notes") < len(row) else "").strip()
+                    product.sync_status = "Pending"
+                    product.save(ignore_permissions=True)
+                    if product.owner != doc.owner:
+                        frappe.db.set_value(product.doctype, product.name, "owner", doc.owner, update_modified=False)
+                    applied.append(product.name)
+                except Exception as row_exc:
+                    errors.append(str(row_exc))
+                line_number = line_number + 1
+
+            frappe.db.set_value(
+                doc.doctype,
+                doc.name,
+                {
+                    "rows_total": total,
+                    "rows_applied": len(applied),
+                    "processed_at": frappe.utils.now(),
+                    "error_log": "\\n".join(errors),
+                    "status": "Failed" if errors else "Applied",
+                },
+                update_modified=False,
+            )
+            doc.rows_total = total
+            doc.rows_applied = len(applied)
+            doc.processed_at = frappe.utils.now()
+            doc.error_log = "\\n".join(errors)
+            doc.status = "Failed" if errors else "Applied"
+    except Exception as exc:
+        frappe.db.set_value(
+            doc.doctype,
+            doc.name,
+            {
+                "status": "Failed",
+                "processed_at": frappe.utils.now(),
+                "error_log": str(exc),
+            },
+            update_modified=False,
+        )
+        doc.status = "Failed"
+        doc.error_log = str(exc)
+    finally:
+        frappe.flags.three_pl_product_import_sync = False
+""".strip()
+
+    if frappe.db.exists("Server Script", script_name):
+        server_script = frappe.get_doc("Server Script", script_name)
+    else:
+        server_script = frappe.new_doc("Server Script")
+        server_script.name = script_name
+
+    server_script.script_type = "DocType Event"
+    server_script.reference_doctype = "Three PL Client Product Import"
     server_script.doctype_event = "After Save"
     server_script.module = "Stock"
     server_script.disabled = 0

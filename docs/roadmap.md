@@ -59,7 +59,7 @@ Immediate fixes from feedback:
 
 ## Phase 2.2 - Live Flow Reliability
 
-Status: queued.
+Status: done for MVP live flows.
 
 Detailed backlog: `docs/processes/live-flow-reliability-backlog.md`.
 
@@ -71,11 +71,15 @@ Goal:
 
 Queued work:
 
-- Shipment Request save/submit immediately creates or updates the warehouse Pick List.
-- Product Import save/submit immediately creates or updates client products and ERPNext Items.
+- Shipment Request save immediately creates or updates the warehouse Pick List.
+- CSV Product Import save immediately creates or updates client products and ERPNext Items.
 - Standard Stock Entry submit immediately syncs inbound receipt, packing, and shipping results.
-- Standard Pick List picked quantity updates immediately sync container and shipment statuses.
-- Validation tests must include live-flow checks that do not call the sync processors manually.
+- Standard Pick List picked quantity updates immediately sync container statuses and movement history.
+- Validation tests include live-flow checks that do not call the sync processors manually.
+
+Remaining boundary:
+
+- XLSX product import remains handled by the recovery processor path; CSV is the immediate MVP portal path.
 
 ## Phase 3 - Warehouse Locations And Containers
 

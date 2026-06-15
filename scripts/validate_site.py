@@ -32,6 +32,10 @@ REQUIRED_SERVER_SCRIPTS = {
     "3PL Container Inventory Snapshot Sync": ("Three PL Container", "After Save"),
     "3PL Receiving Notice Discrepancy Sync": ("Inbound Shipment Notice", "Before Save"),
     "3PL Client Instruction Status Sync": ("Three PL Client Instruction", "After Save"),
+    "3PL Shipment Request Immediate Pick List Sync": ("Three PL Shipment Request", "After Save"),
+    "3PL Product Import Immediate Sync": ("Three PL Client Product Import", "After Save"),
+    "3PL Stock Entry Immediate Flow Sync": ("Stock Entry", "After Submit"),
+    "3PL Pick List Immediate Picked Sync": ("Pick List", "After Save"),
 }
 REQUIRED_USERS = {
     WAREHOUSE_OPERATOR_USER: ["Stock User", "3PL Warehouse User"],
@@ -839,8 +843,6 @@ def cleanup_receiving_validation_docs():
 
 
 def validate_receiving_sync():
-    from sync_receiving_notices import sync_notice
-
     cleanup_receiving_validation_docs()
     frappe.set_user("Administrator")
 
@@ -905,7 +907,6 @@ def validate_receiving_sync():
     entry.insert(ignore_permissions=True)
     entry.submit()
 
-    sync_notice(notice.name)
     notice.reload()
     require(notice.status == "Discrepancy Review", f"Receiving validation notice has wrong status: {notice.status}")
     require(notice.items[0].received_qty == 4, "Receiving validation did not update received_qty")
@@ -963,7 +964,6 @@ def cleanup_shipment_validation_docs():
 
 def validate_shipment_sync():
     from sync_inventory_snapshots import sync_inventory_snapshots
-    from sync_shipment_requests import sync_request
 
     cleanup_shipment_validation_docs()
     frappe.set_user("Administrator")
@@ -993,10 +993,10 @@ def validate_shipment_sync():
         }
     )
     request.insert(ignore_permissions=True)
-
-    pick_list_name = sync_request(request.name)
-    require(pick_list_name, "Shipment validation did not create Pick List")
     request.reload()
+
+    pick_list_name = frappe.db.get_value("Pick List", {"shipment_request": request.name}, "name")
+    require(pick_list_name, "Shipment validation did not create Pick List")
     pick_list = frappe.get_doc("Pick List", pick_list_name)
     require(request.status == "Picking", f"Shipment validation request has wrong status: {request.status}")
     require(pick_list.purpose == "Delivery", f"Shipment validation Pick List has wrong purpose: {pick_list.purpose}")
@@ -1780,8 +1780,6 @@ def ensure_picking_validation_stock(item_code):
 
 def validate_picking_confirmation():
     from sync_inventory_snapshots import sync_inventory_snapshots
-    from sync_picking_confirmations import sync_pick_list
-    from sync_shipment_requests import sync_request
 
     cleanup_picking_validation_docs()
     frappe.set_user("Administrator")
@@ -1832,7 +1830,7 @@ def validate_picking_confirmation():
     )
     request.insert(ignore_permissions=True)
 
-    pick_list_name = sync_request(request.name)
+    pick_list_name = frappe.db.get_value("Pick List", {"shipment_request": request.name}, "name")
     require(pick_list_name, "Picking validation did not create Pick List")
     pick_list = frappe.get_doc("Pick List", pick_list_name)
     picked = False
@@ -1843,8 +1841,6 @@ def validate_picking_confirmation():
     require(picked, "Picking validation Pick List did not allocate validation container")
     pick_list.save(ignore_permissions=True)
 
-    synced = sync_pick_list(pick_list.name)
-    require("BOX-PICKING-VALIDATION" in synced, "Picking validation did not sync picked container")
     container.reload()
     require(container.status == "Picked", f"Picking validation container has wrong status: {container.status}")
     require(
@@ -1924,8 +1920,6 @@ def make_fulfillment_stock_entry(request, flow, entry_type, purpose, source_ware
 
 
 def validate_outbound_fulfillment():
-    from sync_outbound_fulfillment import sync_entry
-
     cleanup_outbound_fulfillment_validation_docs()
     frappe.set_user("Administrator")
 
@@ -1981,7 +1975,6 @@ def validate_outbound_fulfillment():
         source_warehouse="Temporary Receiving - 3",
         target_warehouse="Packing - 3",
     )
-    sync_entry(packing.name)
     request.reload()
     container.reload()
     require(request.status == "Packed", f"Outbound validation request was not packed: {request.status}")
@@ -2007,7 +2000,6 @@ def validate_outbound_fulfillment():
         purpose="Material Issue",
         source_warehouse="Packing - 3",
     )
-    sync_entry(shipping.name)
     request.reload()
     container.reload()
     require(request.status == "Shipped", f"Outbound validation request was not shipped: {request.status}")
@@ -2308,22 +2300,16 @@ def validate_client_portal_permissions():
         raise RuntimeError("Client user can create product for another customer")
 
     frappe.set_user("Administrator")
-    product_sync = load_tmp_module("sync_client_products")
-    receiving_sync = load_tmp_module("sync_receiving_notices")
-    shipment_sync = load_tmp_module("sync_shipment_requests")
-    receiving_sync.sync_receiving_notices()
     structured_notice.reload()
     require(len(structured_notice.items) == 1, "Structured receiving notice did not create child item rows")
     require(structured_notice.items[0].item_code == "SKU-ALPHA-001", "Structured receiving item_code is wrong")
     require(structured_notice.items[0].expected_qty == 2, "Structured receiving expected_qty is wrong")
 
-    shipment_sync.sync_request(structured_shipment.name)
     structured_shipment.reload()
     require(len(structured_shipment.items) == 1, "Structured shipment request did not create child item rows")
     require(structured_shipment.items[0].item_code == "SKU-ALPHA-001", "Structured shipment item_code is wrong")
     require(structured_shipment.items[0].qty == 1, "Structured shipment qty is wrong")
 
-    product_sync.process_product_import(product_import.name)
     product_import.reload()
     imported_product_name = frappe.db.get_value(
         "Three PL Client Product",
@@ -2342,9 +2328,8 @@ def validate_client_portal_permissions():
         "Client product import creation was not logged",
     )
 
-    item_code = product_sync.sync_product(product.name)
-    item = frappe.get_doc("Item", item_code)
     product.reload()
+    item = frappe.get_doc("Item", product.item_code)
     require(product.sync_status == "Synced", "Client product was not synchronized")
     require(product.item_code == item.name, "Client product is not linked to synced Item")
     require(item.owner_client == CLIENT_PORTAL_CUSTOMER, "Synced Item has wrong owner_client")
@@ -2363,9 +2348,8 @@ def validate_client_portal_permissions():
     product.save()
 
     frappe.set_user("Administrator")
-    item_code = product_sync.sync_product(product.name)
-    item = frappe.get_doc("Item", item_code)
     product.reload()
+    item = frappe.get_doc("Item", product.item_code)
     require(item.item_name == "Portal Validation Product Updated", "Client product update did not sync to Item")
     require(item.disabled == 1, "Inactive client product did not disable Item")
     require(

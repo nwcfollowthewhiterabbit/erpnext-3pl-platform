@@ -41,7 +41,11 @@ System-managed fields:
 
 When a client creates or updates a product card, `scripts/sync_client_products.py` synchronizes allowed fields into ERPNext `Item`.
 
-Clients can also upload a controlled CSV/XLSX product file through `3PL Client Product Import`. The processor validates the file, creates or updates `Three PL Client Product` records for the logged-in client's customer account, and then synchronizes those cards into ERPNext `Item`.
+Clients can also upload a controlled product file through `3PL Client Product Import`.
+
+For the MVP portal flow, CSV imports are processed immediately after save: the system validates the file, creates or updates `Three PL Client Product` records for the logged-in client's customer account, and then synchronizes those cards into ERPNext `Item`.
+
+XLSX imports remain supported through the recovery/maintenance processor path, which is useful for bulk administration and reconciliation.
 
 The product export page downloads the client's current product cards as an Excel-compatible CSV file. It also provides a CSV import template with the supported columns:
 
