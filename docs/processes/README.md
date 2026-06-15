@@ -20,6 +20,7 @@ Current process notes:
 - [Warehouse Corrections](warehouse-corrections.md)
 - [Stocktake](stocktake.md)
 - [Inventory Snapshot Sync](inventory-snapshot.md)
+- [Live Flow Reliability Backlog](live-flow-reliability-backlog.md)
 - [Client Product Management](product-management.md)
 - [Warehouse Locations](warehouse-locations.md)
 

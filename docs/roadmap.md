@@ -55,6 +55,27 @@ Immediate fixes from feedback:
 
 - Keep warehouse location rename disabled for normal warehouse roles; treat renaming as an administrative/setup operation.
 - Keep invalid container repack/correction drafts from breaking post-deploy processors; mark them as `Needs Review` instead.
+- Execute the live-flow reliability backlog so primary MVP actions update the next operational document immediately, without manual processor calls. See `docs/processes/live-flow-reliability-backlog.md`.
+
+## Phase 2.2 - Live Flow Reliability
+
+Status: queued.
+
+Detailed backlog: `docs/processes/live-flow-reliability-backlog.md`.
+
+Goal:
+
+- Make every primary MVP user action produce its expected operational result immediately in the UI.
+- Keep batch processors as recovery and reconciliation tools, not as a normal required step for client or warehouse users.
+- Split test coverage into deployment, client portal, and warehouse operation packs.
+
+Queued work:
+
+- Shipment Request save/submit immediately creates or updates the warehouse Pick List.
+- Product Import save/submit immediately creates or updates client products and ERPNext Items.
+- Standard Stock Entry submit immediately syncs inbound receipt, packing, and shipping results.
+- Standard Pick List picked quantity updates immediately sync container and shipment statuses.
+- Validation tests must include live-flow checks that do not call the sync processors manually.
 
 ## Phase 3 - Warehouse Locations And Containers
 
