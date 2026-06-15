@@ -1712,6 +1712,67 @@ else:
     server_script.script = script
     server_script.save(ignore_permissions=True)
 
+    script_name = "3PL Container Inventory Snapshot Sync"
+    script = """
+active_statuses = ["Received", "In Verification", "Ready for Putaway", "Stored", "Picking", "Picked", "Packed"]
+status_map = {
+    "Received": "Receiving",
+    "In Verification": "Receiving",
+    "Ready for Putaway": "Receiving",
+    "Stored": "Available",
+    "Picking": "Allocated",
+    "Picked": "Allocated",
+    "Packed": "Allocated",
+}
+
+active_keys = []
+if doc.get("client") and doc.get("current_warehouse") and doc.get("status") in active_statuses:
+    for item_row in doc.get("items", []):
+        qty = frappe.utils.flt(item_row.get("qty"))
+        if not item_row.get("item_code") or qty <= 0:
+            continue
+        key = (doc.get("client"), item_row.get("item_code"), doc.name)
+        active_keys.append(key)
+        existing = frappe.db.get_value(
+            "Three PL Inventory Snapshot",
+            {"customer": doc.get("client"), "item_code": item_row.get("item_code"), "container_code": doc.name},
+            "name",
+        )
+        snapshot = frappe.get_doc("Three PL Inventory Snapshot", existing) if existing else frappe.new_doc("Three PL Inventory Snapshot")
+        snapshot.customer = doc.get("client")
+        snapshot.item_code = item_row.get("item_code")
+        snapshot.client_sku = item_row.get("client_sku")
+        snapshot.item_name = frappe.db.get_value("Item", item_row.get("item_code"), "item_name") or item_row.get("item_code")
+        snapshot.qty = qty
+        snapshot.uom = item_row.get("uom") or frappe.db.get_value("Item", item_row.get("item_code"), "stock_uom") or "Nos"
+        snapshot.warehouse = doc.get("current_warehouse")
+        snapshot.container_code = doc.name
+        snapshot.status = status_map.get(doc.get("status"), "Available")
+        snapshot.last_updated = frappe.utils.now()
+        snapshot.notes = "Synced automatically from container save."
+        snapshot.save(ignore_permissions=True)
+
+for snapshot_name in frappe.get_all("Three PL Inventory Snapshot", filters={"container_code": doc.name}, pluck="name"):
+    snapshot = frappe.get_doc("Three PL Inventory Snapshot", snapshot_name)
+    snapshot_key = (snapshot.customer, snapshot.item_code, snapshot.container_code)
+    if snapshot_key not in active_keys:
+        frappe.delete_doc("Three PL Inventory Snapshot", snapshot.name, ignore_permissions=True, force=True)
+""".strip()
+
+    if frappe.db.exists("Server Script", script_name):
+        server_script = frappe.get_doc("Server Script", script_name)
+    else:
+        server_script = frappe.new_doc("Server Script")
+        server_script.name = script_name
+
+    server_script.script_type = "DocType Event"
+    server_script.reference_doctype = "Three PL Container"
+    server_script.doctype_event = "After Save"
+    server_script.module = "Stock"
+    server_script.disabled = 0
+    server_script.script = script
+    server_script.save(ignore_permissions=True)
+
     script_name = "3PL Receiving Notice Discrepancy Sync"
     script = """
 if frappe.flags.get("three_pl_receiving_discrepancy_sync"):

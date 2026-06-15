@@ -29,6 +29,7 @@ from project_config import (
 REQUIRED_WORKSPACES = ["3PL Warehouse", "Stock Reference"]
 REQUIRED_SERVER_SCRIPTS = {
     "3PL Client Product Immediate Sync": ("Three PL Client Product", "After Save"),
+    "3PL Container Inventory Snapshot Sync": ("Three PL Container", "After Save"),
     "3PL Receiving Notice Discrepancy Sync": ("Inbound Shipment Notice", "Before Save"),
     "3PL Client Instruction Status Sync": ("Three PL Client Instruction", "After Save"),
 }
@@ -1557,6 +1558,12 @@ def cleanup_putaway_validation_docs():
         pluck="name",
     ):
         frappe.delete_doc("Three PL Container Move", move_name, ignore_permissions=True, force=True)
+    for snapshot_name in frappe.get_all(
+        "Three PL Inventory Snapshot",
+        filters={"container_code": "BOX-PUTAWAY-VALIDATION"},
+        pluck="name",
+    ):
+        frappe.delete_doc("Three PL Inventory Snapshot", snapshot_name, ignore_permissions=True, force=True)
     if frappe.db.exists("Three PL Container", "BOX-PUTAWAY-VALIDATION"):
         frappe.delete_doc("Three PL Container", "BOX-PUTAWAY-VALIDATION", ignore_permissions=True, force=True)
 
@@ -1648,6 +1655,16 @@ def validate_putaway_operation():
         ),
         "Putaway validation did not create movement history",
     )
+    snapshot_name = frappe.db.get_value(
+        "Three PL Inventory Snapshot",
+        {"customer": container.client, "item_code": "SKU-ALPHA-001", "container_code": container.name},
+        "name",
+    )
+    require(snapshot_name, "Putaway validation did not update client inventory snapshot")
+    snapshot = frappe.get_doc("Three PL Inventory Snapshot", snapshot_name)
+    require(snapshot.warehouse == "Aisle B - 3", f"Putaway inventory snapshot has wrong location: {snapshot.warehouse}")
+    require(snapshot.status == "Available", f"Putaway inventory snapshot has wrong status: {snapshot.status}")
+    require(snapshot.qty == 1, f"Putaway inventory snapshot has wrong qty: {snapshot.qty}")
 
     cleanup_putaway_validation_docs()
 

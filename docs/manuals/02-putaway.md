@@ -39,6 +39,7 @@ Expected result:
 - a `Three PL Container Move` operation is created and marked `Applied`;
 - a `Three PL Container Movement` history row is written with movement type `Putaway`;
 - the container status becomes `Stored`;
-- the container current warehouse becomes the scanned storage location.
+- the container current warehouse becomes the scanned storage location;
+- the client-facing Inventory page is updated from the stored container snapshot.
 
 The page accepts containers in `Received`, `In Verification`, or `Ready for Putaway` status. It is intentionally separate from the generic `/warehouse/container-move` page so the receiving-to-storage step remains visible in history.

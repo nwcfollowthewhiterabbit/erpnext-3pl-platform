@@ -27,7 +27,8 @@ When the user applies putaway, the system:
 - creates a `Three PL Container Movement` row with movement type `Putaway`;
 - updates the container current warehouse;
 - changes the container status to `Stored`;
-- links the move operation to the movement history row.
+- links the move operation to the movement history row;
+- updates the client-facing inventory snapshot for that container, item, quantity, location, and status.
 
 Allowed source statuses:
 
@@ -45,7 +46,7 @@ Both use the same operation and movement-history DocTypes, but putaway writes mo
 
 ## Current Limits
 
-- The scanner page updates the container model and movement history.
+- The scanner page updates the container model, movement history, and client-facing inventory snapshot.
 - The standard ERPNext Stock Entry putaway flow is still used when stock-ledger movement must be posted.
 - Automatic stock-ledger posting from the putaway scanner page is not implemented yet.
 - Real warehouse location import is still pending client confirmation of naming convention and hierarchy depth.
