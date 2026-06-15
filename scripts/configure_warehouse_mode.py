@@ -563,8 +563,8 @@ def configure_custom_doctypes():
                 {"fieldname": "item_name", "label": "Item Name", "fieldtype": "Data", "in_list_view": 1},
                 {"fieldname": "expected_qty", "label": "Expected Qty", "fieldtype": "Float", "reqd": 1, "in_list_view": 1},
                 {"fieldname": "uom", "label": "UOM", "fieldtype": "Link", "options": "UOM", "in_list_view": 1},
-                {"fieldname": "received_qty", "label": "Received Qty", "fieldtype": "Float", "in_list_view": 1},
-                {"fieldname": "variance_qty", "label": "Variance Qty", "fieldtype": "Float", "read_only": 1},
+                {"fieldname": "received_qty", "label": "Received Qty", "fieldtype": "Float", "in_list_view": 1, "allow_on_submit": 1},
+                {"fieldname": "variance_qty", "label": "Variance Qty", "fieldtype": "Float", "read_only": 1, "allow_on_submit": 1},
                 {"fieldname": "condition_status", "label": "Condition", "fieldtype": "Select", "options": "\nOK\nDamaged\nQuality Issue\nHold", "in_list_view": 1},
                 {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
             ],
@@ -698,13 +698,13 @@ def configure_custom_doctypes():
                 {"fieldname": "notice_date", "label": "Notice Date", "fieldtype": "Date", "default": "Today", "in_list_view": 1},
                 {"fieldname": "expected_arrival_date", "label": "Expected Arrival Date", "fieldtype": "Date", "in_list_view": 1},
                 {"fieldname": "temporary_warehouse", "label": "Temporary Warehouse", "fieldtype": "Link", "options": "Warehouse", "default": f"Temporary Receiving - {COMPANY_ABBR}"},
-                {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Draft\nIn Verification\nPartially Received\nDiscrepancy Review\nReceived\nClosed", "default": "Draft", "in_list_view": 1},
-                {"fieldname": "client_instruction_status", "label": "Client Instruction Status", "fieldtype": "Select", "options": "\nNot Required\nWaiting for Client\nInstruction Received", "default": "Not Required", "insert_after": "status", "in_standard_filter": 1},
+                {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Draft\nIn Verification\nPartially Received\nDiscrepancy Review\nReceived\nClosed", "default": "Draft", "in_list_view": 1, "allow_on_submit": 1},
+                {"fieldname": "client_instruction_status", "label": "Client Instruction Status", "fieldtype": "Select", "options": "\nNot Required\nWaiting for Client\nInstruction Received", "default": "Not Required", "insert_after": "status", "in_standard_filter": 1, "allow_on_submit": 1},
                 {"fieldname": "portal_items_description", "label": "Portal Products and Quantities", "fieldtype": "Small Text", "insert_after": "client_instruction_status"},
                 {"fieldname": "items_section", "label": "Expected Products", "fieldtype": "Section Break"},
                 {"fieldname": "items", "label": "Items", "fieldtype": "Table", "options": "Inbound Shipment Notice Item"},
                 {"fieldname": "discrepancy_section", "label": "Discrepancies", "fieldtype": "Section Break", "insert_after": "items"},
-                {"fieldname": "discrepancies", "label": "Discrepancies", "fieldtype": "Table", "options": "Inbound Shipment Discrepancy", "insert_after": "discrepancy_section"},
+                {"fieldname": "discrepancies", "label": "Discrepancies", "fieldtype": "Table", "options": "Inbound Shipment Discrepancy", "insert_after": "discrepancy_section", "allow_on_submit": 1},
                 {"fieldname": "notes", "label": "Notes", "fieldtype": "Small Text"},
             ],
             "permissions": [
@@ -1811,6 +1811,32 @@ else:
     server_script.script = script
     server_script.save(ignore_permissions=True)
 
+    script_name = "3PL Client Instruction Status Sync"
+    script = """
+if doc.get("receiving_notice"):
+    frappe.db.set_value(
+        "Inbound Shipment Notice",
+        doc.get("receiving_notice"),
+        "client_instruction_status",
+        "Instruction Received",
+        update_modified=True,
+    )
+""".strip()
+
+    if frappe.db.exists("Server Script", script_name):
+        server_script = frappe.get_doc("Server Script", script_name)
+    else:
+        server_script = frappe.new_doc("Server Script")
+        server_script.name = script_name
+
+    server_script.script_type = "DocType Event"
+    server_script.reference_doctype = "Three PL Client Instruction"
+    server_script.doctype_event = "After Save"
+    server_script.module = "Stock"
+    server_script.disabled = 0
+    server_script.script = script
+    server_script.save(ignore_permissions=True)
+
 
 def build_client_portal_nav():
     form_links = {
@@ -2329,6 +2355,32 @@ def configure_client_portal_website_script():
         }}
       }};
     }}
+    if (pathname === '/client/discrepancy-instruction/new') {{
+      config = {{
+        installFlag: '__threePlInstructionSubmitInstalled',
+        successMessage: 'Instruction Submitted',
+        listPath: '/client/discrepancy-instruction/list',
+        doctype: 'Three PL Client Instruction',
+        requiresItems: false,
+        requiredFields: [
+          ['receiving_notice', 'Receiving Notice'],
+          ['instruction_type', 'Instruction Type'],
+          ['instruction_text', 'Instruction']
+        ],
+        buildDoc: function () {{
+          return {{
+            doctype: 'Three PL Client Instruction',
+            customer: '{CLIENT_PORTAL_CUSTOMER}',
+            receiving_notice: getWebFormValue('receiving_notice'),
+            item_code: getWebFormValue('item_code'),
+            client_sku: getWebFormValue('client_sku'),
+            instruction_type: getWebFormValue('instruction_type'),
+            portal_source: 1,
+            instruction_text: getWebFormValue('instruction_text')
+          }};
+        }}
+      }};
+    }}
     if (!config || document[config.installFlag]) return;
     document[config.installFlag] = true;
 
@@ -2349,8 +2401,8 @@ def configure_client_portal_website_script():
         }}
       }}
 
-      var items = clientProductPayloadItems();
-      if (!items.length) {{
+      var items = config.requiresItems === false ? [] : clientProductPayloadItems();
+      if (config.requiresItems !== false && !items.length) {{
         showClientPortalFormMessage('Add at least one product row.', true);
         return false;
       }}

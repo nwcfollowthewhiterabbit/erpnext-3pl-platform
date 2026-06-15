@@ -24,6 +24,8 @@ def structured_portal_items(description):
 
 
 def ensure_structured_notice_items(notice):
+    if notice.docstatus == 1:
+        return False
     items = structured_portal_items(notice.portal_items_description)
     if not items:
         return False

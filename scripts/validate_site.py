@@ -30,6 +30,7 @@ REQUIRED_WORKSPACES = ["3PL Warehouse", "Stock Reference"]
 REQUIRED_SERVER_SCRIPTS = {
     "3PL Client Product Immediate Sync": ("Three PL Client Product", "After Save"),
     "3PL Receiving Notice Discrepancy Sync": ("Inbound Shipment Notice", "Before Save"),
+    "3PL Client Instruction Status Sync": ("Three PL Client Instruction", "After Save"),
 }
 REQUIRED_USERS = {
     WAREHOUSE_OPERATOR_USER: ["Stock User", "3PL Warehouse User"],
@@ -2115,9 +2116,9 @@ def validate_client_portal_permissions():
         {
             "doctype": "Three PL Client Instruction",
             "customer": CLIENT_PORTAL_CUSTOMER,
-            "receiving_notice": frappe.db.get_value("Inbound Shipment Notice", {"external_reference": "ASN-ALPHA-001"}),
-            "item_code": "SKU-ALPHA-002",
-            "client_sku": "ALPHA-002",
+            "receiving_notice": allowed.name,
+            "item_code": "SKU-ALPHA-001",
+            "client_sku": "ALPHA-001",
             "instruction_type": "Accept Difference",
             "portal_source": 1,
             "instruction_text": "Portal validation instruction",
@@ -2125,6 +2126,8 @@ def validate_client_portal_permissions():
     )
     instruction.insert()
     require(instruction.owner == CLIENT_PORTAL_USER, f"Client-created instruction has wrong owner: {instruction.owner}")
+    allowed.reload()
+    require(allowed.client_instruction_status == "Instruction Received", "Client instruction did not update receiving notice instruction status")
 
     product = frappe.get_doc(
         {

@@ -38,6 +38,10 @@ Status mapping:
 
 The processor is versioned and runs during post-deploy. It can also be run after operational batches.
 
+Submitting or saving an `Inbound Shipment Notice` does not create client inventory by itself. A notice is only the client's advance notification of an expected inbound shipment. Client-facing inventory is updated after warehouse-side receiving creates or updates active Handling Units / containers, and then the inventory snapshot processor synchronizes those containers into `Three PL Inventory Snapshot`.
+
+This boundary is intentional: showing inventory immediately after client notice submission would make the portal display stock before the warehouse physically receives and verifies the goods.
+
 The repository also provides:
 
 - detailed report: `3PL Client Inventory`;

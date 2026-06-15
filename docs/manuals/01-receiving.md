@@ -64,6 +64,8 @@ Expected result:
 - unexpected items create a discrepancy row;
 - damaged and quality issue receipts create discrepancy rows and keep the notice in review.
 
+Submitting or saving the Receiving Notice alone does not create client inventory. The notice is the client's advance notification. Client-facing inventory changes after warehouse receiving creates or updates containers / Handling Units and inventory snapshots are synchronized.
+
 Current boundary:
 
 - photos and final client decisions still belong in the Receiving Notice discrepancy / client instruction workflow;

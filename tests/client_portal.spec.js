@@ -318,6 +318,74 @@ test("client can create a product from portal web form", async ({ page }) => {
   expect(problems).toEqual([]);
 });
 
+test("client can submit a discrepancy instruction from portal web form", async ({ page }) => {
+  const problems = [];
+  await collectPortalProblems(page, problems);
+
+  const loginResponse = await page.context().request.post(`${baseURL}/api/method/login`, {
+    form: { usr: clientUser, pwd: clientPassword },
+  });
+  expect(loginResponse.ok()).toBeTruthy();
+
+  const noticeResponse = await page.context().request.post(`${baseURL}/api/method/frappe.client.get_value`, {
+    form: {
+      doctype: "Inbound Shipment Notice",
+      filters: JSON.stringify({ external_reference: "ASN-ALPHA-001" }),
+      fieldname: JSON.stringify(["name"]),
+    },
+  });
+  expect(noticeResponse.ok()).toBeTruthy();
+  const noticeName = (await noticeResponse.json()).message.name;
+  const uniqueInstruction = `Portal UI discrepancy instruction ${Date.now()}`;
+
+  await page.goto(`${baseURL}/client/discrepancy-instruction/new`);
+  await page.waitForLoadState("networkidle");
+
+  await page
+    .locator('[data-fieldname="receiving_notice"] input, input[name="receiving_notice"], input[data-fieldname="receiving_notice"]')
+    .first()
+    .fill(noticeName);
+  await page
+    .locator('[data-fieldname="item_code"] input, input[name="item_code"], input[data-fieldname="item_code"]')
+    .first()
+    .fill("SKU-ALPHA-002");
+  await page
+    .locator('[data-fieldname="client_sku"] input, input[name="client_sku"], input[data-fieldname="client_sku"]')
+    .first()
+    .fill("ALPHA-002");
+  await page
+    .locator('[data-fieldname="instruction_type"] select, select[name="instruction_type"], select[data-fieldname="instruction_type"]')
+    .first()
+    .selectOption("Accept Difference");
+  await page
+    .locator('[data-fieldname="instruction_text"] textarea, textarea[name="instruction_text"], textarea[data-fieldname="instruction_text"]')
+    .first()
+    .fill(uniqueInstruction);
+
+  await Promise.all([
+    page.waitForURL((url) => url.pathname === "/client/discrepancy-instruction/list", { timeout: 15000 }),
+    page.getByRole("button", { name: /submit instruction|submit/i }).first().click(),
+  ]);
+  await page.waitForLoadState("networkidle");
+  await expect(page.locator("body")).toContainText("ALPHA-002", { timeout: 15000 });
+
+  const createdResponse = await page.context().request.post(`${baseURL}/api/method/frappe.client.get_value`, {
+    form: {
+      doctype: "Three PL Client Instruction",
+      filters: JSON.stringify({ instruction_text: uniqueInstruction }),
+      fieldname: JSON.stringify(["name", "customer", "receiving_notice", "instruction_type"]),
+    },
+  });
+  expect(createdResponse.ok()).toBeTruthy();
+  expect((await createdResponse.json()).message).toMatchObject({
+    customer: "Demo Client Alpha",
+    receiving_notice: noticeName,
+    instruction_type: "Accept Difference",
+  });
+
+  expect(problems).toEqual([]);
+});
+
 test("client can log out from portal", async ({ page, context }) => {
   const loginResponse = await page.context().request.post(`${baseURL}/api/method/login`, {
     form: { usr: clientUser, pwd: clientPassword },
