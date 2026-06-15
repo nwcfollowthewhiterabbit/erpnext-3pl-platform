@@ -2137,6 +2137,144 @@ def configure_client_portal_website_script():
     }}, true);
   }}
 
+  function clientProductPayloadItems() {{
+    var raw = getWebFormValue('portal_items_description');
+    if (!raw) return [];
+    try {{
+      var payload = JSON.parse(raw);
+      if (!payload || payload.source !== 'client_product_picker' || !Array.isArray(payload.items)) return [];
+      return payload.items;
+    }} catch (error) {{
+      return [];
+    }}
+  }}
+
+  function buildReceivingChildItems(items) {{
+    return items.map(function (item) {{
+      return {{
+        item_code: item.item_code,
+        client_sku: item.client_sku,
+        item_name: item.item_name,
+        expected_qty: item.expected_qty || item.qty,
+        uom: item.uom || 'Nos',
+        notes: item.notes || ''
+      }};
+    }});
+  }}
+
+  function buildShipmentChildItems(items) {{
+    return items.map(function (item) {{
+      return {{
+        item_code: item.item_code,
+        client_sku: item.client_sku,
+        item_name: item.item_name,
+        qty: item.qty || item.expected_qty,
+        uom: item.uom || 'Nos',
+        notes: item.notes || ''
+      }};
+    }});
+  }}
+
+  function installClientPortalDocumentSubmit() {{
+    var pathname = window.location.pathname;
+    var config = null;
+    if (pathname === '/client/receiving-notice/new') {{
+      config = {{
+        installFlag: '__threePlReceivingSubmitInstalled',
+        successMessage: 'Receiving Notice Submitted',
+        listPath: '/client/receiving-notice/list',
+        doctype: 'Inbound Shipment Notice',
+        requiredFields: [
+          ['external_reference', 'Client Notice Ref'],
+          ['expected_arrival_date', 'Expected Arrival Date']
+        ],
+        buildDoc: function (items) {{
+          return {{
+            doctype: 'Inbound Shipment Notice',
+            customer: '{CLIENT_PORTAL_CUSTOMER}',
+            external_reference: getWebFormValue('external_reference'),
+            expected_arrival_date: getWebFormValue('expected_arrival_date'),
+            portal_source: 1,
+            portal_items_description: getWebFormValue('portal_items_description'),
+            items: buildReceivingChildItems(items),
+            notes: getWebFormValue('notes')
+          }};
+        }}
+      }};
+    }}
+    if (pathname === '/client/shipment-request/new') {{
+      config = {{
+        installFlag: '__threePlShipmentSubmitInstalled',
+        successMessage: 'Shipment Request Submitted',
+        listPath: '/client/shipment-request/list',
+        doctype: 'Three PL Shipment Request',
+        requiredFields: [
+          ['external_reference', 'Client Shipment Ref'],
+          ['requested_ship_date', 'Requested Ship Date'],
+          ['destination_name', 'Destination Name'],
+          ['destination_address', 'Destination Address']
+        ],
+        buildDoc: function (items) {{
+          return {{
+            doctype: 'Three PL Shipment Request',
+            customer: '{CLIENT_PORTAL_CUSTOMER}',
+            external_reference: getWebFormValue('external_reference'),
+            requested_ship_date: getWebFormValue('requested_ship_date'),
+            destination_name: getWebFormValue('destination_name'),
+            destination_address: getWebFormValue('destination_address'),
+            portal_source: 1,
+            portal_items_description: getWebFormValue('portal_items_description'),
+            items: buildShipmentChildItems(items),
+            notes: getWebFormValue('notes')
+          }};
+        }}
+      }};
+    }}
+    if (!config || document[config.installFlag]) return;
+    document[config.installFlag] = true;
+
+    function submitClientDocument(event) {{
+      var trigger = event.target.closest ? event.target.closest('button, input[type="submit"]') : null;
+      var triggerText = trigger ? ((trigger.textContent || trigger.value || '').toLowerCase()) : '';
+      if (event.type === 'click' && triggerText.indexOf('submit') === -1 && triggerText.indexOf('save') === -1) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+
+      for (var index = 0; index < config.requiredFields.length; index += 1) {{
+        var field = config.requiredFields[index];
+        if (!String(getWebFormValue(field[0]) || '').trim()) {{
+          showClientPortalFormMessage(field[1] + ' is required.', true);
+          return false;
+        }}
+      }}
+
+      var items = clientProductPayloadItems();
+      if (!items.length) {{
+        showClientPortalFormMessage('Add at least one product row.', true);
+        return false;
+      }}
+
+      if (trigger) trigger.setAttribute('disabled', 'disabled');
+      portalApi('frappe.client.insert', {{ doc: config.buildDoc(items) }})
+        .then(function () {{
+          showClientPortalFormMessage(config.successMessage, false);
+          window.location.href = config.listPath;
+        }})
+        .catch(function (error) {{
+          showClientPortalFormMessage(error.message || 'Could not save the document.', true);
+          if (trigger) trigger.removeAttribute('disabled');
+        }});
+      return false;
+    }}
+
+    document.addEventListener('click', submitClientDocument, true);
+    document.addEventListener('submit', function (event) {{
+      if (window.location.pathname === pathname) submitClientDocument(event);
+    }}, true);
+  }}
+
   function padReferencePart(value, width) {{
     return String(value).padStart(width, '0');
   }}
@@ -2377,6 +2515,7 @@ def configure_client_portal_website_script():
       renderClientPortalList();
       installProductImportTemplateAction();
       installClientProductSubmit();
+      installClientPortalDocumentSubmit();
       autoFillClientReference();
       installClientProductPicker();
       removeDeskPermissionNoise();
@@ -2384,6 +2523,7 @@ def configure_client_portal_website_script():
       setTimeout(installClientPortalLogout, 250);
       setTimeout(installProductImportTemplateAction, 250);
       setTimeout(installClientProductSubmit, 250);
+      setTimeout(installClientPortalDocumentSubmit, 250);
       setTimeout(autoFillClientReference, 250);
       setTimeout(installClientProductPicker, 250);
       setTimeout(removeDeskPermissionNoise, 250);
@@ -2391,6 +2531,7 @@ def configure_client_portal_website_script():
       setTimeout(installClientPortalLogout, 1000);
       setTimeout(installProductImportTemplateAction, 1000);
       setTimeout(installClientProductSubmit, 1000);
+      setTimeout(installClientPortalDocumentSubmit, 1000);
       setTimeout(autoFillClientReference, 1000);
       setTimeout(installClientProductPicker, 1000);
       setTimeout(removeDeskPermissionNoise, 1000);
@@ -2403,6 +2544,7 @@ def configure_client_portal_website_script():
       renderClientPortalList();
       installProductImportTemplateAction();
       installClientProductSubmit();
+      installClientPortalDocumentSubmit();
       autoFillClientReference();
       installClientProductPicker();
       removeDeskPermissionNoise();

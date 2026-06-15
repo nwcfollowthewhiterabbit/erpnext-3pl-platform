@@ -54,6 +54,12 @@ const expectedPageText = {
   "/client/discrepancy-instruction/list": ["ALPHA-002"],
 };
 
+function isoDateAfter(days) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 async function collectPortalProblems(page, problems) {
   page.on("console", (message) => {
     const text = message.text();
@@ -203,6 +209,46 @@ test("receiving notice form auto-fills client reference", async ({ page }) => {
   await expect(page.locator("#client-product-picker")).toBeVisible({ timeout: 10000 });
   await page.locator("#client-product-picker-search").fill("ALPHA-001");
   await expect(page.locator("#client-product-picker-results")).toContainText("ALPHA-001", { timeout: 10000 });
+
+  expect(problems).toEqual([]);
+});
+
+test("client can create a receiving notice from portal web form", async ({ page }) => {
+  const problems = [];
+  await collectPortalProblems(page, problems);
+
+  const loginResponse = await page.context().request.post(`${baseURL}/api/method/login`, {
+    form: { usr: clientUser, pwd: clientPassword },
+  });
+  expect(loginResponse.ok()).toBeTruthy();
+
+  await page.goto(`${baseURL}/client/receiving-notice/new`);
+  await page.waitForLoadState("networkidle");
+
+  const referenceInput = page
+    .locator('input[data-fieldname="external_reference"], input[name="external_reference"], [data-fieldname="external_reference"] input')
+    .first();
+  await expect(referenceInput).toHaveValue(/^ALPHA-IN-\d{8}-\d{3}$/, { timeout: 10000 });
+  const reference = await referenceInput.inputValue();
+
+  await page
+    .locator(
+      'input[data-fieldname="expected_arrival_date"], input[name="expected_arrival_date"], [data-fieldname="expected_arrival_date"] input',
+    )
+    .first()
+    .fill(isoDateAfter(3));
+  await page.locator("#client-product-picker-search").fill("ALPHA-001");
+  await page.locator(".client-product-match", { hasText: "ALPHA-001" }).first().click();
+  await page.locator("#client-product-picker-qty").fill("2");
+  await page.locator("#client-product-picker-add").click();
+  await expect(page.locator("#client-product-picker-body")).toContainText("ALPHA-001");
+
+  await Promise.all([
+    page.waitForURL((url) => url.pathname === "/client/receiving-notice/list", { timeout: 15000 }),
+    page.getByRole("button", { name: /submit receiving notice|submit/i }).first().click(),
+  ]);
+  await page.waitForLoadState("networkidle");
+  await expect(page.locator("body")).toContainText(reference, { timeout: 15000 });
 
   expect(problems).toEqual([]);
 });
