@@ -27,17 +27,17 @@ def cancel_and_delete(doctype, name):
 
 def cleanup_by_container(container_names):
     frappe.set_user("Administrator")
-    for entry_name in frappe.get_all(
-        "Stock Entry",
-        filters=[["Stock Entry", "remarks", "like", "WAREHOUSE-OPS-%"]],
-        pluck="name",
-        order_by="creation desc",
-    ):
-        cancel_and_delete("Stock Entry", entry_name)
     for correction_name in frappe.get_all("Three PL Warehouse Correction", filters={"container_code": ("in", container_names)}, pluck="name"):
         linked_entries = frappe.get_all("Stock Entry", filters={"warehouse_correction": correction_name}, pluck="name", order_by="creation desc")
         for entry_name in linked_entries:
             cancel_and_delete("Stock Entry", entry_name)
+    for entry_name in frappe.get_all(
+        "Stock Entry",
+        filters=[["Stock Entry", "remarks", "like", "WAREHOUSE-OPS%"]],
+        pluck="name",
+        order_by="creation desc",
+    ):
+        cancel_and_delete("Stock Entry", entry_name)
     for doctype in ("Three PL Container Movement", "Three PL Container Move", "Three PL Warehouse Correction"):
         for name in frappe.get_all(doctype, filters={"container_code": ("in", container_names)}, pluck="name"):
             cancel_and_delete(doctype, name)

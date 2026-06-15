@@ -50,6 +50,15 @@ def ensure_structured_notice_items(notice):
     return True
 
 
+def scrub_invalid_stock_entry_links(notice):
+    changed = False
+    for row in notice.discrepancies:
+        if row.source_stock_entry and not frappe.db.exists("Stock Entry", row.source_stock_entry):
+            row.source_stock_entry = None
+            changed = True
+    return changed
+
+
 def submitted_receipt_entries(notice_name):
     return frappe.get_all(
         "Stock Entry",
@@ -94,7 +103,16 @@ def set_notice_item_quantities(notice, actual_by_key):
 
 
 def manual_discrepancies(notice):
-    return [row.as_dict() for row in notice.discrepancies if not row.auto_generated]
+    rows = []
+    for row in notice.discrepancies:
+        if row.auto_generated:
+            continue
+        data = row.as_dict()
+        source_stock_entry = data.get("source_stock_entry")
+        if source_stock_entry and not frappe.db.exists("Stock Entry", source_stock_entry):
+            data["source_stock_entry"] = None
+        rows.append(data)
+    return rows
 
 
 def append_auto_discrepancies(notice, expected_by_key, actual_by_key, source_by_key):
@@ -151,6 +169,7 @@ def set_notice_status(notice, expected_by_key, actual_by_key):
 
 def sync_notice(notice_name):
     notice = frappe.get_doc("Inbound Shipment Notice", notice_name)
+    scrub_invalid_stock_entry_links(notice)
     ensure_structured_notice_items(notice)
     stock_entry_names = submitted_receipt_entries(notice.name)
     expected_by_key, _rows_by_key = expected_totals(notice)
@@ -171,7 +190,9 @@ def sync_receiving_notices():
     synced = []
     for notice_name in frappe.get_all("Inbound Shipment Notice", pluck="name"):
         notice = frappe.get_doc("Inbound Shipment Notice", notice_name)
-        if ensure_structured_notice_items(notice):
+        changed_links = scrub_invalid_stock_entry_links(notice)
+        changed_items = ensure_structured_notice_items(notice)
+        if changed_links or changed_items:
             notice.save(ignore_permissions=True)
             synced.append(notice.name)
         if submitted_receipt_entries(notice_name):

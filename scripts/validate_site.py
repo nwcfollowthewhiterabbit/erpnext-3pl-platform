@@ -335,6 +335,20 @@ def delete_stock_entries(filters):
         frappe.delete_doc("Stock Entry", entry.name, ignore_permissions=True, force=True)
 
 
+def validate_demo_inventory_stock_ledger():
+    stock_ledger_rows = frappe.db.sql(
+        """
+        select sum(actual_qty)
+        from `tabStock Ledger Entry`
+        where item_code = 'SKU-ALPHA-003'
+          and warehouse = 'Aisle A - 3'
+          and is_cancelled = 0
+        """,
+        as_list=True,
+    )
+    require(stock_ledger_rows and stock_ledger_rows[0][0] == 36, "Wrong Alpha SKU-ALPHA-003 stock ledger balance")
+
+
 def portal_list_route(route):
     return route if route.endswith("/list") else f"{route}/list"
 
@@ -747,6 +761,17 @@ def main():
         as_list=True,
     )
     require(summary_rows and summary_rows[0][0] == 36, "Wrong Alpha SKU-ALPHA-003 inventory summary")
+    stock_ledger_rows = frappe.db.sql(
+        """
+        select sum(actual_qty)
+        from `tabStock Ledger Entry`
+        where item_code = 'SKU-ALPHA-003'
+          and warehouse = 'Aisle A - 3'
+          and is_cancelled = 0
+        """,
+        as_list=True,
+    )
+    require(stock_ledger_rows and stock_ledger_rows[0][0] == 36, "Wrong Alpha SKU-ALPHA-003 stock ledger balance")
     allocated_rows = frappe.db.sql(
         """
         select sum(qty)
@@ -826,6 +851,7 @@ def main():
     validate_picking_confirmation()
     validate_outbound_fulfillment()
     validate_client_portal_permissions()
+    validate_demo_inventory_stock_ledger()
 
     print("Site validation passed")
 
@@ -833,11 +859,12 @@ def main():
 def cleanup_receiving_validation_docs():
     frappe.set_user("Administrator")
     notice_names = frappe.get_all("Inbound Shipment Notice", filters={"external_reference": ("like", "RECV-VALIDATION-%")}, pluck="name")
-    for entry_name in frappe.get_all("Stock Entry", filters={"inbound_shipment_notice": ("in", notice_names or [""] )}, pluck="name"):
-        entry = frappe.get_doc("Stock Entry", entry_name)
-        if entry.docstatus == 1:
-            entry.cancel()
-        frappe.delete_doc("Stock Entry", entry.name, ignore_permissions=True, force=True)
+    if notice_names:
+        for entry_name in frappe.get_all("Stock Entry", filters={"inbound_shipment_notice": ("in", notice_names)}, pluck="name"):
+            entry = frappe.get_doc("Stock Entry", entry_name)
+            if entry.docstatus == 1:
+                entry.cancel()
+            frappe.delete_doc("Stock Entry", entry.name, ignore_permissions=True, force=True)
     for notice_name in notice_names:
         frappe.delete_doc("Inbound Shipment Notice", notice_name, ignore_permissions=True, force=True)
 
@@ -953,11 +980,12 @@ def validate_receiving_sync():
 def cleanup_shipment_validation_docs():
     frappe.set_user("Administrator")
     request_names = frappe.get_all("Three PL Shipment Request", filters={"external_reference": ("like", "SHIP-VALIDATION-%")}, pluck="name")
-    for pick_name in frappe.get_all("Pick List", filters={"shipment_request": ("in", request_names or [""])}, pluck="name"):
-        pick_list = frappe.get_doc("Pick List", pick_name)
-        if pick_list.docstatus == 1:
-            pick_list.cancel()
-        frappe.delete_doc("Pick List", pick_list.name, ignore_permissions=True, force=True)
+    if request_names:
+        for pick_name in frappe.get_all("Pick List", filters={"shipment_request": ("in", request_names)}, pluck="name"):
+            pick_list = frappe.get_doc("Pick List", pick_name)
+            if pick_list.docstatus == 1:
+                pick_list.cancel()
+            frappe.delete_doc("Pick List", pick_list.name, ignore_permissions=True, force=True)
     for request_name in request_names:
         frappe.delete_doc("Three PL Shipment Request", request_name, ignore_permissions=True, force=True)
 
@@ -1674,7 +1702,7 @@ def cleanup_picking_validation_docs():
     reference = "PICK-VALIDATION-ALPHA"
     delete_stock_entries({"remarks": ("like", "PICKING-VALIDATION-STOCK%")})
     request_names = frappe.get_all("Three PL Shipment Request", filters={"external_reference": reference}, pluck="name")
-    pick_names = frappe.get_all("Pick List", filters={"shipment_request": ("in", request_names or [""])}, pluck="name")
+    pick_names = frappe.get_all("Pick List", filters={"shipment_request": ("in", request_names)}, pluck="name") if request_names else []
     allocated_containers = set()
     for pick_name in pick_names:
         allocated_containers.update(
@@ -1686,12 +1714,13 @@ def cleanup_picking_validation_docs():
             )
             if row.container_code
         )
-    for movement_name in frappe.get_all(
-        "Three PL Container Movement",
-        filters={"reference_doctype": "Pick List", "reference_name": ("in", pick_names or [""])},
-        pluck="name",
-    ):
-        frappe.delete_doc("Three PL Container Movement", movement_name, ignore_permissions=True, force=True)
+    if pick_names:
+        for movement_name in frappe.get_all(
+            "Three PL Container Movement",
+            filters={"reference_doctype": "Pick List", "reference_name": ("in", pick_names)},
+            pluck="name",
+        ):
+            frappe.delete_doc("Three PL Container Movement", movement_name, ignore_permissions=True, force=True)
     for container_name in allocated_containers:
         if frappe.db.exists("Three PL Container", container_name):
             container = frappe.get_doc("Three PL Container", container_name)
@@ -1874,11 +1903,12 @@ def cleanup_outbound_fulfillment_validation_docs():
         pluck="name",
     ):
         frappe.delete_doc("Three PL Container Movement", movement_name, ignore_permissions=True, force=True)
-    for pick_name in frappe.get_all("Pick List", filters={"shipment_request": ("in", request_names or [""])}, pluck="name"):
-        pick_list = frappe.get_doc("Pick List", pick_name)
-        if pick_list.docstatus == 1:
-            pick_list.cancel()
-        frappe.delete_doc("Pick List", pick_list.name, ignore_permissions=True, force=True)
+    if request_names:
+        for pick_name in frappe.get_all("Pick List", filters={"shipment_request": ("in", request_names)}, pluck="name"):
+            pick_list = frappe.get_doc("Pick List", pick_name)
+            if pick_list.docstatus == 1:
+                pick_list.cancel()
+            frappe.delete_doc("Pick List", pick_list.name, ignore_permissions=True, force=True)
     for request_name in request_names:
         frappe.delete_doc("Three PL Shipment Request", request_name, ignore_permissions=True, force=True)
     if frappe.db.exists("Three PL Container", "BOX-FULFILLMENT-VALIDATION"):

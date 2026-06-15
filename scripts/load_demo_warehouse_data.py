@@ -530,20 +530,39 @@ def ensure_container_repack_operation():
 
 
 def ensure_stock_entry(notice_name):
-    name = "DEMO-RECEIVING-ALPHA-001"
-    if frappe.db.exists("Stock Entry", name):
-        entry = frappe.get_doc("Stock Entry", name)
+    reference = "DEMO-RECEIVING-ALPHA-001"
+    existing = frappe.db.get_value("Stock Entry", {"remarks": reference}, "name")
+    if existing:
+        return submit_if_draft(frappe.get_doc("Stock Entry", existing))
+
+    duplicate_drafts = frappe.get_all(
+        "Stock Entry",
+        filters={
+            "client": "Demo Client Alpha",
+            "inbound_shipment_notice": notice_name,
+            "warehouse_flow": "Inbound Receipt",
+            "docstatus": 0,
+        },
+        pluck="name",
+        order_by="creation desc",
+    )
+    reusable_draft = duplicate_drafts[0] if duplicate_drafts else None
+    for duplicate in duplicate_drafts[1:]:
+        frappe.delete_doc("Stock Entry", duplicate, ignore_permissions=True, force=True)
+
+    if reusable_draft:
+        entry = frappe.get_doc("Stock Entry", reusable_draft)
+        entry.remarks = reference
         set_if_field(entry, "container_code", "BOX-ALPHA-001")
         for row in entry.items:
             if row.meta.has_field("container_code"):
                 row.container_code = "BOX-ALPHA-001"
         entry.save(ignore_permissions=True)
-        return entry
+        return submit_if_draft(entry)
 
     entry = frappe.get_doc(
         {
             "doctype": "Stock Entry",
-            "name": name,
             "stock_entry_type": "3PL Inbound Receipt",
             "purpose": "Material Receipt",
             "company": "3pl",
@@ -553,6 +572,7 @@ def ensure_stock_entry(notice_name):
             "warehouse_flow": "Inbound Receipt",
             "scanned_location": "Temporary Receiving - 3",
             "container_code": "BOX-ALPHA-001",
+            "remarks": reference,
             "items": [
                 {
                     "item_code": "SKU-ALPHA-001",
@@ -580,7 +600,84 @@ def ensure_stock_entry(notice_name):
         }
     )
     entry.insert(ignore_permissions=True)
-    return entry
+    return submit_if_draft(entry)
+
+
+def cancel_and_delete_stock_entry(entry_name):
+    entry = frappe.get_doc("Stock Entry", entry_name)
+    if entry.docstatus == 1:
+        entry.cancel()
+    if entry.docstatus == 0:
+        frappe.delete_doc("Stock Entry", entry.name, ignore_permissions=True, force=True)
+
+
+def cleanup_legacy_demo_stock_entries():
+    entries = frappe.db.sql(
+        """
+        select name
+        from `tabStock Entry`
+        where client = 'Demo Client Alpha'
+          and warehouse_flow = 'Inbound Receipt'
+          and ifnull(remarks, '') = ''
+          and docstatus in (0, 1)
+        """,
+        as_dict=True,
+    )
+    for row in entries:
+        cancel_and_delete_stock_entry(row.name)
+
+
+def submit_if_draft(doc):
+    if doc.docstatus == 0:
+        doc.submit()
+    return doc
+
+
+def ensure_storage_stock_entry():
+    reference = "DEMO-STORAGE-ALPHA-003"
+    existing = frappe.db.get_value("Stock Entry", {"remarks": reference}, "name")
+    if existing:
+        return submit_if_draft(frappe.get_doc("Stock Entry", existing))
+
+    entry = frappe.get_doc(
+        {
+            "doctype": "Stock Entry",
+            "stock_entry_type": "3PL Inbound Receipt",
+            "purpose": "Material Receipt",
+            "company": "3pl",
+            "posting_date": nowdate(),
+            "client": "Demo Client Alpha",
+            "warehouse_flow": "Put Away",
+            "scanned_location": "Aisle A - 3",
+            "remarks": reference,
+            "items": [
+                {
+                    "item_code": "SKU-ALPHA-003",
+                    "qty": 18,
+                    "t_warehouse": "Aisle A - 3",
+                    "uom": "Nos",
+                    "stock_uom": "Nos",
+                    "conversion_factor": 1,
+                    "basic_rate": 1,
+                    "scanned_location": "Aisle A - 3",
+                    "container_code": "BOX-ALPHA-002",
+                },
+                {
+                    "item_code": "SKU-ALPHA-003",
+                    "qty": 18,
+                    "t_warehouse": "Aisle A - 3",
+                    "uom": "Nos",
+                    "stock_uom": "Nos",
+                    "conversion_factor": 1,
+                    "basic_rate": 1,
+                    "scanned_location": "Aisle A - 3",
+                    "container_code": "BOX-ALPHA-005",
+                },
+            ],
+        }
+    )
+    entry.insert(ignore_permissions=True)
+    return submit_if_draft(entry)
 
 
 def ensure_inventory_snapshots():
@@ -846,7 +943,9 @@ def main():
     ensure_container_repack_operation()
     notice = frappe.get_doc("Inbound Shipment Notice", notice.name)
     sync_notice_details(notice)
+    cleanup_legacy_demo_stock_entries()
     ensure_stock_entry(notice.name)
+    ensure_storage_stock_entry()
     ensure_inventory_snapshots()
     ensure_shipment_request()
     ensure_client_instruction(notice.name)

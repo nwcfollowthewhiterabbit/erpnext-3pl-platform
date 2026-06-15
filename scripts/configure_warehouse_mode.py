@@ -2720,6 +2720,87 @@ def configure_client_portal_website_script():
     var target = document.querySelector('.web-list-table');
     if (!target || target.getAttribute('data-client-list-rendered') === '1') return;
 
+    if (window.location.pathname.replace(/\\/$/, '') === '/client/inventory/list') {{
+      target.setAttribute('data-client-list-rendered', '1');
+      target.innerHTML = '<div class="text-muted small py-3">Loading inventory...</div>';
+      portalApi('frappe.client.get_list', {{
+        doctype: 'Three PL Inventory Snapshot',
+        fields: ['item_code', 'client_sku', 'item_name', 'qty', 'uom', 'warehouse', 'container_code', 'status'],
+        limit_page_length: 500,
+        order_by: 'item_code asc, status asc'
+      }})
+        .then(function (response) {{
+          var rows = response && response.message ? response.message : [];
+          if (!rows.length) {{
+            target.innerHTML = '<div class="text-muted small py-3">No inventory yet.</div>';
+            return;
+          }}
+
+          function addUnique(list, value) {{
+            if (value && list.indexOf(value) === -1) list.push(value);
+          }}
+
+          function formatQty(value) {{
+            var number = Number(value || 0);
+            return Number.isInteger(number) ? String(number) : number.toFixed(3).replace(/0+$/, '').replace(/\\.$/, '');
+          }}
+
+          var grouped = {{}};
+          rows.forEach(function (row) {{
+            var key = [row.item_code || '', row.uom || ''].join('||');
+            if (!grouped[key]) {{
+              grouped[key] = {{
+                item_code: row.item_code || '',
+                client_sku: row.client_sku || '',
+                item_name: row.item_name || '',
+                qty: 0,
+                receiving_qty: 0,
+                available_qty: 0,
+                allocated_qty: 0,
+                uom: row.uom || '',
+                warehouses: [],
+                containers: []
+              }};
+            }}
+            var qty = Number(row.qty || 0);
+            grouped[key].qty += qty;
+            if (row.status === 'Receiving') grouped[key].receiving_qty += qty;
+            else if (row.status === 'Allocated') grouped[key].allocated_qty += qty;
+            else grouped[key].available_qty += qty;
+            addUnique(grouped[key].warehouses, row.warehouse);
+            addUnique(grouped[key].containers, row.container_code);
+          }});
+
+          var summary = Object.keys(grouped).sort().map(function (key) {{ return grouped[key]; }});
+          var body = summary.map(function (row) {{
+            return '<tr>' +
+              '<td>' + escapeHtml(row.item_code) + '</td>' +
+              '<td>' + escapeHtml(row.client_sku) + '</td>' +
+              '<td>' + escapeHtml(row.item_name) + '</td>' +
+              '<td class="text-end">' + escapeHtml(formatQty(row.qty)) + '</td>' +
+              '<td class="text-end">' + escapeHtml(formatQty(row.receiving_qty)) + '</td>' +
+              '<td class="text-end">' + escapeHtml(formatQty(row.available_qty)) + '</td>' +
+              '<td class="text-end">' + escapeHtml(formatQty(row.allocated_qty)) + '</td>' +
+              '<td>' + escapeHtml(row.uom) + '</td>' +
+              '<td>' + escapeHtml(row.warehouses.join(', ')) + '</td>' +
+              '<td>' + escapeHtml(row.containers.join(', ')) + '</td>' +
+            '</tr>';
+          }}).join('');
+
+          target.innerHTML =
+            '<table class="table table-sm table-bordered mb-0">' +
+              '<thead><tr>' +
+                '<th>Item</th><th>Client SKU</th><th>Item Name</th><th class="text-end">Total Qty</th><th class="text-end">Receiving</th><th class="text-end">Available</th><th class="text-end">Allocated</th><th>UOM</th><th>Locations</th><th>Containers</th>' +
+              '</tr></thead>' +
+              '<tbody>' + body + '</tbody>' +
+            '</table>';
+        }})
+        .catch(function (error) {{
+          target.innerHTML = '<div class="text-danger small py-3">' + escapeHtml(error.message || error) + '</div>';
+        }});
+      return;
+    }}
+
     var columns = (frappe.web_form_doc.list_columns || []).filter(function (column) {{
       return !/^(customer|client)$/i.test(column.fieldname || '') && !/^client$/i.test(column.label || '');
     }}).slice(0, 6);
@@ -2728,7 +2809,7 @@ def configure_client_portal_website_script():
     var payload = new URLSearchParams();
     payload.set('doctype', frappe.web_form_doc.doc_type);
     payload.set('limit_start', '0');
-    payload.set('limit', '20');
+    payload.set('limit', '100');
     payload.set('web_form_name', frappe.web_form_doc.name);
 
     fetch('/api/method/frappe.www.list.get_list_data', {{
