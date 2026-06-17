@@ -33,7 +33,7 @@ Manual fallback:
    - Container / Box
 7. Save and submit.
 
-After submit, `scripts/sync_outbound_fulfillment.py` updates the linked Shipment Request to `Packed`, marks referenced containers as `Packed`, and creates `Three PL Container Movement` history.
+After submit, `erpnext_3pl.sync.outbound_fulfillment` updates the linked Shipment Request to `Packed`, marks referenced containers as `Packed`, and creates `Three PL Container Movement` history.
 
 ## Dispatch
 
@@ -62,7 +62,7 @@ Manual fallback:
    - Container / Box
 7. Submit after products are handed over for dispatch.
 
-After submit, `scripts/sync_outbound_fulfillment.py` updates the linked Shipment Request to `Shipped`, marks referenced containers as `Shipped`, and creates `Three PL Container Movement` history.
+After submit, `erpnext_3pl.sync.outbound_fulfillment` updates the linked Shipment Request to `Shipped`, marks referenced containers as `Shipped`, and creates `Three PL Container Movement` history.
 
 ## Shipment Review
 

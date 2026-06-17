@@ -27,13 +27,14 @@
 - Password: `see BUSINESS_OWNER_PASSWORD in .env`
 - Intended use: owner-level access. Starts on the warehouse management landing page and receives all standard system roles, including `System Manager`, `Stock Manager`, and `Item Manager`.
 
-## Client Portal User
+## Client Desk User
 
 - Login: `alpha.client@example.test`
-- Password: `see CLIENT_PORTAL_PASSWORD in .env`
-- Intended use: client-side portal testing for `Demo Client Alpha`.
-- Portal URL: `https://erpnext.77.237.244.169.sslip.io/client/receiving-notice`
-- This is a `Website User`, not an ERPNext Desk user.
+- Password: `see CLIENT_DESK_PASSWORD in .env`
+- Intended use: client-side MVP testing for `Demo Client Alpha`.
+- Desk URL: `https://erpnext.77.237.244.169.sslip.io/desk/3pl-client`
+- This is a restricted ERPNext Desk user. The user starts in the `3PL Client` Workspace and is limited by role, module profile, User Permission, and server-side customer guards.
+- Client work uses the restricted ERPNext Desk workspace for MVP1.
 
 ## Starting Point
 
@@ -46,9 +47,11 @@ For warehouse/admin users, after login go to:
 - `Warehouse`
 - `Item`
 
-For client portal testing, open:
+For client testing, log in and open the `3PL Client` Workspace:
 
-- `client/receiving-notice`
-- `client/inventory`
-- `client/shipment-request`
-- `client/discrepancy-instruction`
+- `desk/3pl-client`
+- Receiving Notices
+- Products
+- Inventory reports
+- Shipment Requests
+- Discrepancies / client instructions

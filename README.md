@@ -39,11 +39,12 @@ For a quick HTTPS endpoint without managing DNS first, use an `sslip.io` hostnam
 
 - Warehouse operator: `warehouse.demo@example.test` / `see WAREHOUSE_OPERATOR_PASSWORD in .env`
 - Warehouse manager: `warehouse.manager@example.test` / `see WAREHOUSE_MANAGER_PASSWORD in .env`
-- Client portal: `alpha.client@example.test` / `see CLIENT_PORTAL_PASSWORD in .env`
+- Client Desk: `alpha.client@example.test` / `see CLIENT_DESK_PASSWORD in .env`
 
 ## Warehouse Docs
 
 - Deployment: `docs/deployment.md`
+- Operational names: `docs/operational-names.md`
 - Repository policy: `docs/repository-policy.md`
 - Roadmap: `docs/roadmap.md`
 - Client-confirmed MVP scope status: `docs/client-mvp-scope-status.md`
@@ -60,7 +61,9 @@ For a quick HTTPS endpoint without managing DNS first, use an `sslip.io` hostnam
 
 ## Operational Notes
 
+- Canonical names and routes are documented in `docs/operational-names.md`.
 - Stack name: `erpnext3pl`
+- Staging stack name: `erpnext3plstg`
 - ERPNext site: `erpnext-3pl.local`
 - Public port: `8080`
 - Nginx vhost: `/etc/nginx/sites-available/DOMAIN`

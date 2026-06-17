@@ -1,0 +1,260 @@
+[
+ {
+  "block_modules": [
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 1,
+    "module": "Accounts",
+    "name": "3i4661fl0s",
+    "parent": "Warehouse Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 2,
+    "module": "Assets",
+    "name": "3i4cnam475",
+    "parent": "Warehouse Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 3,
+    "module": "Buying",
+    "name": "3i47rc7k4c",
+    "parent": "Warehouse Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 4,
+    "module": "CRM",
+    "name": "3i4d0jc6i3",
+    "parent": "Warehouse Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 5,
+    "module": "ERPNext Integrations",
+    "name": "3i4ue8ckh4",
+    "parent": "Warehouse Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 6,
+    "module": "Integrations",
+    "name": "3i4sgfuok1",
+    "parent": "Warehouse Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 7,
+    "module": "Manufacturing",
+    "name": "3i4hn9rj07",
+    "parent": "Warehouse Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 8,
+    "module": "Projects",
+    "name": "3i4fkp59mq",
+    "parent": "Warehouse Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 9,
+    "module": "Quality Management",
+    "name": "3i4dequ211",
+    "parent": "Warehouse Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 10,
+    "module": "Selling",
+    "name": "3i4mnq00o7",
+    "parent": "Warehouse Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 11,
+    "module": "Support",
+    "name": "3i4de3v55d",
+    "parent": "Warehouse Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 12,
+    "module": "Website",
+    "name": "3i4ocod64j",
+    "parent": "Warehouse Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   }
+  ],
+  "docstatus": 0,
+  "doctype": "Module Profile",
+  "idx": 0,
+  "module_profile_name": "Warehouse Only",
+  "name": "Warehouse Only"
+ },
+ {
+  "block_modules": [
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 1,
+    "module": "Accounts",
+    "name": "3pl_client_block_1",
+    "parent": "3PL Client Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 2,
+    "module": "Assets",
+    "name": "3pl_client_block_2",
+    "parent": "3PL Client Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 3,
+    "module": "Buying",
+    "name": "3pl_client_block_3",
+    "parent": "3PL Client Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 4,
+    "module": "CRM",
+    "name": "3pl_client_block_4",
+    "parent": "3PL Client Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 5,
+    "module": "ERPNext Integrations",
+    "name": "3pl_client_block_5",
+    "parent": "3PL Client Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 6,
+    "module": "Integrations",
+    "name": "3pl_client_block_6",
+    "parent": "3PL Client Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 7,
+    "module": "Manufacturing",
+    "name": "3pl_client_block_7",
+    "parent": "3PL Client Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 8,
+    "module": "Projects",
+    "name": "3pl_client_block_8",
+    "parent": "3PL Client Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 9,
+    "module": "Quality Management",
+    "name": "3pl_client_block_9",
+    "parent": "3PL Client Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 10,
+    "module": "Selling",
+    "name": "3pl_client_block_10",
+    "parent": "3PL Client Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 11,
+    "module": "Support",
+    "name": "3pl_client_block_11",
+    "parent": "3PL Client Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Block Module",
+    "idx": 12,
+    "module": "Website",
+    "name": "3pl_client_block_12",
+    "parent": "3PL Client Only",
+    "parentfield": "block_modules",
+    "parenttype": "Module Profile"
+   }
+  ],
+  "docstatus": 0,
+  "doctype": "Module Profile",
+  "idx": 1,
+  "module_profile_name": "3PL Client Only",
+  "name": "3PL Client Only"
+ }
+]

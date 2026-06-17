@@ -3,13 +3,14 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-if [ ! -f .env ]; then
-  echo ".env is missing; copy .env.example and fill secrets" >&2
+env_file="${PROJECT_ENV_FILE:-.env}"
+if [ ! -f "$env_file" ]; then
+  echo "$env_file is missing; copy .env.example and fill secrets" >&2
   exit 1
 fi
 
 set -a
-. ./.env
+. "$env_file"
 set +a
 
 site_name="${SITE_NAME:?set SITE_NAME}"
@@ -23,69 +24,60 @@ if [ -z "$backend_cid" ]; then
   exit 1
 fi
 
-docker cp scripts/run_project_script.py "$backend_cid":/tmp/run_project_script.py
-docker cp scripts/project_config.py "$backend_cid":/tmp/project_config.py
-docker cp scripts/configure_warehouse_mode.py "$backend_cid":/tmp/configure_warehouse_mode.py
-docker cp scripts/create_demo_users.py "$backend_cid":/tmp/create_demo_users.py
-docker cp scripts/load_demo_warehouse_data.py "$backend_cid":/tmp/load_demo_warehouse_data.py
-docker cp scripts/apply_container_moves.py "$backend_cid":/tmp/apply_container_moves.py
-docker cp scripts/apply_container_repacks.py "$backend_cid":/tmp/apply_container_repacks.py
-docker cp scripts/apply_warehouse_corrections.py "$backend_cid":/tmp/apply_warehouse_corrections.py
-docker cp scripts/sync_receiving_notices.py "$backend_cid":/tmp/sync_receiving_notices.py
-docker cp scripts/sync_client_products.py "$backend_cid":/tmp/sync_client_products.py
-docker cp scripts/sync_shipment_requests.py "$backend_cid":/tmp/sync_shipment_requests.py
-docker cp scripts/sync_picking_confirmations.py "$backend_cid":/tmp/sync_picking_confirmations.py
-docker cp scripts/sync_outbound_fulfillment.py "$backend_cid":/tmp/sync_outbound_fulfillment.py
-docker cp scripts/sync_inventory_snapshots.py "$backend_cid":/tmp/sync_inventory_snapshots.py
-docker cp scripts/sync_inventory_balance_snapshots.py "$backend_cid":/tmp/sync_inventory_balance_snapshots.py
-
 project_env=(
   -e "WAREHOUSE_OPERATOR_PASSWORD=${WAREHOUSE_OPERATOR_PASSWORD:?set WAREHOUSE_OPERATOR_PASSWORD}"
   -e "WAREHOUSE_MANAGER_PASSWORD=${WAREHOUSE_MANAGER_PASSWORD:?set WAREHOUSE_MANAGER_PASSWORD}"
   -e "BUSINESS_OWNER_USER=${BUSINESS_OWNER_USER:?set BUSINESS_OWNER_USER}"
   -e "BUSINESS_OWNER_PASSWORD=${BUSINESS_OWNER_PASSWORD:?set BUSINESS_OWNER_PASSWORD}"
-  -e "CLIENT_PORTAL_PASSWORD=${CLIENT_PORTAL_PASSWORD:?set CLIENT_PORTAL_PASSWORD}"
+  -e "CLIENT_DESK_PASSWORD=${CLIENT_DESK_PASSWORD:?set CLIENT_DESK_PASSWORD}"
 )
 
 docker exec -u root "$backend_cid" bash -lc \
   "mkdir -p /home/frappe/logs /home/frappe/frappe-bench/sites/${site_name}/logs && chown -R frappe:frappe /home/frappe/logs /home/frappe/frappe-bench/sites/${site_name}/logs"
 
-docker exec "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && bench set-config -g server_script_enabled 1"
+app_installed=0
+if docker exec "$backend_cid" bash -lc "cd /home/frappe/frappe-bench && bench --site ${site_name} list-apps | awk '{print \$1}' | grep -qx erpnext_3pl"; then
+  app_installed=1
+fi
 
-docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/configure_warehouse_mode.py 1"
-docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/create_demo_users.py 1"
-docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/load_demo_warehouse_data.py 1"
-docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/apply_container_moves.py 1"
-docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/apply_container_repacks.py 1"
-docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/apply_warehouse_corrections.py 1"
-docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_receiving_notices.py 1"
-docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_client_products.py 1"
-docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_inventory_snapshots.py 1"
-docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_inventory_balance_snapshots.py 1"
-docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_shipment_requests.py 1"
-docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_picking_confirmations.py 1"
-docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_outbound_fulfillment.py 1"
-docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_inventory_snapshots.py 1"
-docker exec "${project_env[@]}" "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/sync_inventory_balance_snapshots.py 1"
+if [ "$app_installed" != "1" ]; then
+  echo "ERPNext 3PL app is not installed on ${site_name}" >&2
+  exit 1
+fi
+
+if [ "${RUN_SITE_BOOTSTRAP:-0}" = "1" ]; then
+  docker exec "${project_env[@]}" "$backend_cid" bash -lc \
+    "cd /home/frappe/frappe-bench && bench --site ${site_name} execute erpnext_3pl.bootstrap.site.main"
+fi
+
+if [ "${RUN_DEMO_DATA:-0}" = "1" ]; then
+  docker exec "${project_env[@]}" "$backend_cid" bash -lc \
+    "cd /home/frappe/frappe-bench && bench --site ${site_name} execute erpnext_3pl.demo.users.main"
+  docker exec "${project_env[@]}" "$backend_cid" bash -lc \
+    "cd /home/frappe/frappe-bench && bench --site ${site_name} execute erpnext_3pl.demo.warehouse_data.main"
+fi
+
+if [ "${RUN_RECOVERY_PROCESSORS:-0}" = "1" ]; then
+  for method in \
+    erpnext_3pl.warehouse.container_moves.main \
+    erpnext_3pl.warehouse.container_repacks.main \
+    erpnext_3pl.warehouse.warehouse_corrections.main \
+    erpnext_3pl.sync.receiving_notices.main \
+    erpnext_3pl.sync.client_products.main \
+    erpnext_3pl.sync.inventory_snapshots.main \
+    erpnext_3pl.sync.inventory_balance_snapshots.main \
+    erpnext_3pl.sync.shipment_requests.main \
+    erpnext_3pl.sync.picking_confirmations.main \
+    erpnext_3pl.sync.outbound_fulfillment.main \
+    erpnext_3pl.sync.inventory_snapshots.main \
+    erpnext_3pl.sync.inventory_balance_snapshots.main
+  do
+    docker exec "${project_env[@]}" "$backend_cid" bash -lc \
+      "cd /home/frappe/frappe-bench && bench --site ${site_name} execute ${method}"
+  done
+fi
+
 docker exec "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && bench --site ${site_name} clear-cache"
 
-./scripts/validate_instance.sh "http://127.0.0.1:${FRONTEND_PORT:-8080}"
-
-echo "Post-deploy warehouse setup complete for ${site_name}"
+echo "Post-deploy maintenance complete for ${site_name}"

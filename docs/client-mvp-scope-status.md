@@ -22,9 +22,9 @@ The client asked for:
 | Area | MVP readiness | Current status |
 | --- | ---: | --- |
 | User roles | 90% | Implemented and tested for client, warehouse operator, warehouse manager, and business owner. Remaining work is role polish after customer feedback. |
-| Receiving products | 90% | Implemented as MVP. Client can create Receiving Notice; warehouse can receive into temporary area; expected vs actual quantities are synced; discrepancies are stored. Warehouse review actions now exist for confirming received, waiting for client, and closing active notices. Client discrepancy review page exists. |
+| Receiving products | 90% | Implemented as MVP. Client creates Receiving Notices from the restricted ERPNext Desk `3PL Client` Workspace; warehouse can receive into temporary area; expected vs actual quantities are synced; discrepancies are stored. Warehouse review actions now exist for confirming received, waiting for client, and closing active notices. |
 | Location movement | 75% | Implemented through container/HU moves and movement history. Good enough for MVP testing. Remaining work is stronger operational validation and real warehouse location naming import. |
-| Sending orders | 85% | Implemented as MVP. Client can create Shipment Request; system creates Pick Lists; warehouse can confirm picking and outbound packing/shipping. Warehouse review actions now exist for accept, close, and cancel. Client shipment tracking page exists. Remaining work is labels and carrier/tracking integrations. |
+| Sending orders | 80% | Implemented as MVP with whole-container allocation. Client creates Shipment Requests from the restricted ERPNext Desk `3PL Client` Workspace; system creates Pick Lists when requested quantities match complete available containers; warehouse can confirm picking and outbound packing/shipping. Partial picks require split/repack before allocation. Warehouse review actions now exist for accept, close, and cancel. Remaining work is labels, carrier/tracking integrations, and richer quantity-level reservation. |
 | Warehouse corrections | 85% | Implemented as MVP. Corrections can adjust container contents, record movement history, and post clear quantity deltas to ERPNext Stock Entry. Ambiguous cases go to Needs Review with manager review actions and review metadata. |
 | Inventory / stocktake | 85% | Implemented as MVP. Stocktake records counted vs system quantity, links deltas to corrections, and now supports grouped stocktake sessions. Remaining work is richer assignment/review UX for large physical counts. |
 | Product balance on selected day | 70% | Implemented through daily inventory balance snapshots and `3PL Inventory Balance By Date`. Limitation: history starts from the day snapshots are generated, not before. |
@@ -38,14 +38,14 @@ Overall MVP readiness for the client's described scope: approximately 87-90%.
 
 Ready:
 
-- Client portal user.
+- Client Desk user with restricted `3PL Client` Workspace.
 - Warehouse operator.
 - Warehouse manager.
 - Business owner / admin-like user.
 
 Test expectation:
 
-- Client works in the portal and does not need ERPNext Desk.
+- Client works in ERPNext Desk, but only through the restricted `3PL Client` Workspace and customer-scoped permissions.
 - Warehouse roles work in the warehouse workspace and warehouse operation pages.
 - Business owner can administer the system and access warehouse flows.
 
@@ -53,15 +53,15 @@ Test expectation:
 
 Ready:
 
-- Client Receiving Notice portal flow.
+- Client Receiving Notice Desk flow.
 - Inbound Shipment Notice data model.
 - Temporary receiving area.
 - Warehouse receiving operation.
 - Expected vs actual received quantity comparison.
 - Discrepancy rows for missing, unexpected, damaged, and quality issue cases.
-- Client instructions for discrepancies as separate portal records.
+- Client instructions for discrepancies as separate customer-scoped records.
 - Warehouse review page at `/warehouse/receiving-review` for confirming received notices, marking notices as waiting for client, and closing notices.
-- Client discrepancy review page at `/client/discrepancies`.
+- Client sees relevant discrepancy/instruction documents and reports through the `3PL Client` Workspace.
 
 Not fully polished yet:
 
@@ -86,19 +86,20 @@ Not fully polished yet:
 
 Ready:
 
-- Client Shipment Request portal flow.
+- Client Shipment Request Desk flow.
 - Structured shipment request item rows.
-- Draft Pick List creation from client request.
-- Picking confirmation.
+- Draft Pick List creation from client request when available containers exactly cover the requested quantities.
+- Picking confirmation at container level.
 - Packing and shipping operation pages.
 - Shipment/container status updates from outbound stock entries.
 - Warehouse review page at `/warehouse/shipment-review` for accepting, closing, or cancelling active shipment requests.
-- Client shipment tracking page at `/client/shipment-tracking`.
+- Client sees Shipment Request status through the `3PL Client` Workspace and client reports.
 
 Not fully polished yet:
 
 - Carrier labels.
 - Tracking numbers and courier integrations.
+- Quantity-level reservation inside one mixed or oversized container. For MVP, split/repack first and then allocate the matching container.
 
 ### Warehouse Corrections
 
@@ -144,7 +145,7 @@ Ready:
 
 Not fully polished yet:
 
-- Client-facing presentation and filters can be improved after the customer confirms exact columns and period logic.
+- Client-facing Desk report filters/presentation can be improved after the customer confirms exact columns and period logic.
 - Historical balance report cannot reconstruct dates before snapshot capture existed.
 
 ## Current Main Gaps For This MVP
@@ -163,6 +164,6 @@ These are the remaining gaps specifically for the client's described MVP:
 Finish the "customer-testable MVP" layer:
 
 1. Agree warehouse location naming convention with the client and import the real location hierarchy.
-2. Add customer-friendly filters to the two required reports if the current portal pages are not enough.
+2. Add customer-friendly filters to the two required reports if the current Desk reports are not enough.
 3. Add carrier labels / tracking integrations if required.
 4. Add richer count assignments/review states for large stocktakes.

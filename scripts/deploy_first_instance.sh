@@ -3,13 +3,14 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-if [ ! -f .env ]; then
-  echo ".env is missing; copy .env.example and fill secrets" >&2
+env_file="${PROJECT_ENV_FILE:-.env}"
+if [ ! -f "$env_file" ]; then
+  echo "$env_file is missing; copy .env.example and fill secrets" >&2
   exit 1
 fi
 
 set -a
-. ./.env
+. "$env_file"
 set +a
 
 stack_name="${STACK_NAME:?set STACK_NAME}"
@@ -84,7 +85,7 @@ echo "Deploying runtime stack"
 docker stack deploy -c compose.yml "$stack_name"
 wait_for_replicas 600
 
-./scripts/run_post_deploy.sh
+RUN_SITE_BOOTSTRAP=1 RUN_DEMO_DATA=1 RUN_RECOVERY_PROCESSORS=1 ./scripts/run_post_deploy.sh
 
 if [ -n "$domain" ]; then
   if [ "$(id -u)" -ne 0 ]; then

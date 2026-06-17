@@ -4,7 +4,7 @@ This document describes business use cases, not step-by-step QA test cases.
 
 ## Actors
 
-- Client user: customer-side user who works through the client portal.
+- Client user: customer-side restricted ERPNext Desk user who works through the `3PL Client` Workspace.
 - Warehouse operator: internal warehouse worker who receives, verifies, moves, picks, and packs goods.
 - Warehouse manager: internal manager who can supervise warehouse operations and master data.
 - Business owner: owner/admin user with broad ERPNext configuration access.
@@ -17,7 +17,7 @@ The client wants to notify the warehouse about an expected inbound shipment befo
 
 Main flow:
 
-1. Client logs in to the client portal.
+1. Client logs in to ERPNext Desk.
 2. Client opens Receiving Notices.
 3. Client creates a Receiving Notice for their own customer account.
 4. Client adds expected products, client SKUs, and quantities.
@@ -30,11 +30,11 @@ Expected result:
 - The notice is tied to the client.
 - The client cannot create notices for another client.
 
-Implementation status: implemented as portal MVP.
+Implementation status: implemented as Desk-native MVP.
 
-Current route:
+Current entry point:
 
-`/client/receiving-notice`
+`/app/3pl-client`
 
 Current demo user:
 
@@ -46,7 +46,7 @@ The client wants to see receiving notices they created or that belong to them.
 
 Main flow:
 
-1. Client logs in to the portal.
+1. Client logs in to ERPNext Desk.
 2. Client opens Receiving Notices.
 3. Client reviews the list of notices linked to their customer account.
 4. Client opens a notice to see expected items and current status.
@@ -54,11 +54,11 @@ Main flow:
 Expected result:
 
 - Client sees only their own receiving notices.
-- Client does not use ERPNext Desk for this flow.
+- Client uses only the restricted `3PL Client` Workspace, not unrestricted ERPNext Desk.
 
-Implementation status: partially implemented.
+Implementation status: implemented as Desk-native MVP.
 
-The Web Form list is enabled and permissions are customer-restricted. Dedicated client-facing list/detail UX is not yet custom-built.
+Client access is customer-restricted through User Permission and server-side guards. MVP1 client work uses the restricted ERPNext Desk workspace.
 
 ### Client Reviews Receiving Discrepancies
 
@@ -69,20 +69,20 @@ Main flow:
 1. Warehouse records a discrepancy during receiving.
 2. Client opens the relevant Receiving Notice.
 3. Client sees discrepancy type, item, expected quantity, actual quantity, and notes.
-4. Client submits an instruction through the portal when a warehouse decision is needed.
+4. Client submits an instruction from the restricted client Workspace when a warehouse decision is needed.
 
 Expected result:
 
 - Discrepancies are stored and can be tracked.
 - The client can understand what needs a decision.
 
-Implementation status: implemented as portal MVP.
+Implementation status: implemented as Desk-native MVP.
 
-Discrepancies are modeled on the Receiving Notice and visible internally. Client instructions can be submitted through the portal as a separate instruction record linked to the Receiving Notice.
+Discrepancies are modeled on the Receiving Notice and visible internally. Client instructions are submitted as separate customer-scoped instruction records linked to the Receiving Notice.
 
-Current route:
+Current entry point:
 
-`/client/discrepancy-instruction`
+`/app/3pl-client`
 
 ### Client Reviews Inventory
 
@@ -90,7 +90,7 @@ The client wants to see their products and current stock.
 
 Main flow:
 
-1. Client logs in to the portal.
+1. Client logs in to ERPNext Desk.
 2. Client opens Inventory.
 3. Client sees only products and stock owned by their customer account.
 
@@ -99,13 +99,13 @@ Expected result:
 - Client does not see another client's products or stock.
 - Inventory is based on ERPNext stock data.
 
-Implementation status: implemented as portal MVP.
+Implementation status: implemented as Desk-native MVP.
 
 Client-facing inventory uses `Three PL Inventory Snapshot` records. The current snapshot is generated from the demo receiving/container data and is permission-restricted by customer.
 
-Current route:
+Current entry point:
 
-`/client/inventory`
+`/app/3pl-client`
 
 ### Client Reviews Product Balance On A Date
 
@@ -134,7 +134,7 @@ The client wants to request outbound shipment of stored goods.
 
 Main flow:
 
-1. Client logs in to the portal.
+1. Client logs in to ERPNext Desk.
 2. Client creates a shipment request.
 3. Client selects products, quantities, and destination details.
 4. Warehouse team receives the request and starts picking.
@@ -147,11 +147,11 @@ Expected result:
 
 Implementation status: implemented as MVP.
 
-Submitted shipment requests with structured item rows are converted into draft ERPNext Pick Lists by the post-deploy/idempotent shipment sync processor. Full packing, dispatch, carrier tracking, and client-facing shipment tracking remain future work.
+Submitted shipment requests with structured item rows are converted into draft ERPNext Pick Lists by the immediate shipment sync hook and the idempotent recovery processor. Packing and dispatch are implemented as MVP through `3PL Packing` and `3PL Shipping` Stock Entries, and client-facing status is available through the restricted `3PL Client` Workspace. Carrier labels, courier integrations, and polished external tracking remain future work.
 
-Current route:
+Current entry point:
 
-`/client/shipment-request`
+`/app/3pl-client`
 
 ## Warehouse Use Cases
 
@@ -258,7 +258,7 @@ Expected result:
 
 Implementation status: implemented as MVP.
 
-Client shipment requests with structured item rows are converted into draft Pick Lists. The Pick List carries client, shipment request, shipment reference, warehouse, scanned location, and container context. Allocated containers move to `Picking` status and inventory snapshots show them as allocated. A scanner-first confirmation page exists at `/warehouse/picking-confirmation`.
+Client shipment requests with structured item rows are converted into draft Pick Lists. The Pick List carries client, shipment request, shipment reference, warehouse, scanned location, and container context. Automatic MVP allocation is whole-container only: if a request needs less than the quantity currently held in a container, warehouse users must split or repack the goods into a matching container before allocation. Allocated containers move to `Picking` status and inventory snapshots show the whole allocated container as allocated. A scanner-first confirmation page exists at `/warehouse/picking-confirmation`.
 
 ### Warehouse Packs And Ships Goods
 
@@ -326,8 +326,8 @@ The business owner has broad system rights. The warehouse manager is operational
 | --- | --- | --- |
 | ERPNext v16 clean install | Implemented | Deployed on prod and validated. |
 | Warehouse-only internal Desk | Implemented | Non-warehouse modules hidden via module profile/workspaces. |
-| Client portal instead of Desk for clients | Implemented as MVP | Client Receiving Notice Web Form exists. |
-| Website User without Desk access | Implemented | Demo client user is `Website User`. |
+| Restricted client Desk instead of custom portal | Implemented as MVP | Demo client user is a System User with `3PL Client` role, `3PL Client Only` module profile, default `3PL Client` Workspace, Customer User Permission, and server-side customer/status guards. |
+| Native ERPNext Desk client surface | Implemented | Client actions run through restricted ERPNext Desk workspaces and forms. |
 | Client linked to Customer | Implemented | Demo client user is linked to `Demo Client Alpha`. |
 | Client can create Receiving Notice | Implemented | Client selects active synced products from their product catalog; server validation expands the structured portal payload into Receiving Notice item rows. |
 | Client restricted to own Customer | Implemented | Server validation confirms cross-customer creation is blocked. |
@@ -339,23 +339,23 @@ The business owner has broad system rights. The warehouse manager is operational
 | Verification/inspection step | Implemented as MVP | Submitted inbound receipts sync received quantities, variances, notice status, and auto-generated discrepancies. |
 | Discrepancy types | Implemented | Missing, unexpected, quantity difference, damaged, quality issue. |
 | Client notification for discrepancies | Not implemented | Placeholder email exists only to prevent ERPNext email-account errors. |
-| Client instructions for discrepancies | Implemented as MVP | Portal Web Form creates `Three PL Client Instruction` records linked to a Receiving Notice. |
+| Client instructions for discrepancies | Implemented as MVP | Restricted client Desk flow creates `Three PL Client Instruction` records linked to a Receiving Notice. |
 | Dynamic storage locations | Implemented as warehouse hierarchy | Locations are modeled as warehouses. |
 | Putaway process | Implemented as MVP | Uses standard ERPNext Stock Entry flow and a scanner-first container putaway page at `/warehouse/putaway`. |
-| Picking from locations | Implemented as MVP | Client Shipment Requests use structured product rows from the client catalog, create draft Pick Lists, and scanner picking confirmation marks containers as `Picked`. |
+| Picking from locations | Implemented as MVP with whole-container allocation | Client Shipment Requests use structured product rows from the client catalog, create draft Pick Lists for exact whole-container quantities, and scanner picking confirmation marks containers as `Picked`. Partial picks require a prior split/repack into a matching container. |
 | Warehouse corrections | Implemented as MVP | Scanner page `/warehouse/correction` updates container contents/condition and writes `Adjusted` movement history. Clear quantity deltas are posted to ERPNext Stock Entry. |
 | Warehouse correction stock posting | Implemented as MVP | Clear quantity deltas create `3PL Quantity Gain` or `3PL Quantity Loss` Stock Entries; blocked postings are marked `Needs Review`. |
 | Warehouse correction review | Implemented as MVP | Managers can review `Needs Review` corrections at `/warehouse/correction-review` and report `3PL Corrections Needing Review`. |
 | Inventory / stocktake | Implemented as MVP | Scanner page `/warehouse/stocktake` records counted quantity by container/SKU and links deltas to warehouse corrections. |
 | Containers/boxes | Implemented as first model | `Three PL Container`; scanner-first pages exist for receiving, container moves, putaway, correction, repack, picking confirmation, and outbound fulfillment. |
 | Barcode/location scan fields | Partially implemented | Scanner pages exist for receiving, container moves, putaway, correction, stocktake, repack, picking, and outbound fulfillment. Multi-item partial split guidance still needs polish. |
-| Client inventory visibility | Implemented as MVP | Portal inventory snapshot exists and is customer-filtered by permissions. |
+| Client inventory visibility | Implemented as MVP | Inventory snapshot/report access is customer-filtered by permissions and Workspace/report roles. |
 | Product balance on date | Implemented as MVP | Daily `Three PL Inventory Balance Snapshot` rows and `3PL Inventory Balance By Date` report. |
 | Warehouse operation turnover | Implemented as MVP | `3PL Warehouse Operation Turnover` report reads movement history. |
-| Receiving history | Partially implemented | Portal Web Form list exists; dedicated polished history UX is not implemented. |
-| Shipment requests | Implemented as MVP | Client portal Web Form creates shipment requests, Pick Lists, and packing/shipping status sync. |
-| Shipment status tracking | Implemented as MVP | Shipment request has status; automatic outbound status updates are not implemented. |
-| Stay close to standard ERPNext | Implemented | Uses custom fields, custom DocTypes, Web Form, reports, stock entries. |
+| Receiving history | Implemented as MVP | Client can review customer-scoped Receiving Notices through the restricted Workspace. |
+| Shipment requests | Implemented as MVP | Restricted client Desk flow creates shipment requests, Pick Lists, and packing/shipping status sync. |
+| Shipment status tracking | Implemented as MVP | Shipment Request status updates from submitted packing/shipping Stock Entries and is visible through the restricted `3PL Client` Workspace; carrier tracking integrations remain future work. |
+| Stay close to standard ERPNext | Improved | Uses ERPNext Desk, Workspaces, DocTypes, Workflow, reports, permissions, stock entries, and server-side guards. MVP1 uses native ERPNext Desk. |
 
 ## Remaining Gaps After MVP
 

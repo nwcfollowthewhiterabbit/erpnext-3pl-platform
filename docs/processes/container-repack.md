@@ -46,7 +46,7 @@ Demo operation:
 - Target Location: `Aisle A - 3`
 - Status after processor: `Applied`
 
-`scripts/apply_container_repacks.py` applies draft repacks.
+`erpnext_3pl.warehouse.container_repacks` applies draft repacks.
 
 For `Full Consolidation`, it:
 

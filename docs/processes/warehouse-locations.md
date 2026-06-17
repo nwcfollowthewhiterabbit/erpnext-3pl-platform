@@ -75,8 +75,7 @@ After the client confirms the naming convention, the CSV can be copied to the se
 
 ```bash
 docker cp warehouse-locations.csv <backend-container>:/tmp/warehouse-locations.csv
-docker cp scripts/import_warehouse_locations.py <backend-container>:/tmp/import_warehouse_locations.py
-docker exec <backend-container> bash -lc "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py erpnext-3pl.local /tmp/import_warehouse_locations.py 1 /tmp/warehouse-locations.csv"
+docker exec -e WAREHOUSE_LOCATIONS_CSV=/tmp/warehouse-locations.csv <backend-container> bash -lc "cd /home/frappe/frappe-bench && bench --site erpnext-3pl.local execute erpnext_3pl.maintenance.import_warehouse_locations.main"
 ```
 
 ## Remaining Decisions

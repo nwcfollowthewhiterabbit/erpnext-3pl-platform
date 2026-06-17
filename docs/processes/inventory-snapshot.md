@@ -8,7 +8,7 @@ The snapshot is the client-facing inventory view. It should not depend only on m
 
 ## Current Processor
 
-`scripts/sync_inventory_snapshots.py`
+`erpnext_3pl.sync.inventory_snapshots`
 
 The processor:
 
@@ -50,7 +50,7 @@ The repository also provides:
 
 ## Daily Balance History
 
-`scripts/sync_inventory_balance_snapshots.py` copies current inventory snapshot rows into `Three PL Inventory Balance Snapshot`.
+`erpnext_3pl.sync.inventory_balance_snapshots` copies current inventory snapshot rows into `Three PL Inventory Balance Snapshot`.
 
 This creates one daily balance history row per:
 

@@ -32,7 +32,7 @@ Manual fallback:
 
 ## Automatic Shipment Request Sync
 
-Submitted client `Three PL Shipment Request` records with structured item rows are converted into draft ERPNext Pick Lists by `scripts/sync_shipment_requests.py`.
+Submitted client `Three PL Shipment Request` records with structured item rows are converted into draft ERPNext Pick Lists by `erpnext_3pl.sync.shipment_requests`.
 
 The sync:
 

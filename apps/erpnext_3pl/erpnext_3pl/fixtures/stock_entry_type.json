@@ -1,0 +1,74 @@
+[
+  {
+    "add_to_transit": 0,
+    "docstatus": 0,
+    "doctype": "Stock Entry Type",
+    "idx": 0,
+    "is_standard": 0,
+    "name": "3PL Comparison",
+    "purpose": "Material Transfer"
+  },
+  {
+    "add_to_transit": 0,
+    "docstatus": 0,
+    "doctype": "Stock Entry Type",
+    "idx": 0,
+    "is_standard": 0,
+    "name": "3PL Inbound Receipt",
+    "purpose": "Material Receipt"
+  },
+  {
+    "add_to_transit": 0,
+    "docstatus": 0,
+    "doctype": "Stock Entry Type",
+    "idx": 0,
+    "is_standard": 0,
+    "name": "3PL Internal Movement",
+    "purpose": "Material Transfer"
+  },
+  {
+    "add_to_transit": 0,
+    "docstatus": 0,
+    "doctype": "Stock Entry Type",
+    "idx": 0,
+    "is_standard": 0,
+    "name": "3PL Packing",
+    "purpose": "Material Transfer"
+  },
+  {
+    "add_to_transit": 0,
+    "docstatus": 0,
+    "doctype": "Stock Entry Type",
+    "idx": 0,
+    "is_standard": 0,
+    "name": "3PL Put Away",
+    "purpose": "Material Transfer"
+  },
+  {
+    "add_to_transit": 0,
+    "docstatus": 0,
+    "doctype": "Stock Entry Type",
+    "idx": 0,
+    "is_standard": 0,
+    "name": "3PL Quantity Gain",
+    "purpose": "Material Receipt"
+  },
+  {
+    "add_to_transit": 0,
+    "docstatus": 0,
+    "doctype": "Stock Entry Type",
+    "idx": 0,
+    "is_standard": 0,
+    "name": "3PL Quantity Loss",
+    "purpose": "Material Issue"
+  },
+  {
+    "add_to_transit": 0,
+    "docstatus": 0,
+    "doctype": "Stock Entry Type",
+    "idx": 0,
+    "is_standard": 0,
+    "name": "3PL Shipping",
+    "purpose": "Material Issue"
+  }
+]

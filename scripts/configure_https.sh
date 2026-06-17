@@ -31,16 +31,8 @@ server {
         return 302 /login;
     }
 
-    location = /app {
-        return 302 /desk/3pl-warehouse;
-    }
-
     location = /app/ {
-        return 302 /desk/3pl-warehouse;
-    }
-
-    location = /desk {
-        return 302 /desk/3pl-warehouse;
+        return 301 /desk;
     }
 
     location = /app/setup-wizard {
@@ -49,14 +41,6 @@ server {
 
     location = /app/setup-wizard/ {
         return 302 /app/3pl-warehouse;
-    }
-
-    location = /app/home {
-        return 302 /desk/3pl-warehouse;
-    }
-
-    location = /apps {
-        return 302 /desk/3pl-warehouse;
     }
 
     location = /docs/erpnext-3pl-demo-use-cases-ru.pdf {
@@ -73,14 +57,6 @@ server {
     proxy_set_header X-Forwarded-Port \$server_port;
 
     location ~ ^/(app|desk)(/|$) {
-        if (\$http_cookie ~* "user_id=Guest") {
-            return 302 /login;
-        }
-
-        if (\$http_cookie ~* "system_user=no") {
-            return 302 /client/receiving-notice/list;
-        }
-
         proxy_read_timeout 120;
         proxy_redirect off;
         proxy_pass http://127.0.0.1:${upstream_port};

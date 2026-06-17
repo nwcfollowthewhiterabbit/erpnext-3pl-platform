@@ -31,13 +31,14 @@ Use this guide for the current ERPNext 3PL test instance.
 - Can create/edit warehouses, products, item groups, UOMs, users, roles, and stock documents.
 - Starts in the warehouse interface but has broad system permissions.
 
-### Client Portal User
+### Client Desk User
 
 - Login: `alpha.client@example.test`
-- Password: `see CLIENT_PORTAL_PASSWORD in .env`
-- Purpose: client-side Receiving Notice testing.
+- Password: `see CLIENT_DESK_PASSWORD in .env`
+- Purpose: client-side MVP testing through the restricted `3PL Client` Desk Workspace.
 - Linked customer: `Demo Client Alpha`.
-- Uses the client portal, not ERPNext Desk.
+- Desk URL: `https://erpnext.77.237.244.169.sslip.io/desk/3pl-client`.
+- Uses native ERPNext Desk.
 
 ## What Is Ready To Test
 
@@ -45,18 +46,19 @@ Use this guide for the current ERPNext 3PL test instance.
 
 Use this sequence for the first customer review.
 
-1. Log in as the Client Portal User and create a new Receiving Notice for `Demo Client Alpha`.
-2. Open Inventory in the portal and confirm only Alpha stock is visible.
-3. Open Shipment Requests in the portal and create a simple outbound request.
-4. Open Discrepancy Instructions in the portal and submit an instruction for `ASN-ALPHA-001`.
-5. Log in as the Warehouse Operator and open `3PL Warehouse`.
-6. Open `ASN-ALPHA-001`, confirm expected vs received quantities and the quantity discrepancy.
-7. Open `BOX-ALPHA-001`, confirm it is linked to the notice and temporary receiving location.
-8. Log in as the Business Owner and confirm products and warehouse locations can be created or edited.
+1. Log in as the Client Desk User and open the `3PL Client` Workspace.
+2. Create a new Receiving Notice for `Demo Client Alpha`.
+3. Open Inventory reports and confirm only Alpha stock is visible.
+4. Open Shipment Requests and create a simple outbound request.
+5. Open Discrepancy Instructions and submit an instruction for `ASN-ALPHA-001`.
+6. Log in as the Warehouse Operator and open `3PL Warehouse`.
+7. Open `ASN-ALPHA-001`, confirm expected vs received quantities and the quantity discrepancy.
+8. Open `BOX-ALPHA-001`, confirm it is linked to the notice and temporary receiving location.
+9. Log in as the Business Owner and confirm products and warehouse locations can be created or edited.
 
-This walkthrough covers the current MVP boundary: client portal input, customer data isolation, receiving notice review, discrepancy tracking, container/box visibility, and owner-level administration.
+This walkthrough covers the current MVP boundary: client Desk input, customer data isolation, receiving notice review, discrepancy tracking, container/box visibility, and owner-level administration.
 
-The deploy validator now checks these same boundaries automatically: internal warehouse logins, business-owner master-data pages, client portal routes, demo records, and Alpha-vs-Beta data isolation.
+The deploy validator now checks these same boundaries automatically: internal warehouse logins, business-owner master-data pages, client Desk controls, demo records, and Alpha-vs-Beta data isolation.
 
 ## Automated Test Packs
 
@@ -70,17 +72,9 @@ Run stateful server-side packs sequentially, not in parallel. They create and cl
 ./scripts/validate_instance.sh https://erpnext.77.237.244.169.sslip.io
 ```
 
-Checks that the deployed instance, roles, workspaces, permissions, demo data, portal routes, and core server-side setup are consistent.
+Checks that the deployed instance, roles, workspaces, permissions, demo data, Desk routes, and core server-side setup are consistent.
 
-2. Client portal validation:
-
-```bash
-CLIENT_PORTAL_PASSWORD="..." npm run test:client-portal
-```
-
-Checks client login/session behavior, portal navigation, access errors, product/receiving/shipment pages, reference autofill, and product picker search.
-
-3. Warehouse operations validation:
+2. Warehouse operations validation:
 
 ```bash
 ./scripts/validate_warehouse_ops.sh
@@ -121,31 +115,31 @@ Expected result:
 - No temporary `MVP-E2E-*` records remain after cleanup.
 - Existing demo data remains available for manual customer review.
 
-### Client Portal
+### Client Desk
 
-Open `https://erpnext.77.237.244.169.sslip.io/client/receiving-notice`.
+Open `https://erpnext.77.237.244.169.sslip.io/desk/3pl-client`.
 
 Test:
 
 - Log in as `alpha.client@example.test`.
-- Create a Receiving Notice for `Demo Client Alpha`.
+- Create a Receiving Notice for `Demo Client Alpha` from the `3PL Client` Workspace.
 - Add expected products and quantities in the `Expected Products` table.
 - Try to use another customer only as a negative test.
 
 Expected result:
 
-- Client can create Receiving Notices through the portal.
-- Client user is a `Website User`, not a Desk/System user.
+- Client can create Receiving Notices through native ERPNext Desk forms.
+- Client user is a restricted Desk `System User` with role `3PL Client`.
 - User permission restricts the client to `Demo Client Alpha`.
 - Client must not see or create records for `Demo Client Beta`.
 
-Additional client portal routes:
+Additional client Desk areas:
 
-- Inventory: `https://erpnext.77.237.244.169.sslip.io/client/inventory`
-- Shipment Requests: `https://erpnext.77.237.244.169.sslip.io/client/shipment-request`
-- Shipment Tracking: `https://erpnext.77.237.244.169.sslip.io/client/shipment-tracking`
-- Discrepancies: `https://erpnext.77.237.244.169.sslip.io/client/discrepancies`
-- Discrepancy Instructions: `https://erpnext.77.237.244.169.sslip.io/client/discrepancy-instruction`
+- Inventory: `3PL Client Inventory Summary`
+- Inventory By Date: `3PL Inventory Balance By Date`
+- Operation Turnover: `3PL Warehouse Operation Turnover`
+- Shipment Requests: `Three PL Shipment Request`
+- Discrepancy Instructions: `Three PL Client Instruction`
 
 Expected result:
 
@@ -218,11 +212,11 @@ Expected result:
 
 ### Client Data Isolation
 
-Use the Client Portal User.
+Use the Client Desk User.
 
 Test:
 
-- Confirm portal inventory contains Alpha products such as `SKU-ALPHA-001`.
+- Confirm client inventory reports contain Alpha products such as `SKU-ALPHA-001`.
 - Confirm Beta data such as `SKU-BETA-001` / `Demo Client Beta` is not available to the client.
 - Confirm Beta receiving notice `ASN-BETA-001` is not available to the Alpha client.
 - Try creating a Receiving Notice or Shipment Request for another customer only as a negative test.
@@ -364,11 +358,11 @@ Expected result:
 
 ## Current Scope Limits
 
-- Client portal MVP is implemented for creating Receiving Notices.
+- Client Desk MVP is implemented for creating Receiving Notices.
 - Client inventory visibility is implemented as an MVP snapshot.
-- Shipment requests are implemented as portal MVP records.
-- Client shipment tracking is implemented as a portal MVP page.
-- Client discrepancy review is implemented as a portal MVP page.
+- Shipment requests are implemented as client Desk MVP records.
+- Client shipment tracking is implemented through client Desk reports/status fields.
+- Client discrepancy review is implemented through client Desk reports and instructions.
 - Structured shipment requests are converted to draft Pick Lists as an MVP.
 - Outbound status updates after packing/dispatch are implemented as MVP through submitted packing/shipping Stock Entries.
 - Box/container handling exists as a first ERPNext custom DocType model. Scanner-first pages exist for receiving, container moves, putaway, warehouse corrections, stocktake, full-container repack, partial split, picking confirmation, and outbound fulfillment; grouped stocktake sessions and richer multi-item split guidance still need polish.

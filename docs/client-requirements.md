@@ -32,20 +32,20 @@ Initial reporting scope:
 
 ## Stage MVP2 Requirement: Product Card Management
 
-The next-stage client requirement is product master data ownership. The base portal flow and controlled bulk import/export are now implemented.
+The next-stage client requirement is product master data ownership. The base direct product-card flow is implemented through the restricted ERPNext Desk `3PL Client` Workspace.
 
-1. The client creates new product cards through the client portal.
-2. The client updates existing product cards through the client portal.
+1. The client creates new product cards through the restricted client Workspace.
+2. The client updates existing product cards through the restricted client Workspace.
 3. Each product card can have a photo.
 4. The client deactivates products instead of deleting master records.
 5. Product changes are logged.
-6. Product data can be exported and imported through an Excel-compatible table workflow. Current MVP uses CSV export and CSV/XLSX import.
+6. Product data export is retained as a reporting/roadmap capability. Bulk Product Import is outside MVP1 and remains post-MVP1/admin-roadmap.
 
 Expected direction:
 
 - Keep ERPNext `Item` as the base product record.
 - Treat `Owner Client + Client SKU` as the product business identity.
-- Expose product maintenance through the client portal, not through unrestricted Desk access.
+- Expose product maintenance through restricted ERPNext Desk access, not through unrestricted Desk access.
 - Validate that clients can only manage their own products.
 
 ## Picking and Shipping
