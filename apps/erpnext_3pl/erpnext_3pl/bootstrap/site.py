@@ -130,6 +130,121 @@ CLIENT_DESKTOP_GROUPS = [
     {"label": "Inventory", "icon": "clipboard-list"},
     {"label": "Products & Issues", "icon": "package"},
 ]
+WAREHOUSE_DESKTOP_SHORTCUTS = [
+    {
+        "label": "3PL Warehouse",
+        "icon": "warehouse",
+        "item": {"label": "3PL Warehouse", "link_type": "URL", "url": "/desk/3pl-warehouse"},
+    },
+    {
+        "label": "Receiving Scan",
+        "icon": "scan-line",
+        "group": "Warehouse Receiving",
+        "item": {"label": "Receiving Scan", "link_type": "URL", "url": "/warehouse/receiving"},
+    },
+    {
+        "label": "Receiving Review",
+        "icon": "clipboard-check",
+        "group": "Warehouse Receiving",
+        "item": {"label": "Receiving Review", "link_type": "URL", "url": "/warehouse/receiving-review"},
+    },
+    {
+        "label": "Putaway",
+        "icon": "archive",
+        "group": "Warehouse Receiving",
+        "item": {"label": "Putaway", "link_type": "URL", "url": "/warehouse/putaway"},
+    },
+    {
+        "label": "ASN vs Received",
+        "icon": "list-checks",
+        "group": "Warehouse Receiving",
+        "item": {"label": "ASN vs Received", "link_type": "Report", "link_to": "3PL ASN vs Received"},
+    },
+    {
+        "label": "Picking Confirmation",
+        "icon": "package-check",
+        "group": "Warehouse Outbound",
+        "item": {"label": "Picking Confirmation", "link_type": "URL", "url": "/warehouse/picking-confirmation"},
+    },
+    {
+        "label": "Shipment Review",
+        "icon": "clipboard-check",
+        "group": "Warehouse Outbound",
+        "item": {"label": "Shipment Review", "link_type": "URL", "url": "/warehouse/shipment-review"},
+    },
+    {
+        "label": "Outbound Fulfillment",
+        "icon": "send",
+        "group": "Warehouse Outbound",
+        "item": {"label": "Outbound Fulfillment", "link_type": "URL", "url": "/warehouse/outbound-fulfillment"},
+    },
+    {
+        "label": "Pick Lists",
+        "icon": "list-todo",
+        "group": "Warehouse Outbound",
+        "item": {"label": "Pick Lists", "link_type": "DocType", "link_to": "Pick List"},
+    },
+    {
+        "label": "Container Move",
+        "icon": "move",
+        "group": "Warehouse Operations",
+        "item": {"label": "Container Move", "link_type": "URL", "url": "/warehouse/container-move"},
+    },
+    {
+        "label": "Container Repack",
+        "icon": "boxes",
+        "group": "Warehouse Operations",
+        "item": {"label": "Container Repack", "link_type": "URL", "url": "/warehouse/repack"},
+    },
+    {
+        "label": "Warehouse Correction",
+        "icon": "wrench",
+        "group": "Warehouse Operations",
+        "item": {"label": "Warehouse Correction", "link_type": "URL", "url": "/warehouse/correction"},
+    },
+    {
+        "label": "Stocktake",
+        "icon": "clipboard-list",
+        "group": "Warehouse Operations",
+        "item": {"label": "Stocktake", "link_type": "URL", "url": "/warehouse/stocktake"},
+    },
+    {
+        "label": "Correction Review",
+        "icon": "badge-check",
+        "group": "Warehouse Operations",
+        "item": {"label": "Correction Review", "link_type": "URL", "url": "/warehouse/correction-review"},
+    },
+    {
+        "label": "Containers Report",
+        "icon": "container",
+        "group": "Warehouse Reports",
+        "item": {"label": "Containers Report", "link_type": "Report", "link_to": "3PL Containers"},
+    },
+    {
+        "label": "Container Movements",
+        "icon": "route",
+        "group": "Warehouse Reports",
+        "item": {"label": "Container Movements", "link_type": "Report", "link_to": "3PL Container Movements"},
+    },
+    {
+        "label": "Operation Turnover Report",
+        "icon": "history",
+        "group": "Warehouse Reports",
+        "item": {"label": "Operation Turnover Report", "link_type": "Report", "link_to": "3PL Warehouse Operation Turnover"},
+    },
+    {
+        "label": "Inventory Summary Report",
+        "icon": "clipboard-list",
+        "group": "Warehouse Reports",
+        "item": {"label": "Inventory Summary Report", "link_type": "Report", "link_to": "3PL Client Inventory Summary"},
+    },
+]
+WAREHOUSE_DESKTOP_GROUPS = [
+    {"label": "Warehouse Receiving", "icon": "truck"},
+    {"label": "Warehouse Outbound", "icon": "send"},
+    {"label": "Warehouse Operations", "icon": "boxes"},
+    {"label": "Warehouse Reports", "icon": "chart-column"},
+]
 
 
 def ensure_warehouse(warehouse_name, parent=None, is_group=0):
@@ -477,8 +592,11 @@ def configure_desktop_icons():
     for idx, shortcut in enumerate(CLIENT_DESKTOP_SHORTCUTS[1:], start=1):
         ensure_desktop_shortcut(shortcut, idx)
 
-    if frappe.db.exists("Desktop Icon", "3PL Warehouse"):
-        frappe.db.set_value("Desktop Icon", "3PL Warehouse", "hidden", 1, update_modified=False)
+    ensure_desktop_shortcut(WAREHOUSE_DESKTOP_SHORTCUTS[0], 20)
+    for idx, group in enumerate(WAREHOUSE_DESKTOP_GROUPS, start=21):
+        ensure_desktop_folder(group["label"], idx, group["icon"])
+    for idx, shortcut in enumerate(WAREHOUSE_DESKTOP_SHORTCUTS[1:], start=1):
+        ensure_desktop_shortcut(shortcut, idx)
 
     for user in (CLIENT_DESK_USER, "warehouse.demo@example.test", "warehouse.manager@example.test"):
         if frappe.db.exists("User", user):

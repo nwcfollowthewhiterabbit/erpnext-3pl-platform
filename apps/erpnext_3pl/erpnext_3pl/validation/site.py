@@ -66,12 +66,102 @@ REQUIRED_DESKTOP_ICONS = {
         "hidden": 0,
         "parent_icon": "Inventory",
     },
+    "3PL Warehouse": {"item": {"link_type": "URL", "url": "/desk/3pl-warehouse"}, "hidden": 0, "parent_icon": None},
+    "Receiving Scan": {
+        "item": {"link_type": "URL", "url": "/warehouse/receiving"},
+        "hidden": 0,
+        "parent_icon": "Warehouse Receiving",
+    },
+    "Receiving Review": {
+        "item": {"link_type": "URL", "url": "/warehouse/receiving-review"},
+        "hidden": 0,
+        "parent_icon": "Warehouse Receiving",
+    },
+    "Putaway": {
+        "item": {"link_type": "URL", "url": "/warehouse/putaway"},
+        "hidden": 0,
+        "parent_icon": "Warehouse Receiving",
+    },
+    "ASN vs Received": {
+        "item": {"link_type": "Report", "link_to": "3PL ASN vs Received"},
+        "hidden": 0,
+        "parent_icon": "Warehouse Receiving",
+    },
+    "Picking Confirmation": {
+        "item": {"link_type": "URL", "url": "/warehouse/picking-confirmation"},
+        "hidden": 0,
+        "parent_icon": "Warehouse Outbound",
+    },
+    "Shipment Review": {
+        "item": {"link_type": "URL", "url": "/warehouse/shipment-review"},
+        "hidden": 0,
+        "parent_icon": "Warehouse Outbound",
+    },
+    "Outbound Fulfillment": {
+        "item": {"link_type": "URL", "url": "/warehouse/outbound-fulfillment"},
+        "hidden": 0,
+        "parent_icon": "Warehouse Outbound",
+    },
+    "Pick Lists": {
+        "item": {"link_type": "DocType", "link_to": "Pick List"},
+        "hidden": 0,
+        "parent_icon": "Warehouse Outbound",
+    },
+    "Container Move": {
+        "item": {"link_type": "URL", "url": "/warehouse/container-move"},
+        "hidden": 0,
+        "parent_icon": "Warehouse Operations",
+    },
+    "Container Repack": {
+        "item": {"link_type": "URL", "url": "/warehouse/repack"},
+        "hidden": 0,
+        "parent_icon": "Warehouse Operations",
+    },
+    "Warehouse Correction": {
+        "item": {"link_type": "URL", "url": "/warehouse/correction"},
+        "hidden": 0,
+        "parent_icon": "Warehouse Operations",
+    },
+    "Stocktake": {
+        "item": {"link_type": "URL", "url": "/warehouse/stocktake"},
+        "hidden": 0,
+        "parent_icon": "Warehouse Operations",
+    },
+    "Correction Review": {
+        "item": {"link_type": "URL", "url": "/warehouse/correction-review"},
+        "hidden": 0,
+        "parent_icon": "Warehouse Operations",
+    },
+    "Containers Report": {
+        "item": {"link_type": "Report", "link_to": "3PL Containers"},
+        "hidden": 0,
+        "parent_icon": "Warehouse Reports",
+    },
+    "Container Movements": {
+        "item": {"link_type": "Report", "link_to": "3PL Container Movements"},
+        "hidden": 0,
+        "parent_icon": "Warehouse Reports",
+    },
+    "Operation Turnover Report": {
+        "item": {"link_type": "Report", "link_to": "3PL Warehouse Operation Turnover"},
+        "hidden": 0,
+        "parent_icon": "Warehouse Reports",
+    },
+    "Inventory Summary Report": {
+        "item": {"link_type": "Report", "link_to": "3PL Client Inventory Summary"},
+        "hidden": 0,
+        "parent_icon": "Warehouse Reports",
+    },
 }
 REQUIRED_DESKTOP_FOLDERS = {
     "Inbound": 0,
     "Outbound": 0,
     "Inventory": 0,
     "Products & Issues": 0,
+    "Warehouse Receiving": 0,
+    "Warehouse Outbound": 0,
+    "Warehouse Operations": 0,
+    "Warehouse Reports": 0,
 }
 HIDDEN_STANDARD_DESKTOP_ICONS = {
     "Accounts",
