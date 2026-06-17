@@ -50,6 +50,14 @@ if [ "${RUN_SITE_BOOTSTRAP:-0}" = "1" ]; then
     "cd /home/frappe/frappe-bench && bench --site ${site_name} execute erpnext_3pl.bootstrap.site.main"
 fi
 
+for method in \
+  erpnext_3pl.bootstrap.site.configure_desktop_icons \
+  erpnext_3pl.bootstrap.site.configure_permissions
+do
+  docker exec "${project_env[@]}" "$backend_cid" bash -lc \
+    "cd /home/frappe/frappe-bench && bench --site ${site_name} execute ${method}"
+done
+
 if [ "${RUN_DEMO_DATA:-0}" = "1" ]; then
   docker exec "${project_env[@]}" "$backend_cid" bash -lc \
     "cd /home/frappe/frappe-bench && bench --site ${site_name} execute erpnext_3pl.demo.users.main"

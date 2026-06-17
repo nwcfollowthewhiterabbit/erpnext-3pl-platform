@@ -24,6 +24,43 @@ from erpnext_3pl.config.workflows import MVP_WORKFLOWS
 
 
 REQUIRED_WORKSPACES = ["3PL Warehouse", "Stock Reference"]
+REQUIRED_DESKTOP_ICONS = {
+    "3PL Client": ("Workspace Sidebar", "3PL Client", 0),
+    "3PL Warehouse": ("Workspace Sidebar", "3PL Warehouse", 0),
+}
+HIDDEN_STANDARD_DESKTOP_ICONS = {
+    "Accounts",
+    "Accounting",
+    "Assets",
+    "Automation",
+    "Banking",
+    "Budget",
+    "Build",
+    "Buying",
+    "CRM",
+    "Data",
+    "Email",
+    "ERPNext",
+    "ERPNext Settings",
+    "Financial Reports",
+    "Framework",
+    "Integrations",
+    "Manufacturing",
+    "My Workspaces",
+    "Printing",
+    "Projects",
+    "Quality",
+    "Selling",
+    "Share Management",
+    "Stock",
+    "Subcontracting",
+    "Subscription",
+    "Support",
+    "System",
+    "Taxes",
+    "Users",
+    "Website",
+}
 REQUIRED_SERVER_SCRIPTS = {
     "3PL Client Product Immediate Sync": ("Three PL Client Product", "After Save"),
     "3PL Container Inventory Snapshot Sync": ("Three PL Container", "After Save"),
@@ -681,8 +718,48 @@ def main():
         "Three PL Client Product Import" not in {row.link_to for row in client_workspace.links if row.link_to},
         "Product Import must stay outside MVP1 client workspace",
     )
+    for label, (link_type, link_to, hidden) in REQUIRED_DESKTOP_ICONS.items():
+        sidebar = frappe.db.get_value(
+            "Workspace Sidebar",
+            label,
+            ["standard", "app", "module"],
+            as_dict=True,
+        )
+        require(sidebar, f"Missing 3PL Workspace Sidebar: {label}")
+        require(sidebar.standard == 1, f"3PL Workspace Sidebar must be standard: {label}")
+        require(sidebar.app == "erpnext_3pl", f"3PL Workspace Sidebar has wrong app: {label}")
+        require(sidebar.module == "ERPNext 3PL", f"3PL Workspace Sidebar has wrong module: {label}")
+        require(
+            frappe.db.exists(
+                "Workspace Sidebar Item",
+                {"parent": label, "type": "Link", "link_type": "Workspace", "link_to": label},
+            ),
+            f"Missing 3PL Workspace Sidebar link item: {label}",
+        )
+        icon = frappe.db.get_value(
+            "Desktop Icon",
+            label,
+            ["standard", "app", "icon_type", "link_type", "link_to", "hidden"],
+            as_dict=True,
+        )
+        require(icon, f"Missing 3PL Desktop Icon: {label}")
+        require(icon.standard == 1, f"3PL Desktop Icon must be standard: {label}")
+        require(icon.app == "erpnext_3pl", f"3PL Desktop Icon has wrong app: {label}")
+        require(icon.icon_type == "Link", f"3PL Desktop Icon has wrong type: {label}")
+        require(icon.link_type == link_type, f"3PL Desktop Icon has wrong link type: {label}")
+        require(icon.link_to == link_to, f"3PL Desktop Icon has wrong link target: {label}")
+        require(icon.hidden == hidden, f"3PL Desktop Icon hidden state is wrong: {label}")
+    visible_standard_icons = {
+        row.name
+        for row in frappe.get_all(
+            "Desktop Icon",
+            filters={"name": ("in", sorted(HIDDEN_STANDARD_DESKTOP_ICONS)), "hidden": 0},
+            fields=["name"],
+        )
+    }
+    require(not visible_standard_icons, "Standard Desktop icons must stay hidden: " + ", ".join(sorted(visible_standard_icons)))
 
-    for role in ("3PL Warehouse User", "3PL Warehouse Manager", "3PL Client"):
+    for role in ("3PL Warehouse User", "3PL Warehouse Manager"):
         require(
             frappe.db.exists(
                 "Custom DocPerm",
@@ -690,6 +767,10 @@ def main():
             ),
             f"Missing Page read permission for role: {role}",
         )
+    require(
+        not frappe.db.exists("Custom DocPerm", {"parent": "Page", "role": "3PL Client", "read": 1}),
+        "3PL Client must not have broad Page read permission",
+    )
 
     client_role = frappe.get_doc("Role", "3PL Client")
     if client_role.meta.has_field("desk_access"):

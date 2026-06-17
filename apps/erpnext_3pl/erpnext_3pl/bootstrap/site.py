@@ -32,6 +32,39 @@ CLIENT_DESK_READ_ONLY_DOCTYPES = {
     "Three PL Inventory Snapshot",
 }
 CUSTOM_DOCTYPE_MODULE = "ERPNext 3PL"
+STANDARD_DESKTOP_ICONS_TO_HIDE = {
+    "Accounts",
+    "Accounting",
+    "Assets",
+    "Automation",
+    "Banking",
+    "Budget",
+    "Build",
+    "Buying",
+    "CRM",
+    "Data",
+    "Email",
+    "ERPNext",
+    "ERPNext Settings",
+    "Financial Reports",
+    "Framework",
+    "Integrations",
+    "Manufacturing",
+    "My Workspaces",
+    "Printing",
+    "Projects",
+    "Quality",
+    "Selling",
+    "Share Management",
+    "Stock",
+    "Subcontracting",
+    "Subscription",
+    "Support",
+    "System",
+    "Taxes",
+    "Users",
+    "Website",
+}
 
 
 def ensure_warehouse(warehouse_name, parent=None, is_group=0):
@@ -227,6 +260,112 @@ def configure_home_workspace():
     workspace.save(ignore_permissions=True)
 
 
+def ensure_desktop_icon(label, idx, icon):
+    if frappe.db.exists("Desktop Icon", label):
+        doc = frappe.get_doc("Desktop Icon", label)
+    else:
+        doc = frappe.new_doc("Desktop Icon")
+        doc.label = label
+
+    expected = {
+        "standard": 1,
+        "app": "erpnext_3pl",
+        "icon_type": "Link",
+        "link_type": "Workspace Sidebar",
+        "link_to": label,
+        "sidebar": label,
+        "parent_icon": None,
+        "hidden": 0,
+        "restrict_removal": 1,
+        "idx": idx,
+    }
+    if doc.meta.has_field("icon"):
+        expected["icon"] = icon
+    changed = False
+    for fieldname, value in expected.items():
+        if getattr(doc, fieldname, None) != value:
+            setattr(doc, fieldname, value)
+            changed = True
+    if doc.is_new():
+        doc.insert(ignore_permissions=True)
+    elif changed:
+        doc.save(ignore_permissions=True)
+
+
+def ensure_workspace_sidebar(title, idx, icon):
+    if frappe.db.exists("Workspace Sidebar", title):
+        sidebar = frappe.get_doc("Workspace Sidebar", title)
+    else:
+        sidebar = frappe.new_doc("Workspace Sidebar")
+        sidebar.title = title
+
+    expected = {
+        "idx": idx,
+        "header_icon": icon,
+        "module": CUSTOM_DOCTYPE_MODULE,
+        "standard": 1,
+        "app": "erpnext_3pl",
+    }
+    changed = False
+    for fieldname, value in expected.items():
+        if getattr(sidebar, fieldname, None) != value:
+            setattr(sidebar, fieldname, value)
+            changed = True
+    if sidebar.is_new():
+        sidebar.insert(ignore_permissions=True)
+    elif changed:
+        sidebar.save(ignore_permissions=True)
+
+    existing_item = frappe.db.get_value(
+        "Workspace Sidebar Item",
+        {"parent": title, "type": "Link", "link_type": "Workspace", "link_to": title},
+        "name",
+    )
+    if existing_item:
+        item = frappe.get_doc("Workspace Sidebar Item", existing_item)
+    else:
+        item = frappe.new_doc("Workspace Sidebar Item")
+        item.parent = title
+        item.parenttype = "Workspace Sidebar"
+        item.parentfield = "items"
+
+    expected_item = {
+        "idx": 1,
+        "label": title,
+        "type": "Link",
+        "link_type": "Workspace",
+        "link_to": title,
+        "icon": icon,
+        "child": 0,
+    }
+    changed = False
+    for fieldname, value in expected_item.items():
+        if getattr(item, fieldname, None) != value:
+            setattr(item, fieldname, value)
+            changed = True
+    if item.is_new():
+        item.insert(ignore_permissions=True)
+    elif changed:
+        item.save(ignore_permissions=True)
+
+
+def configure_desktop_icons():
+    for label in STANDARD_DESKTOP_ICONS_TO_HIDE:
+        if frappe.db.exists("Desktop Icon", label):
+            frappe.db.set_value("Desktop Icon", label, "hidden", 1, update_modified=False)
+
+    ensure_workspace_sidebar("3PL Client", 1, "users")
+    ensure_workspace_sidebar("3PL Warehouse", 2, "stock")
+    ensure_desktop_icon("3PL Client", 1, "users")
+    ensure_desktop_icon("3PL Warehouse", 2, "stock")
+
+    for user in (CLIENT_DESK_USER, "warehouse.demo@example.test", "warehouse.manager@example.test"):
+        if frappe.db.exists("User", user):
+            frappe.clear_cache(user=user)
+    frappe.cache.hdel("desktop_icons", CLIENT_DESK_USER)
+    frappe.cache.hdel("bootinfo", CLIENT_DESK_USER)
+
+
 def configure_client_desk_user():
     if not frappe.db.exists("User", CLIENT_DESK_USER):
         return
@@ -263,7 +402,7 @@ def configure_client_desk_user():
 def configure_permissions():
     from frappe.permissions import add_permission
 
-    for role_name in ("3PL Warehouse User", "3PL Warehouse Manager", "3PL Client"):
+    for role_name in ("3PL Warehouse User", "3PL Warehouse Manager"):
         existing = frappe.db.exists(
             "Custom DocPerm",
             {
@@ -276,6 +415,8 @@ def configure_permissions():
         )
         if not existing:
             add_permission("Page", role_name, 0, "read")
+    for permission_name in frappe.get_all("Custom DocPerm", filters={"parent": "Page", "role": "3PL Client"}, pluck="name"):
+        frappe.delete_doc("Custom DocPerm", permission_name, ignore_permissions=True, force=True)
 
     for doctype in CLIENT_DESK_READ_ONLY_DOCTYPES:
         filters = {"parent": doctype, "role": "3PL Client", "permlevel": 0, "if_owner": 0}
@@ -389,6 +530,7 @@ def main():
     configure_company()
     configure_module_profiles()
     configure_home_workspace()
+    configure_desktop_icons()
     configure_client_desk_user()
     configure_permissions()
     configure_warehouses()
