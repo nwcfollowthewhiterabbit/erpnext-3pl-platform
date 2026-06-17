@@ -306,7 +306,7 @@ def stocktake(container_name, item_code):
         {
             "doctype": "Three PL Stocktake Session",
             "session_reference": f"{PREFIX}-STOCKTAKE-SESSION",
-            "status": "In Progress",
+            "status": "Open",
             "client": CLIENT_DESK_CUSTOMER,
             "warehouse": STORAGE_WAREHOUSE,
             "started_at": operation_time,
@@ -314,12 +314,14 @@ def stocktake(container_name, item_code):
         }
     )
     session.insert()
+    session.status = "In Progress"
+    session.save()
     stocktake = frappe.get_doc(
         {
             "doctype": "Three PL Stocktake",
             "operation_reference": f"{PREFIX}-STOCKTAKE",
             "operation_datetime": operation_time,
-            "status": "No Difference",
+            "status": "Draft",
             "stocktake_session": session.name,
             "client": CLIENT_DESK_CUSTOMER,
             "warehouse": STORAGE_WAREHOUSE,
@@ -335,6 +337,8 @@ def stocktake(container_name, item_code):
         }
     )
     stocktake.insert()
+    stocktake.status = "No Difference"
+    stocktake.save()
     session.status = "Completed"
     session.completed_at = operation_time
     session.save()

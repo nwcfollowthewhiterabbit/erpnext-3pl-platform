@@ -85,6 +85,8 @@ def set_initial_status(doc, status):
 
 
 def freeze_status_for_client(doc, allowed_initial_status):
+    if frappe.flags.get("three_pl_internal_status_sync"):
+        return
     if not is_client_desk_user() or doc.is_new():
         return
     previous = frappe.db.get_value(doc.doctype, doc.name, "status")

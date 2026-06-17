@@ -193,12 +193,18 @@ def append_request_note(request, message):
 
 
 def save_request_without_hook(request):
-    previous = frappe.flags.get("three_pl_shipment_request_pick_list_sync")
+    previous_hook = frappe.flags.get("three_pl_shipment_request_pick_list_sync")
+    previous_status_sync = frappe.flags.get("three_pl_internal_status_sync")
+    previous_user = frappe.session.user
     frappe.flags.three_pl_shipment_request_pick_list_sync = True
+    frappe.flags.three_pl_internal_status_sync = True
     try:
+        frappe.set_user("Administrator")
         request.save(ignore_permissions=True)
     finally:
-        frappe.flags.three_pl_shipment_request_pick_list_sync = previous
+        frappe.set_user(previous_user)
+        frappe.flags.three_pl_shipment_request_pick_list_sync = previous_hook
+        frappe.flags.three_pl_internal_status_sync = previous_status_sync
 
 
 def sync_request(request_name):

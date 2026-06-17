@@ -266,7 +266,7 @@ def validate_correction_loss_and_noop():
             "doctype": "Three PL Warehouse Correction",
             "operation_reference": "WAREHOUSE-OPS-CORR-LOSS",
             "operation_datetime": now_datetime(),
-            "status": "Applied",
+            "status": "Draft",
             "correction_type": "Quantity Count",
             "client": CLIENT_DESK_CUSTOMER,
             "container_code": "WAREHOUSE-OPS-CORR-LOSS",
@@ -281,6 +281,8 @@ def validate_correction_loss_and_noop():
         }
     )
     loss.insert(ignore_permissions=True)
+    loss.status = "Applied"
+    loss.save(ignore_permissions=True)
     loss_entry = processor.apply_correction_stock_posting(loss)
     loss.reload()
     require(loss_entry, "Correction loss did not create Stock Entry")
@@ -294,7 +296,7 @@ def validate_correction_loss_and_noop():
             "doctype": "Three PL Warehouse Correction",
             "operation_reference": "WAREHOUSE-OPS-CORR-NOOP",
             "operation_datetime": now_datetime(),
-            "status": "Applied",
+            "status": "Draft",
             "correction_type": "Quantity Count",
             "client": CLIENT_DESK_CUSTOMER,
             "container_code": "WAREHOUSE-OPS-CORR-NOOP",
@@ -309,6 +311,8 @@ def validate_correction_loss_and_noop():
         }
     )
     noop.insert(ignore_permissions=True)
+    noop.status = "Applied"
+    noop.save(ignore_permissions=True)
     noop_entry = processor.apply_correction_stock_posting(noop)
     noop.reload()
     require(not noop_entry, "No-op correction should not create Stock Entry")

@@ -85,6 +85,14 @@ if [ "${RUN_RECOVERY_PROCESSORS:-0}" = "1" ]; then
   done
 fi
 
+for method in \
+  erpnext_3pl.sync.inventory_snapshots.main \
+  erpnext_3pl.sync.inventory_balance_snapshots.main
+do
+  docker exec "${project_env[@]}" "$backend_cid" bash -lc \
+    "cd /home/frappe/frappe-bench && bench --site ${site_name} execute ${method}"
+done
+
 docker exec "$backend_cid" bash -lc \
   "cd /home/frappe/frappe-bench && bench --site ${site_name} clear-cache"
 
