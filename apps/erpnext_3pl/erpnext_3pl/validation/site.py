@@ -25,8 +25,39 @@ from erpnext_3pl.config.workflows import MVP_WORKFLOWS
 
 REQUIRED_WORKSPACES = ["3PL Warehouse", "Stock Reference"]
 REQUIRED_DESKTOP_ICONS = {
-    "3PL Client": ("Workspace Sidebar", "3PL Client", 0),
-    "3PL Warehouse": ("Workspace Sidebar", "3PL Warehouse", 0),
+    "3PL Client": {"item": {"link_type": "URL", "url": "/desk/3pl-client"}, "hidden": 0},
+    "Receiving Notices": {
+        "item": {"link_type": "DocType", "link_to": "Inbound Shipment Notice"},
+        "hidden": 0,
+    },
+    "Shipment Requests": {
+        "item": {"link_type": "DocType", "link_to": "Three PL Shipment Request"},
+        "hidden": 0,
+    },
+    "Products": {
+        "item": {"link_type": "DocType", "link_to": "Three PL Client Product"},
+        "hidden": 0,
+    },
+    "Discrepancy Instructions": {
+        "item": {"link_type": "DocType", "link_to": "Three PL Client Instruction"},
+        "hidden": 0,
+    },
+    "Receiving Discrepancies": {
+        "item": {"link_type": "Report", "link_to": "3PL Receiving Discrepancies"},
+        "hidden": 0,
+    },
+    "Current Inventory": {
+        "item": {"link_type": "Report", "link_to": "3PL Client Inventory Summary"},
+        "hidden": 0,
+    },
+    "Inventory By Date": {
+        "item": {"link_type": "Report", "link_to": "3PL Inventory Balance By Date"},
+        "hidden": 0,
+    },
+    "Operation Turnover": {
+        "item": {"link_type": "Report", "link_to": "3PL Warehouse Operation Turnover"},
+        "hidden": 0,
+    },
 }
 HIDDEN_STANDARD_DESKTOP_ICONS = {
     "Accounts",
@@ -718,37 +749,45 @@ def main():
         "Three PL Client Product Import" not in {row.link_to for row in client_workspace.links if row.link_to},
         "Product Import must stay outside MVP1 client workspace",
     )
-    for label, (link_type, link_to, hidden) in REQUIRED_DESKTOP_ICONS.items():
+    for label, spec in REQUIRED_DESKTOP_ICONS.items():
         sidebar = frappe.db.get_value(
             "Workspace Sidebar",
             label,
             ["standard", "app", "module"],
             as_dict=True,
         )
-        require(sidebar, f"Missing 3PL Workspace Sidebar: {label}")
-        require(sidebar.standard == 1, f"3PL Workspace Sidebar must be standard: {label}")
-        require(sidebar.app == "erpnext_3pl", f"3PL Workspace Sidebar has wrong app: {label}")
-        require(sidebar.module == "ERPNext 3PL", f"3PL Workspace Sidebar has wrong module: {label}")
-        require(
-            frappe.db.exists(
-                "Workspace Sidebar Item",
-                {"parent": label, "type": "Link", "link_type": "Workspace", "link_to": label},
-            ),
-            f"Missing 3PL Workspace Sidebar link item: {label}",
-        )
+        if spec["hidden"] == 0:
+            require(sidebar, f"Missing 3PL Workspace Sidebar: {label}")
+            require(sidebar.standard == 1, f"3PL Workspace Sidebar must be standard: {label}")
+            require(sidebar.app == "erpnext_3pl", f"3PL Workspace Sidebar has wrong app: {label}")
+            require(sidebar.module == "ERPNext 3PL", f"3PL Workspace Sidebar has wrong module: {label}")
+            item_filters = {
+                "parent": label,
+                "type": "Link",
+                "link_type": spec["item"]["link_type"],
+            }
+            if spec["item"].get("link_to"):
+                item_filters["link_to"] = spec["item"]["link_to"]
+            if spec["item"].get("url"):
+                item_filters["url"] = spec["item"]["url"]
+            require(
+                frappe.db.exists("Workspace Sidebar Item", item_filters),
+                f"Missing 3PL Workspace Sidebar link item: {label}",
+            )
         icon = frappe.db.get_value(
             "Desktop Icon",
             label,
-            ["standard", "app", "icon_type", "link_type", "link_to", "hidden"],
+            ["standard", "app", "icon_type", "link_type", "link_to", "sidebar", "hidden"],
             as_dict=True,
         )
         require(icon, f"Missing 3PL Desktop Icon: {label}")
         require(icon.standard == 1, f"3PL Desktop Icon must be standard: {label}")
         require(icon.app == "erpnext_3pl", f"3PL Desktop Icon has wrong app: {label}")
         require(icon.icon_type == "Link", f"3PL Desktop Icon has wrong type: {label}")
-        require(icon.link_type == link_type, f"3PL Desktop Icon has wrong link type: {label}")
-        require(icon.link_to == link_to, f"3PL Desktop Icon has wrong link target: {label}")
-        require(icon.hidden == hidden, f"3PL Desktop Icon hidden state is wrong: {label}")
+        require(icon.link_type == "Workspace Sidebar", f"3PL Desktop Icon has wrong link type: {label}")
+        require(icon.link_to == label, f"3PL Desktop Icon has wrong link target: {label}")
+        require(not icon.sidebar, f"3PL Desktop Icon sidebar must be empty so Frappe can build route: {label}")
+        require(icon.hidden == spec["hidden"], f"3PL Desktop Icon hidden state is wrong: {label}")
     visible_standard_icons = {
         row.name
         for row in frappe.get_all(

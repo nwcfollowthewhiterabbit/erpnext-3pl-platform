@@ -65,6 +65,57 @@ STANDARD_DESKTOP_ICONS_TO_HIDE = {
     "Users",
     "Website",
 }
+CLIENT_DESKTOP_SHORTCUTS = [
+    {
+        "label": "3PL Client",
+        "icon": "users",
+        "item": {"label": "3PL Client", "link_type": "URL", "url": "/desk/3pl-client"},
+    },
+    {
+        "label": "Receiving Notices",
+        "icon": "truck",
+        "item": {"label": "Receiving Notices", "link_type": "DocType", "link_to": "Inbound Shipment Notice"},
+    },
+    {
+        "label": "Shipment Requests",
+        "icon": "send",
+        "item": {"label": "Shipment Requests", "link_type": "DocType", "link_to": "Three PL Shipment Request"},
+    },
+    {
+        "label": "Products",
+        "icon": "package",
+        "item": {"label": "Products", "link_type": "DocType", "link_to": "Three PL Client Product"},
+    },
+    {
+        "label": "Discrepancy Instructions",
+        "icon": "message-square-warning",
+        "item": {
+            "label": "Discrepancy Instructions",
+            "link_type": "DocType",
+            "link_to": "Three PL Client Instruction",
+        },
+    },
+    {
+        "label": "Receiving Discrepancies",
+        "icon": "triangle-alert",
+        "item": {"label": "Receiving Discrepancies", "link_type": "Report", "link_to": "3PL Receiving Discrepancies"},
+    },
+    {
+        "label": "Current Inventory",
+        "icon": "clipboard-list",
+        "item": {"label": "Current Inventory", "link_type": "Report", "link_to": "3PL Client Inventory Summary"},
+    },
+    {
+        "label": "Inventory By Date",
+        "icon": "calendar-days",
+        "item": {"label": "Inventory By Date", "link_type": "Report", "link_to": "3PL Inventory Balance By Date"},
+    },
+    {
+        "label": "Operation Turnover",
+        "icon": "history",
+        "item": {"label": "Operation Turnover", "link_type": "Report", "link_to": "3PL Warehouse Operation Turnover"},
+    },
+]
 
 
 def ensure_warehouse(warehouse_name, parent=None, is_group=0):
@@ -273,7 +324,7 @@ def ensure_desktop_icon(label, idx, icon):
         "icon_type": "Link",
         "link_type": "Workspace Sidebar",
         "link_to": label,
-        "sidebar": label,
+        "sidebar": None,
         "parent_icon": None,
         "hidden": 0,
         "restrict_removal": 1,
@@ -349,15 +400,64 @@ def ensure_workspace_sidebar(title, idx, icon):
         item.save(ignore_permissions=True)
 
 
+def ensure_desktop_shortcut(shortcut, idx):
+    title = shortcut["label"]
+    item_spec = shortcut["item"]
+    icon = shortcut["icon"]
+
+    if frappe.db.exists("Workspace Sidebar", title):
+        sidebar = frappe.get_doc("Workspace Sidebar", title)
+    else:
+        sidebar = frappe.new_doc("Workspace Sidebar")
+        sidebar.title = title
+
+    expected_sidebar = {
+        "idx": idx,
+        "header_icon": icon,
+        "module": CUSTOM_DOCTYPE_MODULE,
+        "standard": 1,
+        "app": "erpnext_3pl",
+    }
+    changed = False
+    for fieldname, value in expected_sidebar.items():
+        if getattr(sidebar, fieldname, None) != value:
+            setattr(sidebar, fieldname, value)
+            changed = True
+    if sidebar.is_new():
+        sidebar.insert(ignore_permissions=True)
+    elif changed:
+        sidebar.save(ignore_permissions=True)
+
+    for existing in frappe.get_all("Workspace Sidebar Item", filters={"parent": title}, pluck="name"):
+        frappe.delete_doc("Workspace Sidebar Item", existing, ignore_permissions=True, force=True)
+
+    item = frappe.new_doc("Workspace Sidebar Item")
+    item.parent = title
+    item.parenttype = "Workspace Sidebar"
+    item.parentfield = "items"
+    item.idx = 1
+    item.label = item_spec["label"]
+    item.type = "Link"
+    item.link_type = item_spec["link_type"]
+    item.link_to = item_spec.get("link_to")
+    item.url = item_spec.get("url")
+    item.icon = icon
+    item.child = 0
+    item.insert(ignore_permissions=True)
+
+    ensure_desktop_icon(title, idx, icon)
+
+
 def configure_desktop_icons():
     for label in STANDARD_DESKTOP_ICONS_TO_HIDE:
         if frappe.db.exists("Desktop Icon", label):
             frappe.db.set_value("Desktop Icon", label, "hidden", 1, update_modified=False)
 
-    ensure_workspace_sidebar("3PL Client", 1, "users")
-    ensure_workspace_sidebar("3PL Warehouse", 2, "stock")
-    ensure_desktop_icon("3PL Client", 1, "users")
-    ensure_desktop_icon("3PL Warehouse", 2, "stock")
+    for idx, shortcut in enumerate(CLIENT_DESKTOP_SHORTCUTS, start=1):
+        ensure_desktop_shortcut(shortcut, idx)
+
+    if frappe.db.exists("Desktop Icon", "3PL Warehouse"):
+        frappe.db.set_value("Desktop Icon", "3PL Warehouse", "hidden", 1, update_modified=False)
 
     for user in (CLIENT_DESK_USER, "warehouse.demo@example.test", "warehouse.manager@example.test"):
         if frappe.db.exists("User", user):
