@@ -71,9 +71,9 @@ sudo scripts/configure_https.sh erp.example.com
 
 The script installs nginx/certbot, proxies to the ERPNext frontend on port `8080`, enables HTTP to HTTPS redirects, and leaves certbot renewal enabled.
 
-It keeps routing neutral for ERPNext Desk. `/app/` is redirected to `/desk`, but users are not forced into a custom portal or a specific workspace by nginx.
+It keeps routing neutral for ERPNext Desk. nginx must not contain role, portal, setup-wizard, `/app`, `/desk`, or workspace-specific redirects.
 
-Do not add nginx redirects that force `/app`, `/desk`, `/app/home`, or `/apps` into the warehouse workspace. MVP1 now uses native ERPNext Desk workspaces, so ERPNext should route users by role, module profile, and default workspace.
+Do not add nginx redirects that force `/app`, `/desk`, `/app/home`, or `/apps` into any workspace. MVP1 now uses native ERPNext Desk workspaces, so ERPNext should route users by role, module profile, and default workspace.
 
 ## Validation
 

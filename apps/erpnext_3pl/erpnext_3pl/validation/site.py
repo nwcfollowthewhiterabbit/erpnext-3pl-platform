@@ -334,6 +334,18 @@ def require_effective_perm(user, doctype, *permission_types):
         frappe.set_user(current_user)
 
 
+def require_client_system_access_restricted():
+    current_user = frappe.session.user
+    try:
+        frappe.set_user(CLIENT_DESK_USER)
+        visible_users = set(frappe.get_list("User", pluck="name"))
+        require(visible_users <= {CLIENT_DESK_USER}, f"Client can list unrelated users: {sorted(visible_users - {CLIENT_DESK_USER})}")
+        for doctype in ("Role", "DocType", "Module Profile", "System Settings"):
+            require(not frappe.has_permission(doctype, "read"), f"Client has read access to system DocType: {doctype}")
+    finally:
+        frappe.set_user(current_user)
+
+
 def is_app_installed():
     try:
         return "erpnext_3pl" in frappe.get_installed_apps()
@@ -343,7 +355,7 @@ def is_app_installed():
 
 def validate_event_automation():
     if is_app_installed():
-        from erpnext_3pl.hooks import doc_events
+        from erpnext_3pl.hooks import doc_events, has_permission, permission_query_conditions
 
         for doctype, events in REQUIRED_APP_DOC_EVENTS.items():
             require(doctype in doc_events, f"ERPNext 3PL app misses doc_events for {doctype}")
@@ -352,6 +364,14 @@ def validate_event_automation():
                     doc_events[doctype].get(event_name) == handler,
                     f"ERPNext 3PL app has wrong {doctype}.{event_name} hook",
                 )
+        require(
+            permission_query_conditions.get("User") == "erpnext_3pl.permissions.user_query_condition",
+            "ERPNext 3PL app misses User permission query condition",
+        )
+        require(
+            has_permission.get("User") == "erpnext_3pl.permissions.user_has_permission",
+            "ERPNext 3PL app misses User has_permission hook",
+        )
         for script_name in REQUIRED_SERVER_SCRIPTS:
             if frappe.db.exists("Server Script", script_name):
                 server_script = frappe.get_doc("Server Script", script_name)
@@ -720,6 +740,7 @@ def main():
     require_role_perm("Three PL Shipment Request", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Three PL Shipment Request Item", "3PL Client", read=1, write=1, create=1)
     require_role_perm("Three PL Client Instruction", "3PL Client", read=1, write=1, create=1)
+    require_client_system_access_restricted()
     staff_client_doctypes = (
         "Customer",
         "Inbound Shipment Notice",
@@ -2386,14 +2407,14 @@ def validate_client_desk_native_controls():
 
 
 def validate_client_desk_permissions():
-    allowed_ref = "PORTAL-VALIDATION-ALPHA"
-    forbidden_ref = "PORTAL-VALIDATION-BETA"
-    structured_ref = "PORTAL-STRUCTURED-ALPHA"
-    shipment_ref = "PORTAL-SHIPMENT-ALPHA"
-    forbidden_shipment_ref = "PORTAL-SHIPMENT-BETA"
-    structured_shipment_ref = "PORTAL-SHIPMENT-STRUCTURED-ALPHA"
-    product_sku = "PORTAL-PRODUCT-ALPHA"
-    forbidden_product_sku = "PORTAL-PRODUCT-BETA"
+    allowed_ref = "DESK-VALIDATION-ALPHA"
+    forbidden_ref = "DESK-VALIDATION-BETA"
+    structured_ref = "DESK-STRUCTURED-ALPHA"
+    shipment_ref = "DESK-SHIPMENT-ALPHA"
+    forbidden_shipment_ref = "DESK-SHIPMENT-BETA"
+    structured_shipment_ref = "DESK-SHIPMENT-STRUCTURED-ALPHA"
+    product_sku = "DESK-PRODUCT-ALPHA"
+    forbidden_product_sku = "DESK-PRODUCT-BETA"
     frappe.set_user("Administrator")
     for reference in (allowed_ref, forbidden_ref, structured_ref):
         existing = frappe.db.get_value("Inbound Shipment Notice", {"external_reference": reference}, "name")
@@ -2403,7 +2424,7 @@ def validate_client_desk_permissions():
         existing = frappe.db.get_value("Three PL Shipment Request", {"external_reference": reference}, "name")
         if existing:
             frappe.delete_doc("Three PL Shipment Request", existing, ignore_permissions=True, force=True)
-    for existing in frappe.get_all("Three PL Client Instruction", filters={"instruction_text": ("like", "Portal validation%")}, pluck="name"):
+    for existing in frappe.get_all("Three PL Client Instruction", filters={"instruction_text": ("like", "Desk validation%")}, pluck="name"):
         frappe.delete_doc("Three PL Client Instruction", existing, ignore_permissions=True, force=True)
     for sku in (product_sku, forbidden_product_sku):
         for product_name in frappe.get_all("Three PL Client Product", filters={"client_sku": sku}, pluck="name"):
@@ -2464,7 +2485,7 @@ def validate_client_desk_permissions():
             "customer": CLIENT_DESK_CUSTOMER,
             "external_reference": shipment_ref,
             "requested_ship_date": frappe.utils.nowdate(),
-            "destination_name": "Portal Validation",
+            "destination_name": "Desk Validation",
             "destination_address": "Validation Address",
             "portal_source": 1,
             "items": [
@@ -2534,7 +2555,7 @@ def validate_client_desk_permissions():
             "customer": CLIENT_DESK_CUSTOMER,
             "external_reference": structured_shipment_ref,
             "requested_ship_date": frappe.utils.nowdate(),
-            "destination_name": "Portal Structured Validation",
+            "destination_name": "Desk Structured Validation",
             "destination_address": "Validation Address",
             "portal_source": 1,
             "portal_items_description": structured_shipment_payload,
@@ -2550,7 +2571,7 @@ def validate_client_desk_permissions():
                 "customer": "Demo Client Beta",
                 "external_reference": forbidden_shipment_ref,
                 "requested_ship_date": frappe.utils.nowdate(),
-                "destination_name": "Portal Validation",
+                "destination_name": "Desk Validation",
                 "destination_address": "Validation Address",
                 "portal_source": 1,
                 "items": [
@@ -2578,7 +2599,7 @@ def validate_client_desk_permissions():
             "client_sku": "ALPHA-001",
             "instruction_type": "Accept Difference",
             "portal_source": 1,
-            "instruction_text": "Portal validation instruction",
+            "instruction_text": "Desk validation instruction",
         }
     )
     instruction.insert()
@@ -2591,12 +2612,12 @@ def validate_client_desk_permissions():
             "doctype": "Three PL Client Product",
             "customer": CLIENT_DESK_CUSTOMER,
             "client_sku": product_sku,
-            "product_name": "Portal Validation Product",
-            "product_description": "Created by portal validation.",
+            "product_name": "Desk Validation Product",
+            "product_description": "Created by Desk validation.",
             "uom": "Nos",
-            "barcode": "PORTAL-PRODUCT-ALPHA-BARCODE",
+            "barcode": "DESK-PRODUCT-ALPHA-BARCODE",
             "status": "Active",
-            "notes": "Portal validation product card.",
+            "notes": "Desk validation product card.",
         }
     )
     product.insert()
@@ -2636,7 +2657,7 @@ def validate_client_desk_permissions():
     require(product.item_code == item.name, "Client product is not linked to synced Item")
     require(item.owner_client == CLIENT_DESK_CUSTOMER, "Synced Item has wrong owner_client")
     require(item.client_sku == product_sku, "Synced Item has wrong client_sku")
-    require(item.item_name == "Portal Validation Product", "Synced Item has wrong item_name")
+    require(item.item_name == "Desk Validation Product", "Synced Item has wrong item_name")
     require(item.disabled == 0, "Active client product created disabled Item")
     require(
         frappe.db.exists("Three PL Client Product Change Log", {"product": product.name, "action": "Created"}),
@@ -2645,14 +2666,14 @@ def validate_client_desk_permissions():
 
     frappe.set_user(CLIENT_DESK_USER)
     product = frappe.get_doc("Three PL Client Product", product.name)
-    product.product_name = "Portal Validation Product Updated"
+    product.product_name = "Desk Validation Product Updated"
     product.status = "Inactive"
     product.save()
 
     frappe.set_user("Administrator")
     product.reload()
     item = frappe.get_doc("Item", product.item_code)
-    require(item.item_name == "Portal Validation Product Updated", "Client product update did not sync to Item")
+    require(item.item_name == "Desk Validation Product Updated", "Client product update did not sync to Item")
     require(item.disabled == 1, "Inactive client product did not disable Item")
     require(
         frappe.db.exists("Three PL Client Product Change Log", {"product": product.name, "action": "Deactivated"}),

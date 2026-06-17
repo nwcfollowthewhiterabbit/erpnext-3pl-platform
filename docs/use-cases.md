@@ -58,7 +58,7 @@ Expected result:
 
 Implementation status: implemented as Desk-native MVP.
 
-Client access is customer-restricted through User Permission and server-side guards. MVP1 client work uses the restricted ERPNext Desk workspace.
+Client access is customer-restricted through User Permission, DocType permissions, and server-side customer/data guards. MVP1 client work uses the restricted ERPNext Desk workspace. A route/landing consistency guard is backlog-only unless manual testing proves it is needed.
 
 ### Client Reviews Receiving Discrepancies
 

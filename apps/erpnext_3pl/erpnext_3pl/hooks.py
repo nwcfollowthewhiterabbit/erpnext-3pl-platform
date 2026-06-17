@@ -35,3 +35,11 @@ doc_events = {
         "on_submit": "erpnext_3pl.hooks_events.sync_stock_entry_flow",
     },
 }
+
+permission_query_conditions = {
+    "User": "erpnext_3pl.permissions.user_query_condition",
+}
+
+has_permission = {
+    "User": "erpnext_3pl.permissions.user_has_permission",
+}

@@ -33,7 +33,7 @@
 - Password: `see CLIENT_DESK_PASSWORD in .env`
 - Intended use: client-side MVP testing for `Demo Client Alpha`.
 - Desk URL: `https://erpnext.77.237.244.169.sslip.io/desk/3pl-client`
-- This is a restricted ERPNext Desk user. The user starts in the `3PL Client` Workspace and is limited by role, module profile, User Permission, and server-side customer guards.
+- This is a restricted ERPNext Desk user. The user starts in the `3PL Client` Workspace and is limited by role, module profile, User Permission, DocType permissions, and server-side customer/data guards.
 - Client work uses the restricted ERPNext Desk workspace for MVP1.
 
 ## Starting Point

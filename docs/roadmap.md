@@ -80,6 +80,7 @@ Queued work:
 Remaining boundary:
 
 - Decide after MVP1 whether bulk product import should be exposed to clients, kept admin-only, or staged through warehouse review.
+- Keep the server-side route/landing consistency guard in backlog. Add it only if manual testing shows users frequently land in the wrong workspace after login/bookmarks. Do not reintroduce nginx business redirects for this.
 
 ## Phase 3 - Warehouse Locations And Containers
 
