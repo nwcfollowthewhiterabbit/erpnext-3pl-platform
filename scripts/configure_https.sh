@@ -23,52 +23,12 @@ server {
 
     client_max_body_size 100m;
 
-    if (\$request_uri ~* "^/login\\?redirect-to=(%2F|/)app(%2F|/)setup-wizard/?$") {
-        return 302 /login?redirect-to=%2Fdesk%2F3pl-warehouse;
-    }
-
-    location = / {
-        return 302 /login;
-    }
-
-    location = /app/ {
-        return 301 /desk;
-    }
-
-    location = /desk/home {
-        return 302 /desk;
-    }
-
-    location = /desk/home/ {
-        return 302 /desk;
-    }
-
-    location = /app/setup-wizard {
-        return 302 /desk/3pl-warehouse;
-    }
-
-    location = /app/setup-wizard/ {
-        return 302 /desk/3pl-warehouse;
-    }
-
-    location = /docs/erpnext-3pl-demo-use-cases-ru.pdf {
-        alias /opt/erpnext-3pl-platform/docs/erpnext-3pl-demo-use-cases-ru.pdf;
-        default_type application/pdf;
-        add_header Content-Disposition "attachment; filename=erpnext-3pl-demo-use-cases-ru.pdf";
-    }
-
     proxy_set_header Host \$host;
     proxy_set_header X-Real-IP \$remote_addr;
     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto \$scheme;
     proxy_set_header X-Forwarded-Host \$host;
     proxy_set_header X-Forwarded-Port \$server_port;
-
-    location ~ ^/(app|desk)(/|$) {
-        proxy_read_timeout 120;
-        proxy_redirect off;
-        proxy_pass http://127.0.0.1:${upstream_port};
-    }
 
     location /socket.io {
         proxy_http_version 1.1;

@@ -88,20 +88,6 @@ if data.get("home_page") not in {"/desk/3pl-warehouse", "/desk", "/app/home", "/
     raise SystemExit(f"unexpected home_page: {data}")
 PY
 
-  check_redirect_target() {
-    path="$1"
-    final_url="$(
-      curl -sS -L --max-time 30 -b "$cookie_file" -o /dev/null -w "%{url_effective}" "${base_url%/}${path}"
-    )"
-    case "$final_url" in
-      */desk|*/desk/3pl-warehouse) ;;
-      *)
-        echo "Unexpected final URL for ${user} at ${path}: ${final_url}" >&2
-        exit 1
-        ;;
-    esac
-  }
-
   check_page() {
     path="$1"
     curl -fsSL --max-time 30 -b "$cookie_file" "${base_url%/}${path}" -o "$page_file"
@@ -113,25 +99,12 @@ PY
   }
 
   check_page "/desk/3pl-warehouse"
-  case "$base_url" in
-    http://127.0.0.1:*|http://localhost:*) ;;
-    *)
-      check_redirect_target "/apps"
-      check_redirect_target "/app"
-      check_redirect_target "/app/"
-      check_redirect_target "/app/home"
-      check_redirect_target "/desk"
-      ;;
-  esac
+  check_page "/desk"
   if [ "$user" = "$business_owner_user" ]; then
     check_page "/app/item"
     check_page "/app/warehouse"
     check_page "/app/uom"
   fi
-  case "$base_url" in
-    http://127.0.0.1:*|http://localhost:*) ;;
-    *) check_page "/" ;;
-  esac
 
   rm -f "$cookie_file" "$response_file" "$page_file"
 }
@@ -180,36 +153,5 @@ PY
 }
 
 check_client_desk_login "alpha.client@example.test" "$client_desk_password"
-
-expect_redirect() {
-  path="$1"
-  expected="$2"
-  redirect="$(curl -sS -o /dev/null -w "%{redirect_url}" --max-time 30 "${base_url%/}${path}")"
-  if [ "$redirect" != "${base_url%/}${expected}" ]; then
-    echo "Unexpected redirect for ${path}: ${redirect}" >&2
-    exit 1
-  fi
-}
-
-expect_cookie_redirect() {
-  path="$1"
-  cookie="$2"
-  expected="$3"
-  redirect="$(curl -sS -o /dev/null -w "%{redirect_url}" --max-time 30 -H "Cookie: ${cookie}" "${base_url%/}${path}")"
-  if [ "$redirect" != "${base_url%/}${expected}" ]; then
-    echo "Unexpected cookie redirect for ${path}: ${redirect}" >&2
-    exit 1
-  fi
-}
-
-case "$base_url" in
-  http://127.0.0.1:*|http://localhost:*) ;;
-  *)
-    expect_redirect "/" "/login"
-    expect_redirect "/app/setup-wizard" "/desk/3pl-warehouse"
-    expect_redirect "/app/setup-wizard/" "/desk/3pl-warehouse"
-    expect_redirect "/login?redirect-to=%2Fapp%2Fsetup-wizard" "/login?redirect-to=%2Fdesk%2F3pl-warehouse"
-    ;;
-esac
 
 echo "Instance validation passed for ${base_url}"
