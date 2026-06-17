@@ -74,21 +74,25 @@ CLIENT_DESKTOP_SHORTCUTS = [
     {
         "label": "Receiving Notices",
         "icon": "truck",
+        "group": "Inbound",
         "item": {"label": "Receiving Notices", "link_type": "DocType", "link_to": "Inbound Shipment Notice"},
     },
     {
         "label": "Shipment Requests",
         "icon": "send",
+        "group": "Outbound",
         "item": {"label": "Shipment Requests", "link_type": "DocType", "link_to": "Three PL Shipment Request"},
     },
     {
         "label": "Products",
         "icon": "package",
+        "group": "Products & Issues",
         "item": {"label": "Products", "link_type": "DocType", "link_to": "Three PL Client Product"},
     },
     {
         "label": "Discrepancy Instructions",
         "icon": "message-square-warning",
+        "group": "Products & Issues",
         "item": {
             "label": "Discrepancy Instructions",
             "link_type": "DocType",
@@ -98,23 +102,33 @@ CLIENT_DESKTOP_SHORTCUTS = [
     {
         "label": "Receiving Discrepancies",
         "icon": "triangle-alert",
+        "group": "Inbound",
         "item": {"label": "Receiving Discrepancies", "link_type": "Report", "link_to": "3PL Receiving Discrepancies"},
     },
     {
         "label": "Current Inventory",
         "icon": "clipboard-list",
+        "group": "Inventory",
         "item": {"label": "Current Inventory", "link_type": "Report", "link_to": "3PL Client Inventory Summary"},
     },
     {
         "label": "Inventory By Date",
         "icon": "calendar-days",
+        "group": "Inventory",
         "item": {"label": "Inventory By Date", "link_type": "Report", "link_to": "3PL Inventory Balance By Date"},
     },
     {
         "label": "Operation Turnover",
         "icon": "history",
+        "group": "Inventory",
         "item": {"label": "Operation Turnover", "link_type": "Report", "link_to": "3PL Warehouse Operation Turnover"},
     },
+]
+CLIENT_DESKTOP_GROUPS = [
+    {"label": "Inbound", "icon": "truck"},
+    {"label": "Outbound", "icon": "send"},
+    {"label": "Inventory", "icon": "clipboard-list"},
+    {"label": "Products & Issues", "icon": "package"},
 ]
 
 
@@ -311,7 +325,7 @@ def configure_home_workspace():
     workspace.save(ignore_permissions=True)
 
 
-def ensure_desktop_icon(label, idx, icon):
+def ensure_desktop_icon(label, idx, icon, icon_type="Link", parent_icon=None, hidden=0):
     if frappe.db.exists("Desktop Icon", label):
         doc = frappe.get_doc("Desktop Icon", label)
     else:
@@ -321,12 +335,12 @@ def ensure_desktop_icon(label, idx, icon):
     expected = {
         "standard": 1,
         "app": "erpnext_3pl",
-        "icon_type": "Link",
+        "icon_type": icon_type,
         "link_type": "Workspace Sidebar",
-        "link_to": label,
+        "link_to": label if icon_type == "Link" else None,
         "sidebar": None,
-        "parent_icon": None,
-        "hidden": 0,
+        "parent_icon": parent_icon,
+        "hidden": hidden,
         "restrict_removal": 1,
         "idx": idx,
     }
@@ -341,6 +355,10 @@ def ensure_desktop_icon(label, idx, icon):
         doc.insert(ignore_permissions=True)
     elif changed:
         doc.save(ignore_permissions=True)
+
+
+def ensure_desktop_folder(label, idx, icon):
+    ensure_desktop_icon(label, idx, icon, icon_type="Folder")
 
 
 def ensure_workspace_sidebar(title, idx, icon):
@@ -445,7 +463,7 @@ def ensure_desktop_shortcut(shortcut, idx):
     item.child = 0
     item.insert(ignore_permissions=True)
 
-    ensure_desktop_icon(title, idx, icon)
+    ensure_desktop_icon(title, idx, icon, parent_icon=shortcut.get("group"))
 
 
 def configure_desktop_icons():
@@ -453,7 +471,10 @@ def configure_desktop_icons():
         if frappe.db.exists("Desktop Icon", label):
             frappe.db.set_value("Desktop Icon", label, "hidden", 1, update_modified=False)
 
-    for idx, shortcut in enumerate(CLIENT_DESKTOP_SHORTCUTS, start=1):
+    ensure_desktop_shortcut(CLIENT_DESKTOP_SHORTCUTS[0], 1)
+    for idx, group in enumerate(CLIENT_DESKTOP_GROUPS, start=2):
+        ensure_desktop_folder(group["label"], idx, group["icon"])
+    for idx, shortcut in enumerate(CLIENT_DESKTOP_SHORTCUTS[1:], start=1):
         ensure_desktop_shortcut(shortcut, idx)
 
     if frappe.db.exists("Desktop Icon", "3PL Warehouse"):

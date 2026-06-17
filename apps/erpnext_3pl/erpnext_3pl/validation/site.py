@@ -25,39 +25,53 @@ from erpnext_3pl.config.workflows import MVP_WORKFLOWS
 
 REQUIRED_WORKSPACES = ["3PL Warehouse", "Stock Reference"]
 REQUIRED_DESKTOP_ICONS = {
-    "3PL Client": {"item": {"link_type": "URL", "url": "/desk/3pl-client"}, "hidden": 0},
+    "3PL Client": {"item": {"link_type": "URL", "url": "/desk/3pl-client"}, "hidden": 0, "parent_icon": None},
     "Receiving Notices": {
         "item": {"link_type": "DocType", "link_to": "Inbound Shipment Notice"},
         "hidden": 0,
+        "parent_icon": "Inbound",
     },
     "Shipment Requests": {
         "item": {"link_type": "DocType", "link_to": "Three PL Shipment Request"},
         "hidden": 0,
+        "parent_icon": "Outbound",
     },
     "Products": {
         "item": {"link_type": "DocType", "link_to": "Three PL Client Product"},
         "hidden": 0,
+        "parent_icon": "Products & Issues",
     },
     "Discrepancy Instructions": {
         "item": {"link_type": "DocType", "link_to": "Three PL Client Instruction"},
         "hidden": 0,
+        "parent_icon": "Products & Issues",
     },
     "Receiving Discrepancies": {
         "item": {"link_type": "Report", "link_to": "3PL Receiving Discrepancies"},
         "hidden": 0,
+        "parent_icon": "Inbound",
     },
     "Current Inventory": {
         "item": {"link_type": "Report", "link_to": "3PL Client Inventory Summary"},
         "hidden": 0,
+        "parent_icon": "Inventory",
     },
     "Inventory By Date": {
         "item": {"link_type": "Report", "link_to": "3PL Inventory Balance By Date"},
         "hidden": 0,
+        "parent_icon": "Inventory",
     },
     "Operation Turnover": {
         "item": {"link_type": "Report", "link_to": "3PL Warehouse Operation Turnover"},
         "hidden": 0,
+        "parent_icon": "Inventory",
     },
+}
+REQUIRED_DESKTOP_FOLDERS = {
+    "Inbound": 0,
+    "Outbound": 0,
+    "Inventory": 0,
+    "Products & Issues": 0,
 }
 HIDDEN_STANDARD_DESKTOP_ICONS = {
     "Accounts",
@@ -749,6 +763,20 @@ def main():
         "Three PL Client Product Import" not in {row.link_to for row in client_workspace.links if row.link_to},
         "Product Import must stay outside MVP1 client workspace",
     )
+    for label, hidden in REQUIRED_DESKTOP_FOLDERS.items():
+        folder = frappe.db.get_value(
+            "Desktop Icon",
+            label,
+            ["standard", "app", "icon_type", "parent_icon", "hidden"],
+            as_dict=True,
+        )
+        require(folder, f"Missing 3PL Desktop folder: {label}")
+        require(folder.standard == 1, f"3PL Desktop folder must be standard: {label}")
+        require(folder.app == "erpnext_3pl", f"3PL Desktop folder has wrong app: {label}")
+        require(folder.icon_type == "Folder", f"3PL Desktop folder has wrong type: {label}")
+        require(not folder.parent_icon, f"3PL Desktop folder must be top-level: {label}")
+        require(folder.hidden == hidden, f"3PL Desktop folder hidden state is wrong: {label}")
+
     for label, spec in REQUIRED_DESKTOP_ICONS.items():
         sidebar = frappe.db.get_value(
             "Workspace Sidebar",
@@ -777,7 +805,7 @@ def main():
         icon = frappe.db.get_value(
             "Desktop Icon",
             label,
-            ["standard", "app", "icon_type", "link_type", "link_to", "sidebar", "hidden"],
+            ["standard", "app", "icon_type", "link_type", "link_to", "sidebar", "parent_icon", "hidden"],
             as_dict=True,
         )
         require(icon, f"Missing 3PL Desktop Icon: {label}")
@@ -787,6 +815,7 @@ def main():
         require(icon.link_type == "Workspace Sidebar", f"3PL Desktop Icon has wrong link type: {label}")
         require(icon.link_to == label, f"3PL Desktop Icon has wrong link target: {label}")
         require(not icon.sidebar, f"3PL Desktop Icon sidebar must be empty so Frappe can build route: {label}")
+        require(icon.parent_icon == spec["parent_icon"], f"3PL Desktop Icon has wrong parent folder: {label}")
         require(icon.hidden == spec["hidden"], f"3PL Desktop Icon hidden state is wrong: {label}")
     visible_standard_icons = {
         row.name

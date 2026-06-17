@@ -1,0 +1,49 @@
+.desktop-container {
+    align-items: flex-start;
+    padding-top: 120px;
+}
+
+.desktop-container .icons {
+    gap: 28px 30px;
+}
+
+.desktop-container .desktop-icon {
+    height: 154px;
+    width: 164px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.desktop-container .icon-caption {
+    width: 150px;
+    min-height: 54px;
+    height: auto;
+}
+
+.desktop-container .icon-title {
+    max-width: 150px;
+    white-space: normal;
+    text-wrap: balance;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.2;
+}
+
+.desktop-modal-body .desktop-icon {
+    height: 154px;
+    width: 164px;
+}
+
+.desktop-modal-body .icon-caption {
+    width: 150px;
+    height: auto;
+}
+
+.desktop-modal-body .icon-title {
+    max-width: 150px;
+    white-space: normal;
+    text-wrap: balance;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.2;
+}

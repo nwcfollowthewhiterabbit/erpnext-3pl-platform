@@ -7,6 +7,8 @@ app_license = "MIT"
 
 from erpnext_3pl.config.fixtures import FIXTURES as fixtures
 
+app_include_css = ["/assets/erpnext_3pl/css/desk.css"]
+
 after_install = "erpnext_3pl.install.after_install"
 
 doc_events = {
