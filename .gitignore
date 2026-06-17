@@ -1,5 +1,8 @@
 .env
 *.log
 .DS_Store
+__pycache__/
+*.py[cod]
 node_modules/
 private/
+test-results/

@@ -76,15 +76,15 @@ Example:
 - Container move operation DocType exists as `Three PL Container Move`.
 - Container repack operation DocType exists as `Three PL Container Repack`.
 - Movement history DocType exists as `Three PL Container Movement`.
-- Container fields and statuses are created by `scripts/configure_warehouse_mode.py`.
-- Demo containers are loaded by `scripts/load_demo_warehouse_data.py`.
+- Container fields and statuses are owned by the app DocType/configuration files.
+- Demo containers are loaded by `erpnext_3pl.demo.warehouse_data`.
 - Demo movement records are loaded for received and putaway containers.
-- Demo move operation `MOVE-ALPHA-001` is applied by `scripts/apply_container_moves.py`.
-- Demo repack operation `REPACK-ALPHA-001` is applied by `scripts/apply_container_repacks.py`.
-- Inventory snapshots are synchronized from active containers by `scripts/sync_inventory_snapshots.py`.
+- Demo move operation `MOVE-ALPHA-001` is applied by `erpnext_3pl.warehouse.container_moves`.
+- Demo repack operation `REPACK-ALPHA-001` is applied by `erpnext_3pl.warehouse.container_repacks`.
+- Inventory snapshots are synchronized from active containers by `erpnext_3pl.sync.inventory_snapshots`.
 - Minimal scanner-first container move page exists at `/warehouse/container-move` and applies moves immediately for warehouse roles.
 - Aggregated inventory report exists as `3PL Client Inventory Summary`.
-- Validation checks required fields, statuses, movement history, and reports in `scripts/validate_site.py`.
+- Validation checks required fields, statuses, movement history, and reports in `erpnext_3pl.validation.site`.
 - Reports include container references through `3PL Containers`, `3PL Container Moves`, `3PL Container Repacks`, `3PL Container Movements`, and related receiving/inventory reports.
 
 ## Not Automated Yet

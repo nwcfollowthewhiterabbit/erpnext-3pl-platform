@@ -1,0 +1,1127 @@
+[
+ {
+  "add_total_row": 0,
+  "add_translate_data": 0,
+  "columns": [],
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Report",
+  "filters": [],
+  "idx": 0,
+  "is_standard": "No",
+  "module": "Stock",
+  "name": "3PL ASN vs Received",
+  "prepared_report": 0,
+  "query": "select\n    isn.name as \"Notice:Link/Inbound Shipment Notice:150\",\n    isn.external_reference as \"Client Notice Ref:Data:150\",\n    isn.customer as \"Client:Link/Customer:170\",\n    item.item_code as \"Item:Link/Item:150\",\n    item.client_sku as \"Client SKU:Data:120\",\n    item.expected_qty as \"Expected Qty:Float:110\",\n    item.received_qty as \"Received Qty:Float:110\",\n    item.variance_qty as \"Variance Qty:Float:110\",\n    item.container_code as \"Container / Box:Link/Three PL Container:150\",\n    isn.status as \"Status:Data:120\"\nfrom `tabInbound Shipment Notice` isn\ninner join `tabInbound Shipment Notice Item` item on item.parent = isn.name\norder by isn.creation desc, item.idx asc",
+  "ref_doctype": "Inbound Shipment Notice",
+  "report_name": "3PL ASN vs Received",
+  "report_type": "Query Report",
+  "roles": [
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 1,
+    "name": "3ke0qag8e4",
+    "parent": "3PL ASN vs Received",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "System Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 2,
+    "name": "3ke7kgjoal",
+    "parent": "3PL ASN vs Received",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 3,
+    "name": "3kek86sl82",
+    "parent": "3PL ASN vs Received",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock User"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 4,
+    "name": "3keu3gls12",
+    "parent": "3PL ASN vs Received",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 5,
+    "name": "3ke8lqge7c",
+    "parent": "3PL ASN vs Received",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse User"
+   }
+  ],
+  "timeout": 0
+ },
+ {
+  "add_total_row": 0,
+  "add_translate_data": 0,
+  "columns": [],
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Report",
+  "filters": [],
+  "idx": 0,
+  "is_standard": "No",
+  "module": "Stock",
+  "name": "3PL Client Inventory",
+  "prepared_report": 0,
+  "query": "select\n    inv.customer as \"Client:Link/Customer:170\",\n    inv.item_code as \"Item:Link/Item:150\",\n    inv.client_sku as \"Client SKU:Data:120\",\n    inv.item_name as \"Item Name:Data:180\",\n    inv.qty as \"Qty:Float:90\",\n    inv.uom as \"UOM:Link/UOM:80\",\n    inv.warehouse as \"Location:Link/Warehouse:180\",\n    inv.container_code as \"Container / Box:Link/Three PL Container:150\",\n    inv.status as \"Status:Data:120\",\n    inv.last_updated as \"Last Updated:Datetime:160\"\nfrom `tabThree PL Inventory Snapshot` inv\norder by inv.customer asc, inv.item_code asc",
+  "ref_doctype": "Three PL Inventory Snapshot",
+  "report_name": "3PL Client Inventory",
+  "report_type": "Query Report",
+  "roles": [
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 1,
+    "name": "3ksue1u2bj",
+    "parent": "3PL Client Inventory",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "System Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 2,
+    "name": "3ks4gddec5",
+    "parent": "3PL Client Inventory",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 3,
+    "name": "3ksd32amla",
+    "parent": "3PL Client Inventory",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock User"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 4,
+    "name": "3ksev5hl0l",
+    "parent": "3PL Client Inventory",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 5,
+    "name": "3ks3qf9sio",
+    "parent": "3PL Client Inventory",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse User"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 6,
+    "name": "3pl_client_report_3pl_client_inventory",
+    "parent": "3PL Client Inventory",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Client"
+   }
+  ],
+  "timeout": 0
+ },
+ {
+  "add_total_row": 0,
+  "add_translate_data": 0,
+  "columns": [],
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Report",
+  "filters": [],
+  "idx": 0,
+  "is_standard": "No",
+  "module": "Stock",
+  "name": "3PL Client Inventory Summary",
+  "prepared_report": 0,
+  "query": "select\n    inv.customer as \"Client:Link/Customer:170\",\n    inv.item_code as \"Item:Link/Item:150\",\n    inv.client_sku as \"Client SKU:Data:120\",\n    inv.item_name as \"Item Name:Data:180\",\n    sum(inv.qty) as \"Total Qty:Float:110\",\n    inv.uom as \"UOM:Link/UOM:80\",\n    inv.status as \"Status:Data:120\",\n    group_concat(distinct inv.warehouse order by inv.warehouse separator ', ') as \"Locations:Data:240\",\n    group_concat(distinct inv.container_code order by inv.container_code separator ', ') as \"Containers:Data:260\",\n    max(inv.last_updated) as \"Last Updated:Datetime:160\"\nfrom `tabThree PL Inventory Snapshot` inv\ngroup by inv.customer, inv.item_code, inv.client_sku, inv.item_name, inv.uom, inv.status\norder by inv.customer asc, inv.item_code asc, inv.status asc",
+  "ref_doctype": "Three PL Inventory Snapshot",
+  "report_name": "3PL Client Inventory Summary",
+  "report_type": "Query Report",
+  "roles": [
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 1,
+    "name": "3kse2sbsb6",
+    "parent": "3PL Client Inventory Summary",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "System Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 2,
+    "name": "3ks7r2jhsq",
+    "parent": "3PL Client Inventory Summary",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 3,
+    "name": "3ksrin0icu",
+    "parent": "3PL Client Inventory Summary",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock User"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 4,
+    "name": "3ksfb8oql6",
+    "parent": "3PL Client Inventory Summary",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 5,
+    "name": "3ks0cmuh5d",
+    "parent": "3PL Client Inventory Summary",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse User"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 6,
+    "name": "3pl_client_report_3pl_client_inventory_summary",
+    "parent": "3PL Client Inventory Summary",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Client"
+   }
+  ],
+  "timeout": 0
+ },
+ {
+  "add_total_row": 0,
+  "add_translate_data": 0,
+  "columns": [],
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Report",
+  "filters": [],
+  "idx": 0,
+  "is_standard": "No",
+  "module": "Stock",
+  "name": "3PL Container Movements",
+  "prepared_report": 0,
+  "query": "select\n    m.name as \"Movement:Link/Three PL Container Movement:160\",\n    m.movement_datetime as \"Movement Time:Datetime:160\",\n    m.container_code as \"Container / HU:Link/Three PL Container:150\",\n    m.client as \"Client:Link/Customer:170\",\n    m.movement_type as \"Type:Data:110\",\n    m.from_warehouse as \"From Location:Link/Warehouse:180\",\n    m.to_warehouse as \"To Location:Link/Warehouse:180\",\n    m.from_container as \"From Container:Link/Three PL Container:150\",\n    m.to_container as \"To Container:Link/Three PL Container:150\",\n    m.reference_doctype as \"Reference Type:Data:140\",\n    m.reference_name as \"Reference:Dynamic Link/reference_doctype:170\",\n    m.notes as \"Notes:Small Text:240\"\nfrom `tabThree PL Container Movement` m\norder by m.movement_datetime desc, m.creation desc",
+  "ref_doctype": "Three PL Container Movement",
+  "report_name": "3PL Container Movements",
+  "report_type": "Query Report",
+  "roles": [
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 1,
+    "name": "3ko2e7mgbb",
+    "parent": "3PL Container Movements",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "System Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 2,
+    "name": "3kojkdvoeh",
+    "parent": "3PL Container Movements",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 3,
+    "name": "3ko3q8lob5",
+    "parent": "3PL Container Movements",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock User"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 4,
+    "name": "3korkgv8s1",
+    "parent": "3PL Container Movements",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 5,
+    "name": "3koj8muv59",
+    "parent": "3PL Container Movements",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse User"
+   }
+  ],
+  "timeout": 0
+ },
+ {
+  "add_total_row": 0,
+  "add_translate_data": 0,
+  "columns": [],
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Report",
+  "filters": [],
+  "idx": 0,
+  "is_standard": "No",
+  "module": "Stock",
+  "name": "3PL Container Moves",
+  "prepared_report": 0,
+  "query": "select\n    cm.name as \"Move:Link/Three PL Container Move:160\",\n    cm.operation_reference as \"Operation Ref:Data:150\",\n    cm.operation_datetime as \"Operation Time:Datetime:160\",\n    cm.status as \"Status:Data:100\",\n    cm.container_code as \"Container / HU:Link/Three PL Container:150\",\n    cm.client as \"Client:Link/Customer:170\",\n    cm.from_warehouse as \"From Location:Link/Warehouse:180\",\n    cm.to_warehouse as \"To Location:Link/Warehouse:180\",\n    cm.stock_entry as \"Stock Entry:Link/Stock Entry:150\",\n    cm.movement as \"Movement:Link/Three PL Container Movement:160\",\n    cm.notes as \"Notes:Small Text:240\"\nfrom `tabThree PL Container Move` cm\norder by cm.operation_datetime desc, cm.creation desc",
+  "ref_doctype": "Three PL Container Move",
+  "report_name": "3PL Container Moves",
+  "report_type": "Query Report",
+  "roles": [
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 1,
+    "name": "3kpvuub6n8",
+    "parent": "3PL Container Moves",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "System Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 2,
+    "name": "3kpt9ubl37",
+    "parent": "3PL Container Moves",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 3,
+    "name": "3kphko1qbq",
+    "parent": "3PL Container Moves",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock User"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 4,
+    "name": "3kppblfght",
+    "parent": "3PL Container Moves",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 5,
+    "name": "3kpile84rc",
+    "parent": "3PL Container Moves",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse User"
+   }
+  ],
+  "timeout": 0
+ },
+ {
+  "add_total_row": 0,
+  "add_translate_data": 0,
+  "columns": [],
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Report",
+  "filters": [],
+  "idx": 0,
+  "is_standard": "No",
+  "module": "Stock",
+  "name": "3PL Container Repacks",
+  "prepared_report": 0,
+  "query": "select\n    r.name as \"Repack:Link/Three PL Container Repack:170\",\n    r.operation_reference as \"Operation Ref:Data:150\",\n    r.operation_datetime as \"Operation Time:Datetime:160\",\n    r.status as \"Status:Data:100\",\n    r.repack_mode as \"Mode:Data:130\",\n    r.client as \"Client:Link/Customer:170\",\n    r.target_container as \"Target Container:Link/Three PL Container:150\",\n    r.target_location as \"Target Location:Link/Warehouse:180\",\n    src.source_container as \"Source Container:Link/Three PL Container:150\",\n    src.source_location as \"Source Location:Link/Warehouse:180\",\n    item.item_code as \"Item:Link/Item:150\",\n    item.client_sku as \"Client SKU:Data:120\",\n    item.qty as \"Qty:Float:90\",\n    item.uom as \"UOM:Link/UOM:80\",\n    r.movement as \"Movement:Link/Three PL Container Movement:160\",\n    r.notes as \"Notes:Small Text:240\"\nfrom `tabThree PL Container Repack` r\nleft join `tabThree PL Repack Source` src on src.parent = r.name\nleft join `tabThree PL Repack Item` item on item.parent = r.name\norder by r.operation_datetime desc, r.creation desc, src.idx asc, item.idx asc",
+  "ref_doctype": "Three PL Container Repack",
+  "report_name": "3PL Container Repacks",
+  "report_type": "Query Report",
+  "roles": [
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 1,
+    "name": "3kpmmnlans",
+    "parent": "3PL Container Repacks",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "System Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 2,
+    "name": "3kpu5o2vsq",
+    "parent": "3PL Container Repacks",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 3,
+    "name": "3kpfjcc0jc",
+    "parent": "3PL Container Repacks",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock User"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 4,
+    "name": "3kpnnu4q73",
+    "parent": "3PL Container Repacks",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 5,
+    "name": "3kp6cnt6ik",
+    "parent": "3PL Container Repacks",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse User"
+   }
+  ],
+  "timeout": 0
+ },
+ {
+  "add_total_row": 0,
+  "add_translate_data": 0,
+  "columns": [],
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Report",
+  "filters": [],
+  "idx": 0,
+  "is_standard": "No",
+  "module": "Stock",
+  "name": "3PL Containers",
+  "prepared_report": 0,
+  "query": "select\n    c.name as \"Container / Box:Link/Three PL Container:150\",\n    c.client as \"Client:Link/Customer:170\",\n    c.container_type as \"Type:Data:100\",\n    c.status as \"Status:Data:140\",\n    c.current_warehouse as \"Current Location:Link/Warehouse:180\",\n    c.parent_container as \"Parent Container:Link/Three PL Container:150\",\n    c.replaced_by as \"Replaced By:Link/Three PL Container:150\",\n    c.last_moved_at as \"Last Moved At:Datetime:150\",\n    c.inbound_shipment_notice as \"Receiving Notice:Link/Inbound Shipment Notice:170\",\n    ci.item_code as \"Item:Link/Item:150\",\n    ci.client_sku as \"Client SKU:Data:120\",\n    ci.qty as \"Qty:Float:90\",\n    ci.uom as \"UOM:Link/UOM:80\",\n    ci.condition_status as \"Condition:Data:120\"\nfrom `tabThree PL Container` c\nleft join `tabThree PL Container Item` ci on ci.parent = c.name\norder by c.creation desc, ci.idx asc",
+  "ref_doctype": "Three PL Container",
+  "report_name": "3PL Containers",
+  "report_type": "Query Report",
+  "roles": [
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 1,
+    "name": "3knaacjekb",
+    "parent": "3PL Containers",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "System Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 2,
+    "name": "3knjpupbrd",
+    "parent": "3PL Containers",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 3,
+    "name": "3knppc4i5c",
+    "parent": "3PL Containers",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock User"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 4,
+    "name": "3kn0qs6v51",
+    "parent": "3PL Containers",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 5,
+    "name": "3knb84o5f2",
+    "parent": "3PL Containers",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse User"
+   }
+  ],
+  "timeout": 0
+ },
+ {
+  "add_total_row": 0,
+  "add_translate_data": 0,
+  "columns": [],
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Report",
+  "filters": [],
+  "idx": 0,
+  "is_standard": "No",
+  "module": "Stock",
+  "name": "3PL Corrections Needing Review",
+  "prepared_report": 0,
+  "query": "select\n    c.name as \"Correction:Link/Three PL Warehouse Correction:170\",\n    c.operation_datetime as \"Operation Time:Datetime:160\",\n    c.correction_type as \"Type:Data:150\",\n    c.client as \"Client:Link/Customer:170\",\n    c.container_code as \"Container / HU:Link/Three PL Container:150\",\n    c.warehouse as \"Location:Link/Warehouse:180\",\n    c.item_code as \"Item:Link/Item:150\",\n    c.client_sku as \"Client SKU:Data:120\",\n    c.qty_delta as \"Delta:Float:90\",\n    c.condition_status as \"Condition:Data:120\",\n    c.stock_posting_status as \"Stock Posting:Data:130\",\n    c.stock_posting_error as \"Stock Posting Error:Small Text:320\",\n    c.review_notes as \"Review Notes:Small Text:220\",\n    c.notes as \"Notes:Small Text:240\"\nfrom `tabThree PL Warehouse Correction` c\nwhere c.stock_posting_status = 'Needs Review'\norder by c.modified desc",
+  "ref_doctype": "Three PL Warehouse Correction",
+  "report_name": "3PL Corrections Needing Review",
+  "report_type": "Query Report",
+  "roles": [
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 1,
+    "name": "3kqrcu6nde",
+    "parent": "3PL Corrections Needing Review",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "System Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 2,
+    "name": "3kqocs3npp",
+    "parent": "3PL Corrections Needing Review",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 3,
+    "name": "3kqg24i7hr",
+    "parent": "3PL Corrections Needing Review",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock User"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 4,
+    "name": "3kq16udrd3",
+    "parent": "3PL Corrections Needing Review",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 5,
+    "name": "3kqg901hr6",
+    "parent": "3PL Corrections Needing Review",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse User"
+   }
+  ],
+  "timeout": 0
+ },
+ {
+  "add_total_row": 0,
+  "add_translate_data": 0,
+  "columns": [],
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Report",
+  "filters": [],
+  "idx": 0,
+  "is_standard": "No",
+  "module": "Stock",
+  "name": "3PL Inventory Balance By Date",
+  "prepared_report": 0,
+  "query": "select\n    bal.snapshot_date as \"Snapshot Date:Date:110\",\n    bal.customer as \"Client:Link/Customer:170\",\n    bal.item_code as \"Item:Link/Item:150\",\n    bal.client_sku as \"Client SKU:Data:120\",\n    bal.item_name as \"Item Name:Data:180\",\n    sum(bal.qty) as \"Qty:Float:100\",\n    bal.uom as \"UOM:Link/UOM:80\",\n    bal.status as \"Status:Data:120\",\n    group_concat(distinct bal.warehouse order by bal.warehouse separator ', ') as \"Locations:Data:260\",\n    group_concat(distinct bal.container_code order by bal.container_code separator ', ') as \"Containers:Data:260\",\n    max(bal.captured_at) as \"Captured At:Datetime:160\"\nfrom `tabThree PL Inventory Balance Snapshot` bal\ngroup by bal.snapshot_date, bal.customer, bal.item_code, bal.client_sku, bal.item_name, bal.uom, bal.status\norder by bal.snapshot_date desc, bal.customer asc, bal.item_code asc, bal.status asc",
+  "ref_doctype": "Three PL Inventory Balance Snapshot",
+  "report_name": "3PL Inventory Balance By Date",
+  "report_type": "Query Report",
+  "roles": [
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 1,
+    "name": "3ktifbi5d1",
+    "parent": "3PL Inventory Balance By Date",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "System Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 2,
+    "name": "3kto48u70q",
+    "parent": "3PL Inventory Balance By Date",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 3,
+    "name": "3ktv80altn",
+    "parent": "3PL Inventory Balance By Date",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock User"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 4,
+    "name": "3kt2rg00mu",
+    "parent": "3PL Inventory Balance By Date",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 5,
+    "name": "3ktmudj7gn",
+    "parent": "3PL Inventory Balance By Date",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse User"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 6,
+    "name": "3pl_client_report_3pl_inventory_balance_by_date",
+    "parent": "3PL Inventory Balance By Date",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Client"
+   }
+  ],
+  "timeout": 0
+ },
+ {
+  "add_total_row": 0,
+  "add_translate_data": 0,
+  "columns": [],
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Report",
+  "filters": [],
+  "idx": 0,
+  "is_standard": "No",
+  "module": "Stock",
+  "name": "3PL Receiving Discrepancies",
+  "prepared_report": 0,
+  "query": "select\n    isn.name as \"Notice:Link/Inbound Shipment Notice:150\",\n    isn.external_reference as \"Client Notice Ref:Data:150\",\n    isn.customer as \"Client:Link/Customer:170\",\n    d.discrepancy_type as \"Type:Data:140\",\n    d.status as \"Status:Data:150\",\n    d.item_code as \"Item:Link/Item:150\",\n    d.client_sku as \"Client SKU:Data:120\",\n    d.expected_qty as \"Expected Qty:Float:110\",\n    d.actual_qty as \"Actual Qty:Float:110\",\n    d.variance_qty as \"Variance Qty:Float:110\",\n    d.container_code as \"Container / Box:Link/Three PL Container:150\",\n    d.notes as \"Notes:Small Text:220\"\nfrom `tabInbound Shipment Notice` isn\ninner join `tabInbound Shipment Discrepancy` d on d.parent = isn.name\norder by isn.creation desc, d.idx asc",
+  "ref_doctype": "Inbound Shipment Notice",
+  "report_name": "3PL Receiving Discrepancies",
+  "report_type": "Query Report",
+  "roles": [
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 1,
+    "name": "3kmoba5vrn",
+    "parent": "3PL Receiving Discrepancies",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "System Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 2,
+    "name": "3km58pdsi6",
+    "parent": "3PL Receiving Discrepancies",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 3,
+    "name": "3km52mplgv",
+    "parent": "3PL Receiving Discrepancies",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock User"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 4,
+    "name": "3km0o6oe1q",
+    "parent": "3PL Receiving Discrepancies",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 5,
+    "name": "3km35jftvk",
+    "parent": "3PL Receiving Discrepancies",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse User"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 6,
+    "name": "3pl_client_report_3pl_receiving_discrepancies",
+    "parent": "3PL Receiving Discrepancies",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Client"
+   }
+  ],
+  "timeout": 0
+ },
+ {
+  "add_total_row": 0,
+  "add_translate_data": 0,
+  "columns": [],
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Report",
+  "filters": [],
+  "idx": 0,
+  "is_standard": "No",
+  "module": "Stock",
+  "name": "3PL Shipment Requests",
+  "prepared_report": 0,
+  "query": "select\n    sr.name as \"Shipment Request:Link/Three PL Shipment Request:170\",\n    sr.external_reference as \"Client Shipment Ref:Data:160\",\n    sr.customer as \"Client:Link/Customer:170\",\n    sr.status as \"Status:Data:120\",\n    sr.requested_ship_date as \"Requested Ship Date:Date:130\",\n    sr.destination_name as \"Destination:Data:180\",\n    item.item_code as \"Item:Link/Item:150\",\n    item.client_sku as \"Client SKU:Data:120\",\n    item.qty as \"Qty:Float:90\",\n    item.uom as \"UOM:Link/UOM:80\"\nfrom `tabThree PL Shipment Request` sr\nleft join `tabThree PL Shipment Request Item` item on item.parent = sr.name\norder by sr.creation desc, item.idx asc",
+  "ref_doctype": "Three PL Shipment Request",
+  "report_name": "3PL Shipment Requests",
+  "report_type": "Query Report",
+  "roles": [
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 1,
+    "name": "3ko3d004b0",
+    "parent": "3PL Shipment Requests",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "System Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 2,
+    "name": "3koc66ss3b",
+    "parent": "3PL Shipment Requests",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 3,
+    "name": "3kojmoqig1",
+    "parent": "3PL Shipment Requests",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock User"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 4,
+    "name": "3ko3p34cfi",
+    "parent": "3PL Shipment Requests",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 5,
+    "name": "3koa3cj6j0",
+    "parent": "3PL Shipment Requests",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse User"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 6,
+    "name": "3pl_client_report_3pl_shipment_requests",
+    "parent": "3PL Shipment Requests",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Client"
+   }
+  ],
+  "timeout": 0
+ },
+ {
+  "add_total_row": 0,
+  "add_translate_data": 0,
+  "columns": [],
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Report",
+  "filters": [],
+  "idx": 0,
+  "is_standard": "No",
+  "module": "Stock",
+  "name": "3PL Stocktake Sessions",
+  "prepared_report": 0,
+  "query": "select\n    session.name as \"Session:Link/Three PL Stocktake Session:180\",\n    session.session_reference as \"Session Ref:Data:180\",\n    session.status as \"Status:Data:120\",\n    session.client as \"Client:Link/Customer:170\",\n    session.warehouse as \"Location Scope:Link/Warehouse:180\",\n    session.started_at as \"Started At:Datetime:160\",\n    session.completed_at as \"Completed At:Datetime:160\",\n    count(stocktake.name) as \"Count Lines:Int:100\",\n    sum(case when coalesce(stocktake.qty_delta, 0) <> 0 or stocktake.condition_status <> 'OK' then 1 else 0 end) as \"Variance Lines:Int:110\",\n    sum(case when stocktake.correction is not null and stocktake.correction != '' then 1 else 0 end) as \"Corrections:Int:100\",\n    session.notes as \"Notes:Small Text:240\"\nfrom `tabThree PL Stocktake Session` session\nleft join `tabThree PL Stocktake` stocktake on stocktake.stocktake_session = session.name\ngroup by session.name, session.session_reference, session.status, session.client, session.warehouse, session.started_at, session.completed_at, session.notes\norder by session.started_at desc, session.creation desc",
+  "ref_doctype": "Three PL Stocktake Session",
+  "report_name": "3PL Stocktake Sessions",
+  "report_type": "Query Report",
+  "roles": [
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 1,
+    "name": "3krli4lk6s",
+    "parent": "3PL Stocktake Sessions",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "System Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 2,
+    "name": "3kri0majrm",
+    "parent": "3PL Stocktake Sessions",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 3,
+    "name": "3krlqsrser",
+    "parent": "3PL Stocktake Sessions",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock User"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 4,
+    "name": "3krpmoubng",
+    "parent": "3PL Stocktake Sessions",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 5,
+    "name": "3kri5cjn72",
+    "parent": "3PL Stocktake Sessions",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse User"
+   }
+  ],
+  "timeout": 0
+ },
+ {
+  "add_total_row": 0,
+  "add_translate_data": 0,
+  "columns": [],
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Report",
+  "filters": [],
+  "idx": 0,
+  "is_standard": "No",
+  "module": "Stock",
+  "name": "3PL Stocktakes",
+  "prepared_report": 0,
+  "query": "select\n    s.name as \"Stocktake:Link/Three PL Stocktake:170\",\n    s.stocktake_session as \"Session:Link/Three PL Stocktake Session:180\",\n    s.operation_reference as \"Operation Ref:Data:160\",\n    s.operation_datetime as \"Operation Time:Datetime:160\",\n    s.status as \"Status:Data:120\",\n    s.client as \"Client:Link/Customer:170\",\n    s.warehouse as \"Location:Link/Warehouse:180\",\n    s.container_code as \"Container / HU:Link/Three PL Container:150\",\n    s.item_code as \"Item:Link/Item:150\",\n    s.client_sku as \"Client SKU:Data:120\",\n    s.expected_qty as \"System Qty:Float:110\",\n    s.counted_qty as \"Counted Qty:Float:110\",\n    s.qty_delta as \"Delta:Float:90\",\n    s.condition_status as \"Condition:Data:120\",\n    s.correction as \"Correction:Link/Three PL Warehouse Correction:170\",\n    s.movement as \"Movement:Link/Three PL Container Movement:160\",\n    s.notes as \"Notes:Small Text:260\"\nfrom `tabThree PL Stocktake` s\norder by s.operation_datetime desc, s.creation desc",
+  "ref_doctype": "Three PL Stocktake",
+  "report_name": "3PL Stocktakes",
+  "report_type": "Query Report",
+  "roles": [
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 1,
+    "name": "3krpjf2b2c",
+    "parent": "3PL Stocktakes",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "System Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 2,
+    "name": "3kr5stugos",
+    "parent": "3PL Stocktakes",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 3,
+    "name": "3kr44f0qhv",
+    "parent": "3PL Stocktakes",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock User"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 4,
+    "name": "3kr9nahs8v",
+    "parent": "3PL Stocktakes",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 5,
+    "name": "3krat0nqv9",
+    "parent": "3PL Stocktakes",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse User"
+   }
+  ],
+  "timeout": 0
+ },
+ {
+  "add_total_row": 0,
+  "add_translate_data": 0,
+  "columns": [],
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Report",
+  "filters": [],
+  "idx": 0,
+  "is_standard": "No",
+  "module": "Stock",
+  "name": "3PL Warehouse Corrections",
+  "prepared_report": 0,
+  "query": "select\n    c.name as \"Correction:Link/Three PL Warehouse Correction:170\",\n    c.operation_reference as \"Operation Ref:Data:160\",\n    c.operation_datetime as \"Operation Time:Datetime:160\",\n    c.status as \"Status:Data:110\",\n    c.correction_type as \"Type:Data:150\",\n    c.client as \"Client:Link/Customer:170\",\n    c.container_code as \"Container / HU:Link/Three PL Container:150\",\n    c.warehouse as \"Location:Link/Warehouse:180\",\n    c.item_code as \"Item:Link/Item:150\",\n    c.client_sku as \"Client SKU:Data:120\",\n    c.expected_qty as \"Expected Qty:Float:110\",\n    c.actual_qty as \"Actual Qty:Float:110\",\n    c.qty_delta as \"Delta:Float:90\",\n    c.condition_status as \"Condition:Data:120\",\n    c.movement as \"Movement:Link/Three PL Container Movement:160\",\n    c.stock_posting_status as \"Stock Posting:Data:130\",\n    c.stock_entry as \"Stock Entry:Link/Stock Entry:150\",\n    c.stock_posting_error as \"Stock Posting Error:Small Text:220\",\n    c.review_decision as \"Review Decision:Data:170\",\n    c.reviewed_by as \"Reviewed By:Link/User:160\",\n    c.reviewed_at as \"Reviewed At:Datetime:160\",\n    c.review_notes as \"Review Notes:Small Text:220\",\n    c.notes as \"Notes:Small Text:260\"\nfrom `tabThree PL Warehouse Correction` c\norder by c.operation_datetime desc, c.creation desc",
+  "ref_doctype": "Three PL Warehouse Correction",
+  "report_name": "3PL Warehouse Corrections",
+  "report_type": "Query Report",
+  "roles": [
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 1,
+    "name": "3kqpqpps1n",
+    "parent": "3PL Warehouse Corrections",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "System Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 2,
+    "name": "3kqq5epej3",
+    "parent": "3PL Warehouse Corrections",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 3,
+    "name": "3kqatugeci",
+    "parent": "3PL Warehouse Corrections",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock User"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 4,
+    "name": "3kqkftre4d",
+    "parent": "3PL Warehouse Corrections",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 5,
+    "name": "3kqrlrqrjh",
+    "parent": "3PL Warehouse Corrections",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse User"
+   }
+  ],
+  "timeout": 0
+ },
+ {
+  "add_total_row": 0,
+  "add_translate_data": 0,
+  "columns": [],
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Report",
+  "filters": [],
+  "idx": 0,
+  "is_standard": "No",
+  "module": "Stock",
+  "name": "3PL Warehouse Operation Turnover",
+  "prepared_report": 0,
+  "query": "select\n    date(m.movement_datetime) as \"Operation Date:Date:110\",\n    m.movement_datetime as \"Operation Time:Datetime:160\",\n    m.client as \"Client:Link/Customer:170\",\n    m.movement_type as \"Operation Type:Data:130\",\n    m.container_code as \"Container / HU:Link/Three PL Container:150\",\n    m.from_warehouse as \"From Location:Link/Warehouse:180\",\n    m.to_warehouse as \"To Location:Link/Warehouse:180\",\n    m.from_container as \"From Container:Link/Three PL Container:150\",\n    m.to_container as \"To Container:Link/Three PL Container:150\",\n    m.reference_doctype as \"Reference Type:Data:140\",\n    m.reference_name as \"Reference:Dynamic Link/reference_doctype:170\",\n    m.notes as \"Notes:Small Text:260\"\nfrom `tabThree PL Container Movement` m\norder by m.movement_datetime desc, m.creation desc",
+  "ref_doctype": "Three PL Container Movement",
+  "report_name": "3PL Warehouse Operation Turnover",
+  "report_type": "Query Report",
+  "roles": [
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 1,
+    "name": "3kudfvq09i",
+    "parent": "3PL Warehouse Operation Turnover",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "System Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 2,
+    "name": "3ku8q7hodk",
+    "parent": "3PL Warehouse Operation Turnover",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 3,
+    "name": "3kui8ph95h",
+    "parent": "3PL Warehouse Operation Turnover",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "Stock User"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 4,
+    "name": "3ku5riubnr",
+    "parent": "3PL Warehouse Operation Turnover",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse Manager"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 5,
+    "name": "3ku6tj4mbj",
+    "parent": "3PL Warehouse Operation Turnover",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Warehouse User"
+   },
+   {
+    "docstatus": 0,
+    "doctype": "Has Role",
+    "idx": 6,
+    "name": "3pl_client_report_3pl_warehouse_operation_turnover",
+    "parent": "3PL Warehouse Operation Turnover",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "3PL Client"
+   }
+  ],
+  "timeout": 0
+ }
+]

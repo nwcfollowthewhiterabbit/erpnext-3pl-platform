@@ -26,7 +26,7 @@ Status: done.
 Status: in progress.
 
 - Run Receiving flow in UI with demo data.
-- Validate client portal Receiving Notice, Inventory, Shipment Request, and Discrepancy Instruction routes.
+- Validate restricted client Desk Workspace flows for Receiving Notice, Inventory reports, Shipment Request, Products, and Discrepancy Instructions.
 - Validate customer data isolation with Alpha/Beta demo data.
 - Validate Business Owner access to products, warehouses, and UOMs.
 - Capture client feedback on missing fields, screen friction, and scanner needs.
@@ -40,9 +40,9 @@ Focused readiness table: `docs/client-mvp-scope-status.md`.
 Client-confirmed first working scope:
 
 - Roles: implemented.
-- Receiving products: implemented as MVP through client Receiving Notice, scanner receiving for expected and unexpected items, condition capture for damaged/quality issues, required inbound receipt context, warehouse receiving/verification, received quantity sync, variance calculation, discrepancy records, stock/container references, warehouse review actions at `/warehouse/receiving-review`, and client discrepancy review at `/client/discrepancies`.
+- Receiving products: implemented as MVP through client Receiving Notice in the restricted `3PL Client` Workspace, scanner receiving for expected and unexpected items, condition capture for damaged/quality issues, required inbound receipt context, warehouse receiving/verification, received quantity sync, variance calculation, discrepancy records, stock/container references, and warehouse review actions at `/warehouse/receiving-review`.
 - Location moves: implemented for containers through `Three PL Container Move`, movement history, and scanner-first move page. Remaining work: polished scanner UX and stronger operational guards.
-- Sending orders: implemented as MVP through client `Three PL Shipment Request` to draft ERPNext Pick List conversion, scanner picking confirmation, packing/shipping status sync from submitted Stock Entries, warehouse shipment review actions at `/warehouse/shipment-review`, and client shipment tracking at `/client/shipment-tracking`. Allocated containers are marked as `Picking`, picked containers become `Picked`, and packed/shipped operations update Shipment Request and container movement history. Scanner pages exist at `/warehouse/picking-confirmation` and `/warehouse/outbound-fulfillment`. Remaining work: carrier labels, external tracking integrations, and stronger operational guards.
+- Sending orders: implemented as MVP through client `Three PL Shipment Request` in the restricted `3PL Client` Workspace to draft ERPNext Pick List conversion, scanner picking confirmation, packing/shipping status sync from submitted Stock Entries, and warehouse shipment review actions at `/warehouse/shipment-review`. Automatic allocation is whole-container only: partial picks from a larger container require a split/repack into a matching container first. Allocated containers are marked as `Picking`, picked containers become `Picked`, and packed/shipped operations update Shipment Request and container movement history. Scanner pages exist at `/warehouse/picking-confirmation` and `/warehouse/outbound-fulfillment`. Remaining work: quantity-level reservation/splitting, carrier labels, external tracking integrations, and stronger operational guards.
 - Warehouse corrections: implemented as MVP through `Three PL Warehouse Correction`, scanner page `/warehouse/correction`, container item updates, `Adjusted` movement history, automatic ERPNext Stock Entry posting for clear quantity deltas, manager review queue at `/warehouse/correction-review`, and review metadata for manager decisions. Remaining work: richer multi-step approval workflow if required.
 - Inventory / stocktake: implemented as MVP through `Three PL Stocktake Session`, `Three PL Stocktake`, scanner page `/warehouse/stocktake`, counted-vs-system delta, linked correction, `Adjusted` movement history, and correction stock posting where ERPNext ledger permits it. Remaining work: richer large-count assignment/review UX.
 
@@ -67,19 +67,19 @@ Goal:
 
 - Make every primary MVP user action produce its expected operational result immediately in the UI.
 - Keep batch processors as recovery and reconciliation tools, not as a normal required step for client or warehouse users.
-- Split test coverage into deployment, client portal, and warehouse operation packs.
+- Split test coverage into deployment, client Desk, and warehouse operation packs.
 
 Queued work:
 
 - Shipment Request save immediately creates or updates the warehouse Pick List.
-- CSV Product Import save immediately creates or updates client products and ERPNext Items.
+- Product Import is kept as a post-MVP1 roadmap/admin capability, not as a required MVP1 client flow.
 - Standard Stock Entry submit immediately syncs inbound receipt, packing, and shipping results.
 - Standard Pick List picked quantity updates immediately sync container statuses and movement history.
 - Validation tests include live-flow checks that do not call the sync processors manually.
 
 Remaining boundary:
 
-- XLSX product import remains handled by the recovery processor path; CSV is the immediate MVP portal path.
+- Decide after MVP1 whether bulk product import should be exposed to clients, kept admin-only, or staged through warehouse review.
 
 ## Phase 3 - Warehouse Locations And Containers
 
@@ -100,12 +100,12 @@ Implemented:
 - Handling Unit fields on `Three PL Container`: container type, parent container, replacement container, last moved timestamp, and lifecycle statuses.
 - `Three PL Container Movement` DocType and `3PL Container Movements` report for movement history.
 - `Three PL Container Move` operation DocType and `3PL Container Moves` report for explicit move operations.
-- `scripts/apply_container_moves.py` processor for applying draft container moves.
+- `erpnext_3pl.warehouse.container_moves` processor for applying draft container moves.
 - `Three PL Container Repack` operation DocType and `3PL Container Repacks` report for consolidation/repack operations.
-- `scripts/apply_container_repacks.py` processor for applying draft repacks.
+- `erpnext_3pl.warehouse.container_repacks` processor for applying draft repacks.
 - Strict repack quantity validation between source containers and target contents.
-- `scripts/sync_inventory_snapshots.py` processor for syncing client inventory snapshots from active containers.
-- `scripts/sync_inventory_balance_snapshots.py` processor for storing daily historical inventory balance rows.
+- `erpnext_3pl.sync.inventory_snapshots` processor for syncing client inventory snapshots from active containers.
+- `erpnext_3pl.sync.inventory_balance_snapshots` processor for storing daily historical inventory balance rows.
 - Aggregated inventory report `3PL Client Inventory Summary`.
 - Date-based inventory report `3PL Inventory Balance By Date`.
 - Warehouse operations turnover report `3PL Warehouse Operation Turnover`.
@@ -115,7 +115,7 @@ Implemented:
 - Minimal scanner-first repack page at `/warehouse/repack` for full consolidation and partial split from one source container into one target container.
 - Minimal scanner-first warehouse correction page at `/warehouse/correction` for wrong quantity, unexpected product, damaged product, quality issue, and hold-for-review cases.
 - Minimal scanner-first stocktake page at `/warehouse/stocktake` for cycle count by container and SKU.
-- `scripts/apply_warehouse_corrections.py` processor for posting clear correction quantity deltas into ERPNext Stock Entry.
+- `erpnext_3pl.warehouse.warehouse_corrections` processor for posting clear correction quantity deltas into ERPNext Stock Entry.
 - Manager review page `/warehouse/correction-review` and report `3PL Corrections Needing Review`.
 - Container references in receiving, putaway, picking, packing, discrepancy, and inventory reporting contexts.
 
@@ -143,12 +143,12 @@ Status: pending.
 
 ## Stage MVP2 - Client Product Card Management
 
-Status: MVP2 base implemented, including controlled product import/export.
+Status: MVP2 base implemented for product cards and export. Controlled product import is kept outside MVP1 as a post-MVP1 roadmap item.
 
 Client-confirmed future requirement:
 
-- Clients should create new product cards themselves. Base portal flow is implemented through `Three PL Client Product`.
-- Clients should update existing product cards themselves. Base portal flow is implemented through `Three PL Client Product`.
+- Clients should create new product cards themselves. Base restricted Desk flow is implemented through `Three PL Client Product`.
+- Clients should update existing product cards themselves. Base restricted Desk flow is implemented through `Three PL Client Product`.
 - Each product card should support at least:
   - owner client;
   - client SKU;
@@ -156,16 +156,16 @@ Client-confirmed future requirement:
   - unit of measure;
   - product photo.
 - The business identity should remain `Owner Client + Client SKU`, not global SKU alone.
-- The client portal provides a safe product management flow, without giving clients Desk access.
-- Excel-compatible export/import is available for bulk product maintenance. Current implementation uses CSV export and CSV/XLSX import through the client portal.
+- The restricted `3PL Client` Workspace provides a safe product management flow without giving clients unrestricted Desk access.
+- Excel-compatible export is available for product maintenance. Bulk import is kept as a post-MVP1/admin capability.
 
 Implementation direction:
 
 - Build this on top of standard ERPNext `Item`.
 - Keep custom ownership fields (`owner_client`, `client_sku`, `client_product_name`) as the 3PL layer.
-- Add portal pages or Web Forms for client-safe create/update. Base implemented at `/client/products/list`.
+- Use restricted ERPNext Desk forms/workspace for client-safe create/update. Client work uses native ERPNext Desk forms and workspace.
 - Add validation so a client can only create or update products for their own customer account. Base server validation implemented.
-- Add import/export templates with clear required columns and validation errors. Base implemented at `/client/product-export` and `/client/product-import/list`.
+- Keep export templates/reporting as needed after manual testing; bulk import remains post-MVP1.
 - Store product photos using ERPNext file attachments or item image fields.
 - Record client product changes in `Three PL Client Product Change Log`.
 

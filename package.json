@@ -1,8 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "test:repo": "python3 scripts/validate_repo.py",
-    "test:client-portal": "playwright test tests/client_portal.spec.js --reporter=line"
+    "test:repo": "python3 scripts/validate_repo.py"
   },
   "devDependencies": {
     "@playwright/test": "1.60.0"

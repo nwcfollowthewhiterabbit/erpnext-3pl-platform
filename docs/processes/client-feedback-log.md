@@ -57,7 +57,7 @@ Implementation note:
 
 ## MVP Flow Scope From Client
 
-Status: base portal flow implemented; Excel import/export pending.
+Status: base Desk flow implemented; Excel import/export pending.
 
 Client requested these first working flows:
 
@@ -111,10 +111,10 @@ Client feedback:
 Current interpretation:
 
 - This is part of Stage MVP2 because it changes client-facing master data management.
-- The base portal flow is implemented as `Three PL Client Product` in the existing client portal.
+- The base Desk flow is implemented as `Three PL Client Product` in the existing client Desk.
 - The product record should stay based on ERPNext `Item`.
 - The 3PL business identity should remain `Owner Client + Client SKU`.
-- The client should manage products through a constrained client portal flow.
+- The client should manage products through a constrained client Desk flow.
 - Product photos should be attached to the item/product card.
 - Excel import/export uses a controlled template and validation, not unrestricted ERPNext import access for clients. Current MVP supports CSV export and CSV/XLSX import.
 - Client delete is implemented as deactivate/soft-delete, preserving ERPNext item and stock history.

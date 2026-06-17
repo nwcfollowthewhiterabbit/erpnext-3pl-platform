@@ -142,9 +142,9 @@ Implemented:
 - Container move operations are stored in `Three PL Container Move`.
 - Container repack operations are stored in `Three PL Container Repack`.
 - Container movement history is stored in `Three PL Container Movement`.
-- Draft container moves can be applied by `scripts/apply_container_moves.py`.
-- Draft container repacks can be applied by `scripts/apply_container_repacks.py`.
-- Inventory snapshots can be synchronized from active containers by `scripts/sync_inventory_snapshots.py`.
+- Draft container moves can be applied by `erpnext_3pl.warehouse.container_moves`.
+- Draft container repacks can be applied by `erpnext_3pl.warehouse.container_repacks`.
+- Inventory snapshots can be synchronized from active containers by `erpnext_3pl.sync.inventory_snapshots`.
 - Aggregated inventory is available through `3PL Client Inventory Summary`.
 - Minimal scanner-first receiving page is available at `/warehouse/receiving` and receives expected items into a container at temporary receiving.
 - Minimal scanner-first container move page is available at `/warehouse/container-move` and applies moves immediately for warehouse roles.

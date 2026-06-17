@@ -5,13 +5,14 @@ cd "$(dirname "$0")/.."
 
 base_url="${1:-}"
 
-if [ ! -f .env ]; then
-  echo ".env is missing; copy .env.example and fill secrets" >&2
+env_file="${PROJECT_ENV_FILE:-.env}"
+if [ ! -f "$env_file" ]; then
+  echo "$env_file is missing; copy .env.example and fill secrets" >&2
   exit 1
 fi
 
 set -a
-. ./.env
+. "$env_file"
 set +a
 
 stack_name="${STACK_NAME:?set STACK_NAME}"
@@ -20,7 +21,7 @@ warehouse_operator_password="${WAREHOUSE_OPERATOR_PASSWORD:?set WAREHOUSE_OPERAT
 warehouse_manager_password="${WAREHOUSE_MANAGER_PASSWORD:?set WAREHOUSE_MANAGER_PASSWORD}"
 business_owner_user="${BUSINESS_OWNER_USER:?set BUSINESS_OWNER_USER}"
 business_owner_password="${BUSINESS_OWNER_PASSWORD:?set BUSINESS_OWNER_PASSWORD}"
-client_portal_password="${CLIENT_PORTAL_PASSWORD:?set CLIENT_PORTAL_PASSWORD}"
+client_desk_password="${CLIENT_DESK_PASSWORD:?set CLIENT_DESK_PASSWORD}"
 
 if [ -z "$base_url" ]; then
   base_url="http://127.0.0.1:${FRONTEND_PORT:-8080}"
@@ -51,24 +52,14 @@ if [ -z "$backend_cid" ]; then
   exit 1
 fi
 
-docker cp scripts/run_project_script.py "$backend_cid":/tmp/run_project_script.py
-docker cp scripts/project_config.py "$backend_cid":/tmp/project_config.py
-docker cp scripts/sync_receiving_notices.py "$backend_cid":/tmp/sync_receiving_notices.py
-docker cp scripts/sync_client_products.py "$backend_cid":/tmp/sync_client_products.py
-docker cp scripts/sync_shipment_requests.py "$backend_cid":/tmp/sync_shipment_requests.py
-docker cp scripts/sync_picking_confirmations.py "$backend_cid":/tmp/sync_picking_confirmations.py
-docker cp scripts/sync_outbound_fulfillment.py "$backend_cid":/tmp/sync_outbound_fulfillment.py
-docker cp scripts/apply_container_repacks.py "$backend_cid":/tmp/apply_container_repacks.py
-docker cp scripts/apply_warehouse_corrections.py "$backend_cid":/tmp/apply_warehouse_corrections.py
-docker cp scripts/validate_site.py "$backend_cid":/tmp/validate_site.py
 docker exec \
   -e "WAREHOUSE_OPERATOR_PASSWORD=${warehouse_operator_password}" \
   -e "WAREHOUSE_MANAGER_PASSWORD=${warehouse_manager_password}" \
   -e "BUSINESS_OWNER_USER=${business_owner_user}" \
   -e "BUSINESS_OWNER_PASSWORD=${business_owner_password}" \
-  -e "CLIENT_PORTAL_PASSWORD=${client_portal_password}" \
+  -e "CLIENT_DESK_PASSWORD=${client_desk_password}" \
   "$backend_cid" bash -lc \
-  "cd /home/frappe/frappe-bench && ./env/bin/python /tmp/run_project_script.py ${site_name} /tmp/validate_site.py 1"
+  "cd /home/frappe/frappe-bench && bench --site ${site_name} execute erpnext_3pl.validation.site.main"
 
 check_login() {
   user="$1"
@@ -103,7 +94,7 @@ PY
       curl -sS -L --max-time 30 -b "$cookie_file" -o /dev/null -w "%{url_effective}" "${base_url%/}${path}"
     )"
     case "$final_url" in
-      */desk/3pl-warehouse|*/app/3pl-warehouse) ;;
+      */desk|*/desk/home|*/desk/3pl-warehouse|*/app/3pl-warehouse) ;;
       *)
         echo "Unexpected final URL for ${user} at ${path}: ${final_url}" >&2
         exit 1
@@ -150,7 +141,7 @@ check_login "warehouse.demo@example.test" "$warehouse_operator_password"
 check_login "warehouse.manager@example.test" "$warehouse_manager_password"
 check_login "$business_owner_user" "$business_owner_password"
 
-check_portal_login() {
+check_client_desk_login() {
   user="$1"
   password="$2"
   cookie_file="$(mktemp)"
@@ -170,17 +161,17 @@ import sys
 with open(sys.argv[1]) as handle:
     data = json.load(handle)
 
-if data.get("message") not in {"Logged In", "No App"}:
-    raise SystemExit(f"portal login failed: {data}")
+if data.get("message") != "Logged In":
+    raise SystemExit(f"client Desk login failed: {data}")
 
-if data.get("home_page") not in {"/client/receiving-notice/list", "client/receiving-notice/list", "/client/receiving-notice", "client/receiving-notice", "/me"}:
-    raise SystemExit(f"unexpected portal home_page: {data}")
+if data.get("home_page") not in {"/desk", "/app/home", "/desk/home"}:
+    raise SystemExit(f"unexpected client Desk home_page: {data}")
 PY
 
-  for path in /client/receiving-notice/list /client/products/list /client/product-import/list /client/product-export /client/inventory/list /client/shipment-request/list /client/discrepancy-instruction/list; do
+  for path in /desk/home /desk/3pl-client; do
     curl -fsSL --max-time 30 -b "$cookie_file" "${base_url%/}${path}" -o "$page_file"
     if grep -Eiq "Page not found|Not permitted|No permission" "$page_file"; then
-      echo "Unexpected portal error page for ${user} at ${path}" >&2
+      echo "Unexpected client Desk error page for ${user} at ${path}" >&2
       grep -Eio "Page not found|Not permitted|No permission" "$page_file" | head -5 >&2
       exit 1
     fi
@@ -189,7 +180,7 @@ PY
   rm -f "$cookie_file" "$response_file" "$page_file"
 }
 
-check_portal_login "alpha.client@example.test" "$client_portal_password"
+check_client_desk_login "alpha.client@example.test" "$client_desk_password"
 
 expect_redirect() {
   path="$1"
@@ -216,16 +207,9 @@ case "$base_url" in
   http://127.0.0.1:*|http://localhost:*) ;;
   *)
     expect_redirect "/" "/login"
-    expect_redirect "/app" "/desk/3pl-warehouse"
-    expect_redirect "/app/" "/desk/3pl-warehouse"
-    expect_redirect "/desk" "/desk/3pl-warehouse"
     expect_redirect "/app/setup-wizard" "/app/3pl-warehouse"
     expect_redirect "/app/setup-wizard/" "/app/3pl-warehouse"
     expect_redirect "/login?redirect-to=%2Fapp%2Fsetup-wizard" "/login?redirect-to=%2Fapp%2F3pl-warehouse"
-    expect_redirect "/app/home" "/desk/3pl-warehouse"
-    expect_redirect "/apps" "/desk/3pl-warehouse"
-    expect_cookie_redirect "/desk/3pl-warehouse" "user_id=Guest; system_user=no" "/login"
-    expect_cookie_redirect "/desk/3pl-warehouse" "user_id=alpha.client@example.test; system_user=no" "/client/receiving-notice/list"
     ;;
 esac
 

@@ -2,23 +2,19 @@
 
 ## Business Decision
 
-Clients manage their product cards through the existing client portal, not through ERPNext Desk.
+Clients manage their product cards through the restricted ERPNext Desk `3PL Client` Workspace.
 
 ERPNext `Item` remains the warehouse master record. The client-facing layer is `Three PL Client Product`, which exposes only safe product fields and synchronizes them into `Item`.
 
 ## Current Implemented Behavior
 
-Client portal section:
+Client entry point:
 
-`/client/products/list`
+`/app/3pl-client`
 
-Bulk import section:
+Bulk export/import:
 
-`/client/product-import/list`
-
-Bulk export section:
-
-`/client/product-export`
+Bulk Product Import is outside MVP1. Product export/import UX should be revisited after MVP1 manual testing and customer feedback.
 
 Client-editable fields:
 
@@ -39,15 +35,11 @@ System-managed fields:
 - sync error;
 - last sync timestamp.
 
-When a client creates or updates a product card, `scripts/sync_client_products.py` synchronizes allowed fields into ERPNext `Item`.
+When a client creates or updates a product card, `erpnext_3pl.sync.client_products` synchronizes allowed fields into ERPNext `Item`.
 
-Clients can also upload a controlled product file through `3PL Client Product Import`.
+Product import is outside MVP1. The `Three PL Client Product Import` DocType and processor remain available as a roadmap/admin capability, but it is not exposed as a required client flow in MVP1.
 
-For the MVP portal flow, CSV imports are processed immediately after save: the system validates the file, creates or updates `Three PL Client Product` records for the logged-in client's customer account, and then synchronizes those cards into ERPNext `Item`.
-
-XLSX imports remain supported through the recovery/maintenance processor path, which is useful for bulk administration and reconciliation.
-
-The product export page downloads the client's current product cards as an Excel-compatible CSV file. It also provides a CSV import template with the supported columns:
+If export is re-enabled after MVP1, the expected product table columns are:
 
 `client_sku, product_name, product_description, uom, barcode, product_image, status, notes`
 
@@ -55,8 +47,7 @@ Client-facing operational forms now use these product cards as their product sou
 
 - Receiving Notice product rows are selected from active synced client products and are expanded into `Inbound Shipment Notice Item` child rows.
 - Shipment Request product rows are selected from active synced client products and are expanded into `Three PL Shipment Request Item` child rows.
-- The portal product picker uses SKU/name search instead of a long dropdown, so clients can work with larger product catalogs.
-- Client references are auto-filled in portal forms: inbound notices use `ALPHA-IN-YYYYMMDD-###`, outbound shipment requests use `ALPHA-OUT-YYYYMMDD-###`.
+- Server-side client reference generation is active for Desk-created documents: inbound notices use `ALPHA-IN-YYYYMMDD-###`, outbound shipment requests use `ALPHA-OUT-YYYYMMDD-###` when the user leaves the reference blank.
 - The older free-text `portal_items_description` field is kept as a compatibility/storage field for structured JSON payloads and legacy records.
 
 ## Identity Rule
@@ -91,7 +82,7 @@ The log stores old values, new values, changed user, change time, linked client 
 
 ## Current Limits
 
-- Import is implemented for CSV and XLSX files. CSV is the recommended exchange format for the current MVP.
+- Product import is not part of MVP1 client acceptance.
 - Export is implemented as Excel-compatible CSV, not native XLSX.
 - Product approval workflow is not implemented yet.
 - Product image is captured as a product card attachment/image field; final production image handling still needs review.

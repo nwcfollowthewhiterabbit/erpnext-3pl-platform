@@ -1,0 +1,173 @@
+[
+  {
+    "docstatus": 0,
+    "doctype": "Workflow State",
+    "icon": "",
+    "idx": 0,
+    "name": "Accepted",
+    "style": "",
+    "workflow_state_name": "Accepted"
+  },
+  {
+    "docstatus": 0,
+    "doctype": "Workflow State",
+    "icon": "",
+    "idx": 0,
+    "name": "Applied",
+    "style": "",
+    "workflow_state_name": "Applied"
+  },
+  {
+    "docstatus": 0,
+    "doctype": "Workflow State",
+    "icon": "",
+    "idx": 0,
+    "name": "Cancelled",
+    "style": "",
+    "workflow_state_name": "Cancelled"
+  },
+  {
+    "docstatus": 0,
+    "doctype": "Workflow State",
+    "icon": "",
+    "idx": 0,
+    "name": "Closed",
+    "style": "",
+    "workflow_state_name": "Closed"
+  },
+  {
+    "docstatus": 0,
+    "doctype": "Workflow State",
+    "icon": "",
+    "idx": 0,
+    "name": "Completed",
+    "style": "",
+    "workflow_state_name": "Completed"
+  },
+  {
+    "docstatus": 0,
+    "doctype": "Workflow State",
+    "icon": "",
+    "idx": 0,
+    "name": "Discrepancy Review",
+    "style": "",
+    "workflow_state_name": "Discrepancy Review"
+  },
+  {
+    "docstatus": 0,
+    "doctype": "Workflow State",
+    "icon": "",
+    "idx": 0,
+    "name": "Draft",
+    "style": "",
+    "workflow_state_name": "Draft"
+  },
+  {
+    "docstatus": 0,
+    "doctype": "Workflow State",
+    "icon": "",
+    "idx": 0,
+    "name": "In Progress",
+    "style": "",
+    "workflow_state_name": "In Progress"
+  },
+  {
+    "docstatus": 0,
+    "doctype": "Workflow State",
+    "icon": "",
+    "idx": 0,
+    "name": "In Verification",
+    "style": "",
+    "workflow_state_name": "In Verification"
+  },
+  {
+    "docstatus": 0,
+    "doctype": "Workflow State",
+    "icon": "",
+    "idx": 0,
+    "name": "Needs Review",
+    "style": "",
+    "workflow_state_name": "Needs Review"
+  },
+  {
+    "docstatus": 0,
+    "doctype": "Workflow State",
+    "icon": "",
+    "idx": 0,
+    "name": "No Difference",
+    "style": "",
+    "workflow_state_name": "No Difference"
+  },
+  {
+    "docstatus": 0,
+    "doctype": "Workflow State",
+    "icon": "",
+    "idx": 0,
+    "name": "Open",
+    "style": "",
+    "workflow_state_name": "Open"
+  },
+  {
+    "docstatus": 0,
+    "doctype": "Workflow State",
+    "icon": "",
+    "idx": 0,
+    "name": "Packed",
+    "style": "",
+    "workflow_state_name": "Packed"
+  },
+  {
+    "docstatus": 0,
+    "doctype": "Workflow State",
+    "icon": "",
+    "idx": 0,
+    "name": "Partially Received",
+    "style": "",
+    "workflow_state_name": "Partially Received"
+  },
+  {
+    "docstatus": 0,
+    "doctype": "Workflow State",
+    "icon": "",
+    "idx": 0,
+    "name": "Picking",
+    "style": "",
+    "workflow_state_name": "Picking"
+  },
+  {
+    "docstatus": 0,
+    "doctype": "Workflow State",
+    "icon": "",
+    "idx": 0,
+    "name": "Received",
+    "style": "",
+    "workflow_state_name": "Received"
+  },
+  {
+    "docstatus": 0,
+    "doctype": "Workflow State",
+    "icon": "",
+    "idx": 0,
+    "name": "Reviewed",
+    "style": "",
+    "workflow_state_name": "Reviewed"
+  },
+  {
+    "docstatus": 0,
+    "doctype": "Workflow State",
+    "icon": "",
+    "idx": 0,
+    "name": "Shipped",
+    "style": "",
+    "workflow_state_name": "Shipped"
+  },
+  {
+    "docstatus": 0,
+    "doctype": "Workflow State",
+    "icon": "",
+    "idx": 0,
+    "name": "Submitted",
+    "style": "",
+    "workflow_state_name": "Submitted"
+  }
+]

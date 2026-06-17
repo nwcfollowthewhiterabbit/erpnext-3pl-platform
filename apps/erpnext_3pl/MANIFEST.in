@@ -1,0 +1,1 @@
+recursive-include erpnext_3pl *.json *.js *.css *.html *.md *.txt

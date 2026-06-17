@@ -80,11 +80,20 @@ services:
           echo "Site $$SITE_NAME already exists";
           exit 0;
         fi;
-        bench new-site "$$SITE_NAME" --mariadb-user-host-login-scope='%' --admin-password="$$ADMIN_PASSWORD" --db-root-username=root --db-root-password="$$DB_ROOT_PASSWORD" --install-app erpnext --set-default;
+        install_apps="--install-app erpnext";
+        if [ -d "apps/erpnext_3pl" ]; then
+          install_apps="$$install_apps --install-app erpnext_3pl";
+        fi;
+        bench new-site "$$SITE_NAME" --mariadb-user-host-login-scope='%' --admin-password="$$ADMIN_PASSWORD" --db-root-username=root --db-root-password="$$DB_ROOT_PASSWORD" $$install_apps --set-default;
     environment:
       SITE_NAME: ${SITE_NAME:?set SITE_NAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD}
       DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?set DB_ROOT_PASSWORD}
+      WAREHOUSE_OPERATOR_PASSWORD: ${WAREHOUSE_OPERATOR_PASSWORD:?set WAREHOUSE_OPERATOR_PASSWORD}
+      WAREHOUSE_MANAGER_PASSWORD: ${WAREHOUSE_MANAGER_PASSWORD:?set WAREHOUSE_MANAGER_PASSWORD}
+      BUSINESS_OWNER_USER: ${BUSINESS_OWNER_USER:?set BUSINESS_OWNER_USER}
+      BUSINESS_OWNER_PASSWORD: ${BUSINESS_OWNER_PASSWORD:?set BUSINESS_OWNER_PASSWORD}
+      CLIENT_DESK_PASSWORD: ${CLIENT_DESK_PASSWORD:?set CLIENT_DESK_PASSWORD}
 
   db:
     image: mariadb:10.6
@@ -232,4 +241,3 @@ networks:
   erpnext:
     driver: overlay
     attachable: true
-

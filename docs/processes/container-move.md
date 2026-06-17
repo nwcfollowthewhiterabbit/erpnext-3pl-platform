@@ -37,7 +37,7 @@ Demo operation:
 - To: `Aisle A - 3`
 - Status: `Applied`
 
-The demo operation starts as `Draft` during demo-data loading. `scripts/apply_container_moves.py` applies it, updates the container current location, creates a `Three PL Container Movement` record, and marks the operation as `Applied`.
+The demo operation starts as `Draft` during demo-data loading. `erpnext_3pl.warehouse.container_moves` applies it, updates the container current location, creates a `Three PL Container Movement` record, and marks the operation as `Applied`.
 
 ## Important Boundary
 
@@ -63,14 +63,14 @@ The preferred long-term direction is a custom app or scanner-first operation pag
 
 ## Processor
 
-Run pending moves inside the ERPNext backend through the project runner:
+Run pending moves inside the ERPNext backend through the app method:
 
 ```bash
 cd /home/frappe/frappe-bench
-./env/bin/python /tmp/run_project_script.py SITE_NAME /tmp/apply_container_moves.py 1
+bench --site SITE_NAME execute erpnext_3pl.warehouse.container_moves.main
 ```
 
-The post-deploy script already copies and runs this processor.
+The post-deploy script already runs this processor.
 
 ## Scanner-First Page
 
