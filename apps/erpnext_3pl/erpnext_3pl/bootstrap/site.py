@@ -629,17 +629,22 @@ def configure_client_desk_user():
         user.append("roles", {"role": "3PL Client"})
         changed = True
 
-    original_role_count = len(user.roles)
-    user.roles = [row for row in user.roles if row.role != "Customer"]
-    if len(user.roles) != original_role_count:
+    filtered_roles = [row.as_dict() for row in user.roles if row.role != "Customer"]
+    if len(filtered_roles) != len(user.roles):
+        user.set("roles", filtered_roles)
         changed = True
 
     if changed:
         user.save(ignore_permissions=True)
 
+    for role_row in frappe.get_all("Has Role", filters={"parent": CLIENT_DESK_USER, "role": "Customer"}, pluck="name"):
+        frappe.delete_doc("Has Role", role_row, ignore_permissions=True, force=True)
+
 
 def configure_permissions():
     from frappe.permissions import add_permission
+
+    configure_client_desk_user()
 
     for role_name in ("3PL Warehouse User", "3PL Warehouse Manager"):
         existing = frappe.db.exists(

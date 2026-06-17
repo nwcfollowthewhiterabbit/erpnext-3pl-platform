@@ -73,14 +73,14 @@ def apply_correction_stock_posting(correction):
         mark_needs_review(correction, "Correction has no warehouse/location for stock posting.")
         return None
 
+    savepoint = f"warehouse_correction_stock_{frappe.generate_hash(length=8)}"
+    frappe.db.sql(f"savepoint {savepoint}")
     try:
         entry = make_stock_entry(correction)
     except Exception as exc:
-        frappe.db.rollback()
-        if frappe.db.exists("Three PL Warehouse Correction", correction.name):
-            correction.reload()
-            mark_needs_review(correction, exc)
-        frappe.db.commit()
+        frappe.db.sql(f"rollback to savepoint {savepoint}")
+        correction.reload()
+        mark_needs_review(correction, exc)
         return None
 
     if entry:

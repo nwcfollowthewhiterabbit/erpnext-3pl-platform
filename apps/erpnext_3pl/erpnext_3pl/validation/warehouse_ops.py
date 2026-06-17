@@ -38,7 +38,13 @@ def cleanup_by_container(container_names):
         order_by="creation desc",
     ):
         cancel_and_delete("Stock Entry", entry_name)
-    for doctype in ("Three PL Container Movement", "Three PL Container Move", "Three PL Warehouse Correction"):
+    for movement_name in frappe.get_all("Three PL Container Movement", filters={"container_code": ("in", container_names)}, pluck="name"):
+        cancel_and_delete("Three PL Container Movement", movement_name)
+    for stocktake_name in frappe.get_all("Three PL Stocktake", filters={"container_code": ("in", container_names)}, pluck="name"):
+        cancel_and_delete("Three PL Stocktake", stocktake_name)
+    for session_name in frappe.get_all("Three PL Stocktake Session", filters={"session_reference": ("like", "WAREHOUSE-OPS-%")}, pluck="name"):
+        cancel_and_delete("Three PL Stocktake Session", session_name)
+    for doctype in ("Three PL Container Move", "Three PL Warehouse Correction"):
         for name in frappe.get_all(doctype, filters={"container_code": ("in", container_names)}, pluck="name"):
             cancel_and_delete(doctype, name)
     for repack_name in frappe.get_all("Three PL Container Repack", filters={"operation_reference": ("like", "WAREHOUSE-OPS-%")}, pluck="name"):
@@ -321,6 +327,87 @@ def validate_correction_loss_and_noop():
     cleanup_by_container(containers)
 
 
+def validate_scanner_api_operations():
+    from erpnext_3pl.api import warehouse_ops
+
+    containers = [
+        "WAREHOUSE-OPS-API-MOVE",
+        "WAREHOUSE-OPS-API-CORR",
+        "WAREHOUSE-OPS-API-STOCK",
+        "WAREHOUSE-OPS-API-REPACK-SRC",
+        "WAREHOUSE-OPS-API-REPACK-TGT",
+    ]
+    cleanup_by_container(containers)
+    frappe.set_user("Administrator")
+    seed_container("WAREHOUSE-OPS-API-MOVE", "Aisle A - 3", qty=2)
+    seed_container("WAREHOUSE-OPS-API-CORR", "Aisle B - 3", qty=2)
+    seed_container("WAREHOUSE-OPS-API-STOCK", "Aisle B - 3", qty=5)
+    seed_container("WAREHOUSE-OPS-API-REPACK-SRC", "Aisle A - 3", qty=6)
+
+    frappe.set_user(WAREHOUSE_MANAGER_USER)
+    move_result = warehouse_ops.apply_container_move("WAREHOUSE-OPS-API-MOVE", "Aisle B - 3")
+    moved_container = frappe.get_doc("Three PL Container", "WAREHOUSE-OPS-API-MOVE")
+    require(move_result["move"], "Scanner API did not create container move")
+    require(move_result["movement"], "Scanner API did not create move history")
+    require(moved_container.current_warehouse == "Aisle B - 3", "Scanner API move did not update location")
+
+    correction_result = warehouse_ops.apply_warehouse_correction(
+        "WAREHOUSE-OPS-API-CORR",
+        "SKU-ALPHA-001",
+        3,
+        notes="WAREHOUSE-OPS scanner API correction.",
+    )
+    corrected_container = frappe.get_doc("Three PL Container", "WAREHOUSE-OPS-API-CORR")
+    correction = frappe.get_doc("Three PL Warehouse Correction", correction_result["correction"])
+    require(corrected_container.items[0].qty == 3, "Scanner API correction did not update container qty")
+    require(correction.status == "Applied", "Scanner API correction did not apply document")
+    require(correction.stock_posting_status == "Posted", "Scanner API correction did not post stock entry")
+    require(correction.stock_entry, "Scanner API correction is not linked to Stock Entry")
+
+    same_result = warehouse_ops.apply_stocktake(
+        "WAREHOUSE-OPS-API-STOCK",
+        "SKU-ALPHA-001",
+        5,
+        session_reference="WAREHOUSE-OPS-API-STOCK-SAME",
+        notes="WAREHOUSE-OPS scanner API no-difference stocktake.",
+    )
+    same_stocktake = frappe.get_doc("Three PL Stocktake", same_result["stocktake"])
+    require(same_stocktake.status == "No Difference", "Scanner API no-difference stocktake has wrong status")
+    warehouse_ops.complete_stocktake_session("WAREHOUSE-OPS-API-STOCK-SAME")
+    same_session = frappe.get_doc("Three PL Stocktake Session", same_result["session"])
+    require(same_session.status == "Completed", "Scanner API stocktake session did not complete")
+
+    delta_result = warehouse_ops.apply_stocktake(
+        "WAREHOUSE-OPS-API-STOCK",
+        "SKU-ALPHA-001",
+        6,
+        session_reference="WAREHOUSE-OPS-API-STOCK-DELTA",
+        notes="WAREHOUSE-OPS scanner API delta stocktake.",
+    )
+    delta_stocktake = frappe.get_doc("Three PL Stocktake", delta_result["stocktake"])
+    delta_correction = frappe.get_doc("Three PL Warehouse Correction", delta_result["correction"])
+    require(delta_stocktake.status == "Applied", "Scanner API delta stocktake was not applied")
+    require(delta_stocktake.correction == delta_correction.name, "Scanner API delta stocktake is not linked to correction")
+    require(delta_correction.stock_posting_status == "Posted", "Scanner API stocktake correction did not post stock entry")
+
+    repack_result = warehouse_ops.apply_container_repack(
+        "Partial Split",
+        ["WAREHOUSE-OPS-API-REPACK-SRC"],
+        "WAREHOUSE-OPS-API-REPACK-TGT",
+        "Aisle B - 3",
+        item_code="SKU-ALPHA-001",
+        qty=2,
+        notes="WAREHOUSE-OPS scanner API partial split.",
+    )
+    source = frappe.get_doc("Three PL Container", "WAREHOUSE-OPS-API-REPACK-SRC")
+    target = frappe.get_doc("Three PL Container", "WAREHOUSE-OPS-API-REPACK-TGT")
+    require(repack_result["repack"], "Scanner API did not create repack document")
+    require(source.items[0].qty == 4, "Scanner API partial split did not subtract source qty")
+    require(target.items[0].qty == 2, "Scanner API partial split did not add target qty")
+
+    cleanup_by_container(containers)
+
+
 def validate_warehouse_role_access():
     frappe.set_user(WAREHOUSE_MANAGER_USER)
     for doctype in (
@@ -356,6 +443,7 @@ def main():
     validate_warehouse_correction()
     validate_warehouse_correction_stock_posting()
     validate_correction_loss_and_noop()
+    validate_scanner_api_operations()
     validate_stocktake()
     validate_picking_confirmation()
     validate_outbound_fulfillment()
