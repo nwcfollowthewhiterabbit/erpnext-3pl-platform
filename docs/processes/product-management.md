@@ -10,7 +10,7 @@ ERPNext `Item` remains the warehouse master record. The client-facing layer is `
 
 Client entry point:
 
-`/app/3pl-client`
+`/desk/3pl-client`
 
 Bulk export/import:
 

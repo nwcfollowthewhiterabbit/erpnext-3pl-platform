@@ -24,7 +24,7 @@ server {
     client_max_body_size 100m;
 
     if (\$request_uri ~* "^/login\\?redirect-to=(%2F|/)app(%2F|/)setup-wizard/?$") {
-        return 302 /login?redirect-to=%2Fapp%2F3pl-warehouse;
+        return 302 /login?redirect-to=%2Fdesk%2F3pl-warehouse;
     }
 
     location = / {
@@ -35,12 +35,20 @@ server {
         return 301 /desk;
     }
 
+    location = /desk/home {
+        return 302 /desk;
+    }
+
+    location = /desk/home/ {
+        return 302 /desk;
+    }
+
     location = /app/setup-wizard {
-        return 302 /app/3pl-warehouse;
+        return 302 /desk/3pl-warehouse;
     }
 
     location = /app/setup-wizard/ {
-        return 302 /app/3pl-warehouse;
+        return 302 /desk/3pl-warehouse;
     }
 
     location = /docs/erpnext-3pl-demo-use-cases-ru.pdf {

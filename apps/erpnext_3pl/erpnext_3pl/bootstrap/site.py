@@ -181,15 +181,15 @@ def configure_module_profiles():
         if role.meta.has_field("desk_access") and not role.desk_access:
             role.desk_access = 1
             changed = True
-        if role.home_page != "app/3pl-client":
-            role.home_page = "app/3pl-client"
+        if role.home_page != "desk/3pl-client":
+            role.home_page = "desk/3pl-client"
             changed = True
         if changed:
             role.save(ignore_permissions=True)
 
     for role_name in ("Stock User", "Stock Manager", "3PL Warehouse User", "3PL Warehouse Manager"):
         if frappe.db.exists("Role", role_name):
-            frappe.db.set_value("Role", role_name, "home_page", "app/3pl-warehouse")
+            frappe.db.set_value("Role", role_name, "home_page", "desk/3pl-warehouse")
 
     frappe.db.set_default("desktop:home_page", "workspace")
 

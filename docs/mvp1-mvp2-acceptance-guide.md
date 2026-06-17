@@ -43,7 +43,7 @@
 
 | Раздел | Полная ссылка | Что проверять |
 | --- | --- | --- |
-| Warehouse Workspace | <https://erpnext.77.237.244.169.sslip.io/app/3pl-warehouse> | рабочее место склада |
+| Warehouse Workspace | <https://erpnext.77.237.244.169.sslip.io/desk/3pl-warehouse> | рабочее место склада |
 | Receiving | <https://erpnext.77.237.244.169.sslip.io/warehouse/receiving> | приемка товара в temporary receiving |
 | Receiving Review | <https://erpnext.77.237.244.169.sslip.io/warehouse/receiving-review> | сверка и review входящих заявок |
 | Putaway | <https://erpnext.77.237.244.169.sslip.io/warehouse/putaway> | размещение коробки/контейнера в storage |

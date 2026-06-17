@@ -78,7 +78,7 @@ The client user is a Desk `System User`, not a legacy Website Portal user. The c
 
 - Use `/desk/3pl-client` for the client workspace.
 - Use `/desk/3pl-warehouse` for warehouse users.
-- `/app/3pl-client` may redirect to `/desk/3pl-client`, but `/desk/3pl-client` is the canonical link.
+- `/desk/3pl-client` is the canonical client workspace link.
 - Client testing should use the native ERPNext Desk workspace.
 - nginx should not force `/app`, `/desk`, `/app/home`, or `/apps` to the warehouse workspace. Let ERPNext handle Desk routing by role/workspace.
 

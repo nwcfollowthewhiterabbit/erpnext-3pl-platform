@@ -34,7 +34,7 @@ Implementation status: implemented as Desk-native MVP.
 
 Current entry point:
 
-`/app/3pl-client`
+`/desk/3pl-client`
 
 Current demo user:
 
@@ -82,7 +82,7 @@ Discrepancies are modeled on the Receiving Notice and visible internally. Client
 
 Current entry point:
 
-`/app/3pl-client`
+`/desk/3pl-client`
 
 ### Client Reviews Inventory
 
@@ -105,7 +105,7 @@ Client-facing inventory uses `Three PL Inventory Snapshot` records. The current 
 
 Current entry point:
 
-`/app/3pl-client`
+`/desk/3pl-client`
 
 ### Client Reviews Product Balance On A Date
 
@@ -151,7 +151,7 @@ Submitted shipment requests with structured item rows are converted into draft E
 
 Current entry point:
 
-`/app/3pl-client`
+`/desk/3pl-client`
 
 ## Warehouse Use Cases
 

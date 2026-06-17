@@ -84,7 +84,7 @@ with open(sys.argv[1]) as handle:
 if data.get("message") != "Logged In":
     raise SystemExit(f"login failed: {data}")
 
-if data.get("home_page") not in {"/app/3pl-warehouse", "/app/home", "/apps"}:
+if data.get("home_page") not in {"/desk/3pl-warehouse", "/desk", "/app/home", "/apps"}:
     raise SystemExit(f"unexpected home_page: {data}")
 PY
 
@@ -94,7 +94,7 @@ PY
       curl -sS -L --max-time 30 -b "$cookie_file" -o /dev/null -w "%{url_effective}" "${base_url%/}${path}"
     )"
     case "$final_url" in
-      */desk|*/desk/home|*/desk/3pl-warehouse|*/app/3pl-warehouse) ;;
+      */desk|*/desk/3pl-warehouse) ;;
       *)
         echo "Unexpected final URL for ${user} at ${path}: ${final_url}" >&2
         exit 1
@@ -112,7 +112,6 @@ PY
     fi
   }
 
-  check_page "/app/3pl-warehouse"
   check_page "/desk/3pl-warehouse"
   case "$base_url" in
     http://127.0.0.1:*|http://localhost:*) ;;
@@ -164,7 +163,7 @@ with open(sys.argv[1]) as handle:
 if data.get("message") != "Logged In":
     raise SystemExit(f"client Desk login failed: {data}")
 
-if data.get("home_page") not in {"/desk", "/app/home", "/desk/home"}:
+if data.get("home_page") not in {"/desk/3pl-client", "/desk", "/app/home", "/desk/home"}:
     raise SystemExit(f"unexpected client Desk home_page: {data}")
 PY
 
@@ -207,9 +206,9 @@ case "$base_url" in
   http://127.0.0.1:*|http://localhost:*) ;;
   *)
     expect_redirect "/" "/login"
-    expect_redirect "/app/setup-wizard" "/app/3pl-warehouse"
-    expect_redirect "/app/setup-wizard/" "/app/3pl-warehouse"
-    expect_redirect "/login?redirect-to=%2Fapp%2Fsetup-wizard" "/login?redirect-to=%2Fapp%2F3pl-warehouse"
+    expect_redirect "/app/setup-wizard" "/desk/3pl-warehouse"
+    expect_redirect "/app/setup-wizard/" "/desk/3pl-warehouse"
+    expect_redirect "/login?redirect-to=%2Fapp%2Fsetup-wizard" "/login?redirect-to=%2Fdesk%2F3pl-warehouse"
     ;;
 esac
 

@@ -654,7 +654,7 @@ def main():
             require("Customer" not in user_roles, "Desk-native client user must not keep legacy Customer role")
 
     for role in ("Stock User", "Stock Manager", "3PL Warehouse User", "3PL Warehouse Manager"):
-        require(frappe.db.get_value("Role", role, "home_page") == "app/3pl-warehouse", f"Wrong home_page for role: {role}")
+        require(frappe.db.get_value("Role", role, "home_page") == "desk/3pl-warehouse", f"Wrong home_page for role: {role}")
     require(frappe.db.exists("Workspace", "3PL Client"), "Missing 3PL Client Workspace")
     client_workspace = frappe.get_doc("Workspace", "3PL Client")
     require(
@@ -674,7 +674,7 @@ def main():
     client_role = frappe.get_doc("Role", "3PL Client")
     if client_role.meta.has_field("desk_access"):
         require(client_role.desk_access == 1, "3PL Client role must have Desk access")
-    require(client_role.home_page == "app/3pl-client", f"Wrong 3PL Client home_page: {client_role.home_page}")
+    require(client_role.home_page == "desk/3pl-client", f"Wrong 3PL Client home_page: {client_role.home_page}")
 
     require(
         frappe.db.exists("User Permission", {"user": CLIENT_DESK_USER, "allow": "Customer", "for_value": CLIENT_DESK_CUSTOMER}),
