@@ -10,7 +10,7 @@
  "indicator_color": "blue",
  "is_hidden": 0,
  "label": "3PL Client",
- "link_type": "DocType",
+ "link_type": null,
  "links": [
   {
    "docstatus": 0,
@@ -57,7 +57,8 @@
    "parent": "3PL Client",
    "parentfield": "links",
    "parenttype": "Workspace",
-   "type": "Link"
+   "type": "Link",
+   "report_ref_doctype": "Inbound Shipment Notice"
   },
   {
    "docstatus": 0,
@@ -166,7 +167,8 @@
    "parent": "3PL Client",
    "parentfield": "links",
    "parenttype": "Workspace",
-   "type": "Link"
+   "type": "Link",
+   "report_ref_doctype": "Three PL Inventory Snapshot"
   },
   {
    "docstatus": 0,
@@ -182,7 +184,8 @@
    "parent": "3PL Client",
    "parentfield": "links",
    "parenttype": "Workspace",
-   "type": "Link"
+   "type": "Link",
+   "report_ref_doctype": "Three PL Inventory Balance Snapshot"
   },
   {
    "docstatus": 0,
@@ -198,7 +201,8 @@
    "parent": "3PL Client",
    "parentfield": "links",
    "parenttype": "Workspace",
-   "type": "Link"
+   "type": "Link",
+   "report_ref_doctype": "Three PL Container Movement"
   }
  ],
  "module": "ERPNext 3PL",

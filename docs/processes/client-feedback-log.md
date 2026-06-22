@@ -57,7 +57,7 @@ Implementation note:
 
 ## MVP Flow Scope From Client
 
-Status: base Desk flow implemented; Excel import/export pending.
+Status: base Desk flow implemented; bulk import moved outside MVP1.
 
 Client requested these first working flows:
 
@@ -78,8 +78,8 @@ Current interpretation:
 - Roles are implemented.
 - Receiving is implemented as an MVP with required inbound receipt context, scanner support for expected/unexpected items, condition capture, received quantity sync, variance calculation, and discrepancy rows.
 - Location movement is implemented for containers and scanner-first container moves.
-- Shipment requests are implemented as portal MVP records and create draft Pick Lists for structured item rows. Scanner-first picking confirmation marks containers as picked. Submitted packing/shipping Stock Entries update request and container statuses. Carrier integrations and polished shipment tracking remain open.
-- Corrections, correction stock posting, correction review, stocktake, full-container repack, and partial split are implemented as MVP flows.
+- Shipment requests are implemented as Desk-native MVP records and create draft Pick Lists for structured item rows. Scanner-first picking confirmation marks containers as picked. Submitted packing/shipping Stock Entries update request and container statuses. Carrier integrations and polished shipment tracking remain open.
+- Corrections, correction stock posting, correction review, and stocktake are implemented as MVP flows. Full-container repack and partial split are available as extended warehouse support, not as required MVP1 acceptance flows.
 - Inventory snapshot reports, date-based balance, and period operation turnover reports exist as MVP reports.
 
 Implementation note:
@@ -116,7 +116,7 @@ Current interpretation:
 - The 3PL business identity should remain `Owner Client + Client SKU`.
 - The client should manage products through a constrained client Desk flow.
 - Product photos should be attached to the item/product card.
-- Excel import/export uses a controlled template and validation, not unrestricted ERPNext import access for clients. Current MVP supports CSV export and CSV/XLSX import.
+- Product Export is available for review/reporting. Bulk Product Import is outside MVP1 and remains a post-MVP1/admin roadmap capability, not a required client flow.
 - Client delete is implemented as deactivate/soft-delete, preserving ERPNext item and stock history.
 - Client product changes are recorded in `Three PL Client Product Change Log`.
 
@@ -125,4 +125,4 @@ Open:
 - final required fields for product cards;
 - product approval workflow before warehouse use;
 - whether clients can reactivate inactive products;
-- whether the current CSV/XLSX import flow needs an approval step before products become active.
+- whether any future CSV/XLSX import flow needs an approval step before products become active.

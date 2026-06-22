@@ -14,7 +14,7 @@ Client entry point:
 
 Bulk export/import:
 
-Bulk Product Import is outside MVP1. Product export/import UX should be revisited after MVP1 manual testing and customer feedback.
+Product Export is available for review/reporting. Bulk Product Import is outside MVP1 and should be revisited only after MVP1 manual testing and customer feedback.
 
 Client-editable fields:
 
@@ -39,7 +39,7 @@ When a client creates or updates a product card, `erpnext_3pl.sync.client_produc
 
 Product import is outside MVP1. The `Three PL Client Product Import` DocType and processor remain available as a roadmap/admin capability, but it is not exposed as a required client flow in MVP1.
 
-If export is re-enabled after MVP1, the expected product table columns are:
+If bulk import is revisited after MVP1, the expected product table columns are:
 
 `client_sku, product_name, product_description, uom, barcode, product_image, status, notes`
 

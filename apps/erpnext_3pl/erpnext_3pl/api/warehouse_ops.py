@@ -1,7 +1,9 @@
 from frappe import _
 import frappe
 from frappe.utils import flt, now_datetime
+from frappe.utils import nowdate
 
+from erpnext_3pl.config.project_config import COMPANY
 from erpnext_3pl.warehouse.container_moves import apply_move
 from erpnext_3pl.warehouse.container_repacks import apply_repack
 from erpnext_3pl.warehouse.warehouse_corrections import apply_correction_stock_posting
@@ -32,6 +34,186 @@ def get_item_client_sku(item_code):
     if client_sku is None:
         frappe.throw(_("Item {0} was not found.").format(item_code))
     return client_sku
+
+
+def get_receiving_notice(reference):
+    reference = (reference or "").strip()
+    if not reference:
+        frappe.throw(_("Receiving Notice / ASN is required."))
+
+    notice_name = reference if frappe.db.exists("Inbound Shipment Notice", reference) else None
+    if not notice_name:
+        notice_name = frappe.db.get_value("Inbound Shipment Notice", {"external_reference": reference}, "name")
+    if not notice_name:
+        frappe.throw(_("Receiving Notice {0} was not found.").format(reference))
+    return frappe.get_doc("Inbound Shipment Notice", notice_name)
+
+
+def get_notice_item_context(notice, item_code):
+    for row in notice.items:
+        if row.item_code == item_code:
+            return row.uom or "Nos", row.client_sku or get_item_client_sku(item_code)
+
+    item = frappe.db.get_value("Item", item_code, ["name", "stock_uom", "client_sku", "owner_client"], as_dict=True)
+    if not item:
+        frappe.throw(_("Item {0} was not found.").format(item_code))
+    if item.owner_client and item.owner_client != notice.customer:
+        frappe.throw(_("Item {0} belongs to another client.").format(item_code))
+    return item.stock_uom or "Nos", item.client_sku or ""
+
+
+def ensure_receiving_container(container_code, notice, location, operation_time):
+    if not container_code:
+        frappe.throw(_("Container / HU is required."))
+    if not frappe.db.exists("Warehouse", location):
+        frappe.throw(_("Receiving location {0} was not found.").format(location))
+
+    if not frappe.db.exists("Three PL Container", container_code):
+        container = frappe.get_doc(
+            {
+                "doctype": "Three PL Container",
+                "container_code": container_code,
+                "barcode": container_code,
+                "container_type": "Box",
+                "client": notice.customer,
+                "current_warehouse": location,
+                "status": "Received",
+                "inbound_shipment_notice": notice.name,
+                "last_moved_at": operation_time,
+            }
+        )
+        container.insert(ignore_permissions=True)
+        return container
+
+    container = get_open_container(container_code)
+    if container.client and container.client != notice.customer:
+        frappe.throw(_("Container {0} belongs to another client.").format(container.name))
+    container.client = notice.customer
+    container.current_warehouse = location
+    container.status = "Received"
+    container.inbound_shipment_notice = notice.name
+    container.last_moved_at = operation_time
+    container.save(ignore_permissions=True)
+    return container
+
+
+def add_received_container_item(container, item_code, client_sku, qty, uom, condition, notes):
+    matched = False
+    for row in container.items:
+        if row.item_code == item_code and (row.uom or uom) == uom and (row.condition_status or "OK") == condition:
+            row.qty = flt(row.qty) + qty
+            if notes:
+                row.notes = notes
+            matched = True
+            break
+
+    if not matched:
+        container.append(
+            "items",
+            {
+                "item_code": item_code,
+                "client_sku": client_sku,
+                "qty": qty,
+                "uom": uom,
+                "condition_status": condition,
+                "notes": notes or "Received from scanner-first receiving page.",
+            },
+        )
+    if condition != "OK":
+        container.status = "In Verification"
+    container.save(ignore_permissions=True)
+
+
+def create_inbound_stock_entry(notice, container, item_code, qty, uom, location, operation_time, notes):
+    entry = frappe.get_doc(
+        {
+            "doctype": "Stock Entry",
+            "stock_entry_type": "3PL Inbound Receipt",
+            "purpose": "Material Receipt",
+            "company": COMPANY,
+            "posting_date": nowdate(),
+            "client": notice.customer,
+            "inbound_shipment_notice": notice.name,
+            "warehouse_flow": "Inbound Receipt",
+            "scanned_location": location,
+            "container_code": container.name,
+            "remarks": notes or "Created from scanner-first receiving page.",
+            "items": [
+                {
+                    "item_code": item_code,
+                    "qty": qty,
+                    "t_warehouse": location,
+                    "uom": uom,
+                    "stock_uom": uom,
+                    "conversion_factor": 1,
+                    "basic_rate": 1,
+                    "allow_zero_valuation_rate": 1,
+                    "scanned_location": location,
+                    "container_code": container.name,
+                }
+            ],
+        }
+    )
+    entry.insert(ignore_permissions=True)
+    entry.submit()
+    return entry
+
+
+def create_receiving_movement(container, entry, location, condition, notes, operation_time):
+    movement = frappe.get_doc(
+        {
+            "doctype": "Three PL Container Movement",
+            "movement_datetime": operation_time,
+            "container_code": container.name,
+            "client": container.client,
+            "movement_type": "Received",
+            "to_warehouse": location,
+            "reference_doctype": "Stock Entry",
+            "reference_name": entry.name,
+            "notes": f"Created from scanner-first receiving page. Condition: {condition}. {notes or ''}".strip(),
+        }
+    )
+    movement.insert(ignore_permissions=True)
+    return movement
+
+
+def annotate_receiving_notice(notice_name, item_code, client_sku, qty, uom, container_code, entry_name, condition, notes):
+    from erpnext_3pl.sync.receiving_notices import normalize_uom, sync_notice
+
+    sync_notice(notice_name)
+    notice = frappe.get_doc("Inbound Shipment Notice", notice_name)
+    matched = False
+    for row in notice.items:
+        if row.item_code == item_code and normalize_uom(row.item_code, row.uom) == normalize_uom(item_code, uom):
+            if not row.uom:
+                row.uom = normalize_uom(item_code, uom)
+            row.container_code = container_code
+            row.condition_status = condition
+            matched = True
+
+    for row in notice.discrepancies:
+        if row.source_stock_entry == entry_name:
+            row.container_code = container_code
+
+    if condition != "OK":
+        notice.append(
+            "discrepancies",
+            {
+                "discrepancy_type": "Damaged Product" if condition == "Damaged" else "Quality Issue",
+                "item_code": item_code,
+                "client_sku": client_sku,
+                "expected_qty": qty,
+                "actual_qty": qty,
+                "variance_qty": 0,
+                "status": "Open",
+                "auto_generated": 0,
+                "source_stock_entry": entry_name,
+                "container_code": container_code,
+                "notes": notes or f"{condition} recorded from scanner-first receiving page.",
+            },
+        )
+        notice.status = "Discrepancy Review"
+    notice.save(ignore_permissions=True)
 
 
 def find_container_item(container, item_code, uom):
@@ -119,6 +301,38 @@ def create_correction(container, item_code, uom, expected_qty, actual_qty, condi
     )
     correction.insert(ignore_permissions=True)
     return correction
+
+
+@frappe.whitelist()
+def apply_receiving_scan(notice_reference, container_code, item_code, qty, location, condition="OK", notes=None):
+    require_warehouse_role()
+    notice = get_receiving_notice(notice_reference)
+    container_code = (container_code or "").strip()
+    item_code = (item_code or "").strip()
+    location = (location or "").strip()
+    condition = condition or "OK"
+    qty = flt(qty)
+    if not item_code:
+        frappe.throw(_("Item / SKU is required."))
+    if qty <= 0:
+        frappe.throw(_("Qty must be positive."))
+    if not location:
+        frappe.throw(_("Receiving Location is required."))
+
+    operation_time = now_datetime()
+    uom, client_sku = get_notice_item_context(notice, item_code)
+    container = ensure_receiving_container(container_code, notice, location, operation_time)
+    entry = create_inbound_stock_entry(notice, container, item_code, qty, uom, location, operation_time, notes)
+    add_received_container_item(container, item_code, client_sku, qty, uom, condition, notes)
+    movement = create_receiving_movement(container, entry, location, condition, notes, operation_time)
+    annotate_receiving_notice(notice.name, item_code, client_sku, qty, uom, container.name, entry.name, condition, notes)
+    frappe.db.commit()
+    return {
+        "notice": notice.name,
+        "container": container.name,
+        "stock_entry": entry.name,
+        "movement": movement.name,
+    }
 
 
 @frappe.whitelist()

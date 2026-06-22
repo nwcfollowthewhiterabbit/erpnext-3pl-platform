@@ -40,6 +40,6 @@ These gaps are stabilized in the current MVP configuration:
 
 - Do not remove existing processors. They are useful for deployment, repair, and periodic reconciliation.
 - Prefer small server scripts/hooks that call the existing processor functions for one document where possible.
-- Avoid duplicating business logic between hooks, portal pages, and batch processors.
+- Avoid duplicating business logic between hooks, Desk/scanner pages, and batch processors.
 - After each item is implemented, run both automated validation and a browser/manual flow check with the relevant role.
 - Product Import remains covered by the processor path for post-MVP1/admin use.

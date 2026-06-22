@@ -10,7 +10,7 @@
  "indicator_color": "green",
  "is_hidden": 0,
  "label": "Stock Reference",
- "link_type": "DocType",
+ "link_type": null,
  "links": [
   {
    "docstatus": 0,

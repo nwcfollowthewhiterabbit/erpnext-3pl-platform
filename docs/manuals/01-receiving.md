@@ -2,6 +2,18 @@
 
 Goal: receive products from a client notification into a temporary warehouse.
 
+## Document Responsibilities
+
+`Inbound Shipment Notice` is the client's advance notice. It records expected products and quantities, but it does not create stock by itself.
+
+`Receiving Scan` and `Stock Entry` are warehouse receiving actions. These create the actual inbound stock movement.
+
+`Three PL Container` is the physical box / handling unit. Container records are created or updated during receiving and are later used for putaway, movement, stocktake, picking, packing, and shipping.
+
+`Current Inventory` is a report. It shows stock only after warehouse receiving has posted actual stock and inventory snapshots have synchronized.
+
+ERPNext derives `Stock Entry.purpose` from `Stock Entry Type`. The project makes `Purpose` visible as a read-only confirmation field, so warehouse users can verify it but should not edit it manually. For receiving, use `3PL Inbound Receipt`, which maps to `Material Receipt`.
+
 ## Demo Records
 
 - Client: `Demo Client Alpha`
@@ -23,6 +35,7 @@ Goal: receive products from a client notification into a temporary warehouse.
 8. Open draft receiving Stock Entry if available, or create a new one.
 9. Confirm:
    - Stock Entry Type: `3PL Inbound Receipt`
+   - Purpose should show `Material Receipt` automatically and is not edited manually.
    - Client: `Demo Client Alpha`
    - Warehouse Flow: `Inbound Receipt`
    - Target Warehouse: `Temporary Receiving - 3`
@@ -63,8 +76,11 @@ Expected result:
 - the Receiving Notice row is updated with received and variance quantities for expected items;
 - unexpected items create a discrepancy row;
 - damaged and quality issue receipts create discrepancy rows and keep the notice in review.
+- `Current Inventory` starts showing the received item for the client.
 
 Submitting or saving the Receiving Notice alone does not create client inventory. The notice is the client's advance notification. Client-facing inventory changes after warehouse receiving creates or updates containers / Handling Units and inventory snapshots are synchronized.
+
+If a tester sees an empty `Current Inventory` after creating an `Inbound Shipment Notice`, the next step is not to edit the notice again. The next step is warehouse receiving through `Receiving Scan` or submitted `Stock Entry`.
 
 Current boundary:
 

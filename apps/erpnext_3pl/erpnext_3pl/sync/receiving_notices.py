@@ -3,8 +3,12 @@ import json
 import frappe
 
 
+def normalize_uom(item_code, uom):
+    return uom or frappe.db.get_value("Item", item_code, "stock_uom") or "Nos"
+
+
 def qty_key(item_code, uom):
-    return (item_code, uom or "")
+    return (item_code, normalize_uom(item_code, uom))
 
 
 def add_qty(target, key, qty):
@@ -106,6 +110,8 @@ def set_notice_item_quantities(notice, actual_by_key):
         key = qty_key(row.item_code, row.uom)
         expected_qty = row.expected_qty or 0
         received_qty = actual_by_key.get(key, 0)
+        if not row.uom:
+            row.uom = key[1]
         row.received_qty = received_qty
         row.variance_qty = received_qty - expected_qty
 

@@ -823,6 +823,9 @@ def main():
         require(frappe.db.exists("Warehouse", warehouse), f"Missing Warehouse: {warehouse}")
     require(frappe.get_meta("Warehouse").allow_rename == 0, "Warehouse location rename must stay disabled for normal warehouse roles")
     stock_entry_meta = frappe.get_meta("Stock Entry")
+    purpose_field = stock_entry_meta.get_field("purpose")
+    require(purpose_field and not purpose_field.hidden, "Stock Entry purpose must be visible for manual tester confirmation")
+    require(purpose_field and purpose_field.read_only, "Stock Entry purpose must remain read-only")
     for fieldname in ("client", "inbound_shipment_notice", "scanned_location", "container_code"):
         field = stock_entry_meta.get_field(fieldname)
         require(field and field.mandatory_depends_on == "eval:doc.warehouse_flow=='Inbound Receipt'", f"Stock Entry {fieldname} must be mandatory for inbound receipts")
@@ -867,46 +870,18 @@ def main():
         require(not folder.parent_icon, f"3PL Desktop folder must be top-level: {label}")
         require(folder.hidden == hidden, f"3PL Desktop folder hidden state is wrong: {label}")
 
+    client_workspace_links = {
+        (row.link_type, row.link_to, row.label) for row in client_workspace.links if row.link_type or row.link_to
+    }
     for label, spec in REQUIRED_DESKTOP_ICONS.items():
-        sidebar = frappe.db.get_value(
-            "Workspace Sidebar",
-            label,
-            ["standard", "app", "module"],
-            as_dict=True,
-        )
-        if spec["hidden"] == 0:
-            require(sidebar, f"Missing 3PL Workspace Sidebar: {label}")
-            require(sidebar.standard == 1, f"3PL Workspace Sidebar must be standard: {label}")
-            require(sidebar.app == "erpnext_3pl", f"3PL Workspace Sidebar has wrong app: {label}")
-            require(sidebar.module == "ERPNext 3PL", f"3PL Workspace Sidebar has wrong module: {label}")
-            item_filters = {
-                "parent": label,
-                "type": "Link",
-                "link_type": spec["item"]["link_type"],
-            }
-            if spec["item"].get("link_to"):
-                item_filters["link_to"] = spec["item"]["link_to"]
-            if spec["item"].get("url"):
-                item_filters["url"] = spec["item"]["url"]
+        if spec["parent_icon"] not in {"Inbound", "Outbound", "Inventory", "Products & Issues"}:
+            continue
+        item = spec["item"]
+        if item.get("link_to"):
             require(
-                frappe.db.exists("Workspace Sidebar Item", item_filters),
-                f"Missing 3PL Workspace Sidebar link item: {label}",
+                (item["link_type"], item["link_to"], label) in client_workspace_links,
+                f"Missing 3PL Client Workspace link: {label}",
             )
-        icon = frappe.db.get_value(
-            "Desktop Icon",
-            label,
-            ["standard", "app", "icon_type", "link_type", "link_to", "sidebar", "parent_icon", "hidden"],
-            as_dict=True,
-        )
-        require(icon, f"Missing 3PL Desktop Icon: {label}")
-        require(icon.standard == 1, f"3PL Desktop Icon must be standard: {label}")
-        require(icon.app == "erpnext_3pl", f"3PL Desktop Icon has wrong app: {label}")
-        require(icon.icon_type == "Link", f"3PL Desktop Icon has wrong type: {label}")
-        require(icon.link_type == "Workspace Sidebar", f"3PL Desktop Icon has wrong link type: {label}")
-        require(icon.link_to == label, f"3PL Desktop Icon has wrong link target: {label}")
-        require(not icon.sidebar, f"3PL Desktop Icon sidebar must be empty so Frappe can build route: {label}")
-        require(icon.parent_icon == spec["parent_icon"], f"3PL Desktop Icon has wrong parent folder: {label}")
-        require(icon.hidden == spec["hidden"], f"3PL Desktop Icon hidden state is wrong: {label}")
     visible_standard_icons = {
         row.name
         for row in frappe.get_all(

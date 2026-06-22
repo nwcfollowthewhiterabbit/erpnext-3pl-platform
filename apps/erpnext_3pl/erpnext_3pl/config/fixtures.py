@@ -96,6 +96,15 @@ PROJECT_WORKFLOW_ACTIONS = sorted(
     {transition[1] for workflow in MVP_WORKFLOWS for transition in workflow["transitions"]}
 )
 
+PROJECT_PROPERTY_SETTERS = [
+    "Warehouse-main-allow_rename",
+    "Stock Entry-purpose-hidden",
+]
+
+PROJECT_WORKSPACE_SIDEBARS = [
+    "ERPNext 3PL",
+]
+
 
 FIXTURES = [
     {"dt": "Custom Field", "filters": [["name", "in", PROJECT_CUSTOM_FIELDS]]},
@@ -113,6 +122,7 @@ FIXTURES = [
     },
     {
         "dt": "Property Setter",
-        "filters": [["doc_type", "=", "Warehouse"], ["property", "=", "allow_rename"]],
+        "filters": [["name", "in", PROJECT_PROPERTY_SETTERS]],
     },
+    {"dt": "Workspace Sidebar", "filters": [["name", "in", PROJECT_WORKSPACE_SIDEBARS]]},
 ]

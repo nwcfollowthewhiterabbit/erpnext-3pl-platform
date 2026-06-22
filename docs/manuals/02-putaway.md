@@ -11,7 +11,7 @@ Submit the receiving Stock Entry first. ERPNext needs posted incoming stock befo
 1. Open `Stock > Stock Entry`.
 2. Create a new Stock Entry.
 3. Select Stock Entry Type: `3PL Put Away`.
-4. Confirm Purpose is `Material Transfer`.
+4. Purpose should show `Material Transfer` automatically. It is read-only and should not be edited manually.
 5. Set:
    - Client: `Demo Client Alpha`
    - Inbound Shipment Notice: the notice for `ASN-ALPHA-001`

@@ -42,21 +42,36 @@ Use this guide for the current ERPNext 3PL test instance.
 
 ## What Is Ready To Test
 
+## MVP1 Document Map
+
+For customer-facing manual testing in Russian, use:
+
+`docs/mvp1-workflow-test-guide-ru.md`
+
+Core rule:
+
+- `Inbound Shipment Notice` is the client's advance notification. It does not create stock.
+- Warehouse receiving creates stock through `Receiving Scan` or a submitted `Stock Entry` with type `3PL Inbound Receipt`.
+- `Three PL Container` is the physical box / handling unit.
+- `Current Inventory` is a report. It shows stock only after warehouse receiving has created stock and container records.
+- Product Import / bulk import is not part of MVP1 testing. Client product maintenance for MVP1 is direct product card create/edit plus optional Product Export.
+
 ## Recommended Demo Walkthrough
 
 Use this sequence for the first customer review.
 
 1. Log in as the Client Desk User and open the `3PL Client` Workspace.
 2. Create a new Receiving Notice for `Demo Client Alpha`.
-3. Open Inventory reports and confirm only Alpha stock is visible.
-4. Open Shipment Requests and create a simple outbound request.
-5. Open Discrepancy Instructions and submit an instruction for `ASN-ALPHA-001`.
-6. Log in as the Warehouse Operator and open `3PL Warehouse`.
-7. Open `ASN-ALPHA-001`, confirm expected vs received quantities and the quantity discrepancy.
-8. Open `BOX-ALPHA-001`, confirm it is linked to the notice and temporary receiving location.
-9. Log in as the Business Owner and confirm products and warehouse locations can be created or edited.
+3. Log in as the Warehouse Operator and receive the Notice through `Receiving Scan` or a submitted `3PL Inbound Receipt` Stock Entry.
+4. Confirm that a `Three PL Container`, inbound `Stock Entry`, and `Received` movement were created.
+5. Log in as the Client Desk User and open Inventory reports.
+6. Confirm the received item appears in `Current Inventory` and only Alpha stock is visible.
+7. Open Shipment Requests and create a simple outbound request using available stock.
+8. Log in as the Warehouse Operator or Manager and process picking / packing / shipping.
+9. Open Discrepancy Instructions and submit an instruction for a notice with discrepancies.
+10. Log in as the Business Owner and confirm products and warehouse locations can be created or edited.
 
-This walkthrough covers the current MVP boundary: client Desk input, customer data isolation, receiving notice review, discrepancy tracking, container/box visibility, and owner-level administration.
+This walkthrough covers the current MVP boundary: client Desk input, customer data isolation, warehouse receiving, inventory visibility, shipment request handling, discrepancy tracking, container/box visibility, and owner-level administration.
 
 The deploy validator now checks these same boundaries automatically: internal warehouse logins, business-owner master-data pages, client Desk controls, demo records, and Alpha-vs-Beta data isolation.
 
@@ -232,7 +247,8 @@ Open `Stock Entry`.
 
 Test:
 
-- Create a Material Receipt into `Temporary Receiving - 3`.
+- Create a Material Receipt into `Temporary Receiving - 3`, or use the scanner alternative below.
+- Select `Stock Entry Type = 3PL Inbound Receipt`; `Purpose` should show `Material Receipt` automatically and is read-only.
 - Use demo client, receiving notice, scanned location, and container fields where available.
 - Compare received quantity against the receiving notice.
 
@@ -241,6 +257,7 @@ Expected result:
 - Goods can be received into temporary receiving.
 - Stock is not placed directly into final storage.
 - The container/box reference can be recorded on the stock entry.
+- `Current Inventory` is updated only after the inbound receipt is submitted and inventory snapshots are synchronized.
 
 Scanner alternative:
 
@@ -254,6 +271,12 @@ Expected scanner result:
 - The container contents are updated.
 - The Receiving Notice received and variance quantities are updated.
 - Movement history shows movement type `Received`.
+- `Current Inventory` starts showing the received item for the client.
+
+Important:
+
+- Saving or updating `Inbound Shipment Notice` alone does not create stock.
+- If `Current Inventory` is empty after creating a Notice, complete warehouse receiving first.
 
 ### Putaway
 

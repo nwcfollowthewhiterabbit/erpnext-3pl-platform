@@ -121,7 +121,7 @@ Scanner route for packing/shipping:
 Custom fields were added to:
 
 - `Stock Entry`: `Client`, `Inbound Shipment Notice`, `Shipment Request`, `Shipment Reference`, `Warehouse Flow`, `Scanned Location`
-- `Stock Entry Detail`: `Scanned Location`
+- `Stock Entry Detail`: `Scanned Location`, `Container / Box`
 - `Pick List`: `Client`, `Shipment Reference`, `Shipment Request`
 - `Pick List Item`: `Scanned Location`
 
@@ -159,12 +159,7 @@ Implemented:
 
 Still pending:
 
-- repack workflow, for example two small boxes consolidated into one larger box;
 - empty / closed / replaced container lifecycle actions;
-- scanner UX for unexpected receiving items and damaged/quality inspection details;
-- stock-ledger posting automation for warehouse corrections;
-- grouped stocktake sessions and stock-ledger posting for count deltas;
 - richer guided quantity editing for multi-item partial repack / split operations;
-- ERPNext form submit-time or scanner-page automation for move/repack documents;
-- automatic inventory snapshot updates from stock movements and container movements;
+- stronger operational guards for unusual move/repack/correction edge cases;
 - import or guided creation of the client's real warehouse location tree.

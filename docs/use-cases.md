@@ -329,7 +329,7 @@ The business owner has broad system rights. The warehouse manager is operational
 | Restricted client Desk instead of custom portal | Implemented as MVP | Demo client user is a System User with `3PL Client` role, `3PL Client Only` module profile, default `3PL Client` Workspace, Customer User Permission, and server-side customer/status guards. |
 | Native ERPNext Desk client surface | Implemented | Client actions run through restricted ERPNext Desk workspaces and forms. |
 | Client linked to Customer | Implemented | Demo client user is linked to `Demo Client Alpha`. |
-| Client can create Receiving Notice | Implemented | Client selects active synced products from their product catalog; server validation expands the structured portal payload into Receiving Notice item rows. |
+| Client can create Receiving Notice | Implemented | Client selects active synced products from their product catalog; server validation expands the structured Desk payload into Receiving Notice item rows. |
 | Client restricted to own Customer | Implemented | Server validation confirms cross-customer creation is blocked. |
 | Product ownership | Implemented | `Item.owner_client`, `Item.client_sku`, `Item.client_product_name`. |
 | Business identity is Client + SKU | Implemented in data model | Not yet enforced by unique DB constraint. |

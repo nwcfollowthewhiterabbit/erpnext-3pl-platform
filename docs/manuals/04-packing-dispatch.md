@@ -23,7 +23,7 @@ Manual fallback:
 1. Open `Stock > Stock Entry`.
 2. Create a new Stock Entry.
 3. Select Stock Entry Type: `3PL Packing`.
-4. Use Purpose: `Material Transfer`.
+4. Purpose should show `Material Transfer` automatically. It is read-only and should not be edited manually.
 5. Move products from storage/picking location to `Packing - 3`.
 6. Set:
    - Client
@@ -52,7 +52,7 @@ Manual fallback:
 1. Open `Stock > Stock Entry`.
 2. Create a new Stock Entry.
 3. Select Stock Entry Type: `3PL Shipping`.
-4. Use Purpose: `Material Issue`.
+4. Purpose should show `Material Issue` automatically. It is read-only and should not be edited manually.
 5. Issue products from the final dispatch/packing warehouse.
 6. Set:
    - Client

@@ -17,6 +17,42 @@ The client asked for:
    - product balance on a selected day for the client;
    - warehouse operation turnover for a selected period for client and warehouse users.
 
+## Scope Guardrails
+
+This file is the source of truth for the customer-requested MVP1 scope.
+
+MVP1 manual testing should not include `Three PL Client Product Import` / bulk product import. Product import exists only as a post-MVP1 roadmap/admin capability and must stay outside the client MVP1 workspace.
+
+Client product maintenance for MVP1 means:
+
+- create/edit products through `Three PL Client Product`;
+- synchronize product cards to ERPNext `Item`;
+- optionally use Product Export for review/reporting.
+
+Bulk Product Import is not part of MVP1 acceptance.
+
+## Added Beyond The Customer's Minimal MVP1
+
+These features are available or partially available for testing, but they go beyond the customer's original minimal request:
+
+| Feature | MVP1 relation | Status |
+| --- | --- | --- |
+| Receiving Scan | Convenience layer over warehouse receiving. MVP1 can also be tested through standard `Stock Entry`. | Available for testing. |
+| Receiving Review | Convenience review screen for inbound notices. | Available for testing. |
+| Container / Handling Unit model | More detailed than the customer's original request, but now used as the warehouse operating model. | Available for testing. |
+| Container scanner pages | Convenience pages for moves, putaway, correction, stocktake, picking, and outbound fulfillment. | Available for testing. |
+| Container Repack / split / consolidation | Not required by MVP1, but useful when whole-container allocation needs a matching box. | Available for testing as extended warehouse functionality. |
+| Correction Review | Review queue beyond simple correction entry. | Available for testing. |
+| Stocktake Session | Grouping layer beyond simple stocktake. | Available for testing. |
+| Picking Confirmation | Dedicated picking confirmation screen beyond basic shipment request flow. | Available for testing. |
+| Outbound Fulfillment | Dedicated packing/shipping screen beyond basic dispatch records. | Available for testing. |
+| Client Product Catalog | More structured than manually maintaining ERPNext Items directly. | Available for testing. |
+| Product Export | Not explicitly requested, but useful for client product review. | Available for testing. |
+| Product Import / bulk import | Not part of MVP1. | Roadmap/post-MVP1 only. Do not include in MVP1 manual testing. |
+| Shipment Tracking | Convenience client view beyond basic shipment request status. | Available for testing. |
+| Discrepancy Instructions | Structured client response to receiving discrepancies. | Available for testing. |
+| Extended container/movement reports | More detailed than the two requested reports. | Available for testing where visible. |
+
 ## Readiness Summary
 
 | Area | MVP readiness | Current status |

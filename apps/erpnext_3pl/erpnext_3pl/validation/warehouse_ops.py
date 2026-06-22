@@ -331,6 +331,7 @@ def validate_scanner_api_operations():
     from erpnext_3pl.api import warehouse_ops
 
     containers = [
+        "WAREHOUSE-OPS-API-RECV",
         "WAREHOUSE-OPS-API-MOVE",
         "WAREHOUSE-OPS-API-CORR",
         "WAREHOUSE-OPS-API-STOCK",
@@ -338,13 +339,61 @@ def validate_scanner_api_operations():
         "WAREHOUSE-OPS-API-REPACK-TGT",
     ]
     cleanup_by_container(containers)
+    for notice_name in frappe.get_all("Inbound Shipment Notice", filters={"external_reference": "WAREHOUSE-OPS-API-RECV"}, pluck="name"):
+        cancel_and_delete("Inbound Shipment Notice", notice_name)
     frappe.set_user("Administrator")
     seed_container("WAREHOUSE-OPS-API-MOVE", "Aisle A - 3", qty=2)
     seed_container("WAREHOUSE-OPS-API-CORR", "Aisle B - 3", qty=2)
     seed_container("WAREHOUSE-OPS-API-STOCK", "Aisle B - 3", qty=5)
     seed_container("WAREHOUSE-OPS-API-REPACK-SRC", "Aisle A - 3", qty=6)
 
+    notice = frappe.get_doc(
+        {
+            "doctype": "Inbound Shipment Notice",
+            "customer": CLIENT_DESK_CUSTOMER,
+            "external_reference": "WAREHOUSE-OPS-API-RECV",
+            "notice_date": nowdate(),
+            "temporary_warehouse": "Temporary Receiving - 3",
+            "status": "Draft",
+            "items": [
+                {
+                    "item_code": "SKU-ALPHA-001",
+                    "client_sku": frappe.db.get_value("Item", "SKU-ALPHA-001", "client_sku") or "ALPHA-001",
+                    "expected_qty": 4,
+                }
+            ],
+        }
+    )
+    notice.insert(ignore_permissions=True)
+
     frappe.set_user(WAREHOUSE_MANAGER_USER)
+    receiving_result = warehouse_ops.apply_receiving_scan(
+        "WAREHOUSE-OPS-API-RECV",
+        "WAREHOUSE-OPS-API-RECV",
+        "SKU-ALPHA-001",
+        4,
+        "Temporary Receiving - 3",
+        notes="WAREHOUSE-OPS scanner API receiving.",
+    )
+    received_notice = frappe.get_doc("Inbound Shipment Notice", receiving_result["notice"])
+    received_container = frappe.get_doc("Three PL Container", receiving_result["container"])
+    received_entry = frappe.get_doc("Stock Entry", receiving_result["stock_entry"])
+    require(receiving_result["movement"], "Scanner API receiving did not create movement history")
+    require(received_entry.docstatus == 1, "Scanner API receiving did not submit Stock Entry")
+    require(received_entry.inbound_shipment_notice == received_notice.name, "Scanner API receiving Stock Entry is not linked to notice")
+    require(received_entry.container_code == received_container.name, "Scanner API receiving Stock Entry is not linked to container")
+    require(received_container.current_warehouse == "Temporary Receiving - 3", "Scanner API receiving did not set container location")
+    require(received_container.items[0].qty == 4, "Scanner API receiving did not update container qty")
+    require(received_notice.items[0].received_qty == 4, "Scanner API receiving did not update notice received qty")
+    require(received_notice.items[0].variance_qty == 0, "Scanner API receiving did not normalize notice variance")
+    require(received_notice.items[0].uom == "Nos", "Scanner API receiving did not normalize empty notice UOM")
+    require(
+        not any(row.discrepancy_type in {"Missing Product", "Unexpected Product"} for row in received_notice.discrepancies),
+        "Scanner API receiving created false missing/unexpected discrepancies",
+    )
+    require(received_notice.items[0].container_code == received_container.name, "Scanner API receiving did not annotate notice container")
+    require(received_notice.status == "Received", "Scanner API receiving did not mark notice received")
+
     move_result = warehouse_ops.apply_container_move("WAREHOUSE-OPS-API-MOVE", "Aisle B - 3")
     moved_container = frappe.get_doc("Three PL Container", "WAREHOUSE-OPS-API-MOVE")
     require(move_result["move"], "Scanner API did not create container move")
@@ -406,6 +455,7 @@ def validate_scanner_api_operations():
     require(target.items[0].qty == 2, "Scanner API partial split did not add target qty")
 
     cleanup_by_container(containers)
+    cancel_and_delete("Inbound Shipment Notice", notice.name)
 
 
 def validate_warehouse_role_access():
