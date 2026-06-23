@@ -196,7 +196,7 @@ HIDDEN_STANDARD_DESKTOP_ICONS = {
     "Users",
     "Website",
 }
-REQUIRED_SERVER_SCRIPTS = {
+DUPLICATE_SERVER_SCRIPTS = {
     "3PL Client Product Immediate Sync": ("Three PL Client Product", "After Save"),
     "3PL Container Inventory Snapshot Sync": ("Three PL Container", "After Save"),
     "3PL Receiving Notice Discrepancy Sync": ("Inbound Shipment Notice", "Before Save"),
@@ -544,23 +544,13 @@ def validate_event_automation():
             has_permission.get("User") == "erpnext_3pl.permissions.user_has_permission",
             "ERPNext 3PL app misses User has_permission hook",
         )
-        for script_name in REQUIRED_SERVER_SCRIPTS:
+        for script_name in DUPLICATE_SERVER_SCRIPTS:
             if frappe.db.exists("Server Script", script_name):
                 server_script = frappe.get_doc("Server Script", script_name)
                 require(server_script.disabled == 1, f"Duplicate Server Script must be disabled when ERPNext 3PL app is installed: {script_name}")
         return
 
-    require(
-        frappe.conf.get("server_script_enabled") in (1, "1", True),
-        "Server Scripts must be enabled for immediate client product synchronization",
-    )
-    for script_name, (reference_doctype, doctype_event) in REQUIRED_SERVER_SCRIPTS.items():
-        require(frappe.db.exists("Server Script", script_name), f"Missing Server Script: {script_name}")
-        server_script = frappe.get_doc("Server Script", script_name)
-        require(server_script.disabled == 0, f"Server Script is disabled: {script_name}")
-        require(server_script.script_type == "DocType Event", f"Server Script has wrong type: {script_name}")
-        require(server_script.reference_doctype == reference_doctype, f"Server Script has wrong reference doctype: {script_name}")
-        require(server_script.doctype_event == doctype_event, f"Server Script has wrong event: {script_name}")
+    raise RuntimeError("ERPNext 3PL app must be installed so immediate MVP automation runs through versioned app hooks.")
 
 
 def validate_mvp_workflows():

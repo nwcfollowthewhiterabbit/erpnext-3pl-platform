@@ -104,10 +104,9 @@ Barcode handling rule:
 
 ## Not Automated Yet
 
-- Split/merge validation.
+- Richer split/merge validation and guided quantity editing for complex multi-item cases.
 - Lifecycle transition buttons and guards.
 - Submit-time automation that applies `Three PL Container Move` directly from the ERPNext form.
-- Scanner-first UI for repack and picking.
 
 ## Client Feedback Wording
 

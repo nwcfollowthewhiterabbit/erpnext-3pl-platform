@@ -41,15 +41,9 @@ The demo operation starts as `Draft` during demo-data loading. `erpnext_3pl.ware
 
 ## Important Boundary
 
-At this stage, the move operation can be applied by the versioned processor script. Submit-time automation directly from the ERPNext form is not implemented yet.
+The scanner-first page applies container moves immediately through the versioned custom app API.
 
-The next implementation decision is whether automation should be done through:
-
-- a custom Frappe app with controller logic;
-- Server Scripts, if enabled and accepted for the deployment;
-- a dedicated scanner/mobile operation page.
-
-The preferred long-term direction is a custom app or scanner-first operation page, because it is easier to test, version, and validate than hidden manual server scripts. The processor script keeps the behavior versioned and testable until that UI/controller layer is added.
+Submit-time automation directly from the ERPNext `Three PL Container Move` form is not implemented yet. If users create Draft move records manually in Desk, the versioned processor remains available as a recovery/batch path.
 
 ## Target Flow
 
@@ -83,7 +77,7 @@ The page lets a warehouse user scan or enter:
 - container / HU;
 - target location.
 
-It creates a Draft `Three PL Container Move`. The versioned processor applies pending moves.
+It creates and applies a `Three PL Container Move` immediately through `erpnext_3pl.api.warehouse_ops.apply_container_move`.
 
 Current behavior:
 

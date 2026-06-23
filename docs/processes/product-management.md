@@ -86,7 +86,7 @@ The log stores old values, new values, changed user, change time, linked client 
 - Export is implemented as Excel-compatible CSV, not native XLSX.
 - Product approval workflow is not implemented yet.
 - Product image is captured as a product card attachment/image field; final production image handling still needs review.
-- Sync currently runs through the versioned processor, not through a custom app hook.
+- Product saves sync immediately through versioned custom app hooks. The processor remains available for maintenance/recovery paths.
 
 ## Remaining MVP2 Work
 
