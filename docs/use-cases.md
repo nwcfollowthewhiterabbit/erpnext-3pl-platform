@@ -260,7 +260,7 @@ Expected result:
 
 Implementation status: implemented as MVP.
 
-Client shipment requests with structured item rows are converted into draft Pick Lists. The Pick List carries client, shipment request, shipment reference, warehouse, scanned location, and container context. Automatic MVP allocation is whole-container only: if a request needs less than the quantity currently held in a container, warehouse users must split or repack the goods into a matching container before allocation. Allocated containers move to `Picking` status and inventory snapshots show the whole allocated container as allocated. A scanner-first confirmation page exists at `/warehouse/picking-confirmation`.
+Client shipment requests with structured item rows are converted into draft Pick Lists. The Pick List carries client, shipment request, shipment reference, warehouse, scanned location, and container context. Automatic MVP allocation is whole-container only: if a request needs less than the quantity currently held in a container, warehouse users must split or repack the picked quantity into a new target container before allocation. The source shelf box keeps its original container number and remaining quantity. Allocated containers move to `Picking` status and inventory snapshots show the whole allocated container as allocated. A scanner-first confirmation page exists at `/warehouse/picking-confirmation`.
 
 ### Warehouse Packs And Ships Goods
 
@@ -346,7 +346,7 @@ The business owner has broad system rights. The warehouse manager is operational
 | Client instructions for discrepancies | Implemented as MVP | Restricted client Desk flow creates `Three PL Client Instruction` records linked to a Receiving Notice. |
 | Dynamic storage locations | Implemented as warehouse hierarchy | Locations are modeled as warehouses. |
 | Putaway process | Implemented as MVP | Uses standard ERPNext Stock Entry flow and a scanner-first container putaway page at `/warehouse/putaway`. |
-| Picking from locations | Implemented as MVP with whole-container allocation | Client Shipment Requests use structured product rows from the client catalog, create draft Pick Lists for exact whole-container quantities, and scanner picking confirmation marks containers as `Picked`. Partial picks require a prior split/repack into a matching container. |
+| Picking from locations | Implemented as MVP with whole-container allocation | Client Shipment Requests use structured product rows from the client catalog, create draft Pick Lists for exact whole-container quantities, and scanner picking confirmation marks containers as `Picked`. Partial picks require a prior split/repack into a new target container while the original shelf box keeps its container number and remaining quantity. |
 | Warehouse corrections | Implemented as MVP | Scanner page `/warehouse/correction` updates container contents/condition and writes `Adjusted` movement history. Clear quantity deltas are posted to ERPNext Stock Entry. |
 | Warehouse correction stock posting | Implemented as MVP | Clear quantity deltas create `3PL Quantity Gain` or `3PL Quantity Loss` Stock Entries; blocked postings are marked `Needs Review`. |
 | Warehouse correction review | Implemented as MVP | Managers can review `Needs Review` corrections at `/warehouse/correction-review` and report `3PL Corrections Needing Review`. |

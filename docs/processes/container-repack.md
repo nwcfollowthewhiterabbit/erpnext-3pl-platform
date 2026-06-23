@@ -66,10 +66,17 @@ For `Partial Split`, it:
 - validates that the source contains the requested item quantity;
 - subtracts the split quantity from the source container;
 - creates or updates the target container with the moved quantity;
-- keeps the source container active when stock remains;
+- keeps the source container active with the same container code when stock remains;
 - marks the source container `Empty` only when all item rows are removed;
 - creates a `Three PL Container Movement` record with type `Repacked`;
 - marks the repack operation as `Applied`.
+
+Accepted business rule for outbound partial picking:
+
+- The source container is the real cardboard box on the shelf. Its container number must not change when only part of its contents is picked.
+- The picked quantity should move into a new target container / outbound handling unit.
+- The source container keeps the remaining quantity and remains available in its current identity.
+- The target container can then be used for picking, packing, courier parcel handling, and shipping.
 
 ## Scanner-First Page
 
@@ -102,7 +109,7 @@ Expected result:
 - a `Three PL Container Repack` operation is created;
 - a `Three PL Container Movement` row is written with movement type `Repacked`;
 - full-consolidation source containers are marked `Replaced`;
-- partial-split source containers remain active while stock remains;
+- partial-split source containers remain active with the same container code while stock remains;
 - the target container becomes `Stored` at the target location;
 - target container contents equal the sum of source container contents for full consolidation, or the moved quantity for partial split.
 

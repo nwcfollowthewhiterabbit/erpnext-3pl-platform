@@ -45,3 +45,12 @@ The sync:
 ## Notes
 
 Standard ERPNext Pick List behavior can be used for item allocation. The custom fields add client and scanned-location context without replacing the standard logic.
+
+For partial picking from a larger container, the accepted process is split/repack before picking:
+
+- the original shelf box keeps its existing container number;
+- the quantity needed for the order is moved into a new target container / outbound handling unit;
+- the original box keeps the remaining quantity;
+- the new target container is used for the outbound picking/packing/shipping flow.
+
+This avoids changing the physical shelf box identity and avoids quantity-level reservation ambiguity inside one container.
