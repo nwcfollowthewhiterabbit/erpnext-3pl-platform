@@ -149,6 +149,8 @@ Implementation status: implemented as MVP.
 
 Submitted shipment requests with structured item rows are converted into draft ERPNext Pick Lists by the immediate shipment sync hook and the idempotent recovery processor. Packing and dispatch are implemented as MVP through `3PL Packing` and `3PL Shipping` Stock Entries, and client-facing status is available through the restricted `3PL Client` Workspace. Carrier labels, courier integrations, and polished external tracking remain future work.
 
+Future outbound parcel decision: if a courier label/tracking number is only an external reference, store it on the shipment/outbound document. If warehouse staff physically create one parcel/box per customer order, model that parcel as a short-lived outbound Handling Unit linked to the Shipment Request and close it after shipping. Barcode UX should be scan-first with manual entry fallback because not every courier label format is guaranteed to scan without validation.
+
 Current entry point:
 
 `/desk/3pl-client`
@@ -281,6 +283,8 @@ Implementation status: implemented as MVP.
 
 Submitted `3PL Packing` and `3PL Shipping` Stock Entries with shipment context update the Shipment Request, referenced containers, and container movement history. A scanner-first page exists at `/warehouse/outbound-fulfillment` for warehouse roles. Detailed packing units, carrier labels, courier integrations, and polished shipment tracking are not implemented yet.
 
+Courier parcel handling is not part of the MVP1 implementation. It is a likely MVP2 extension if the warehouse process confirms that each courier label corresponds to a real physical outbound parcel/box. The expected implementation should allow both scanning readable courier labels and manually entering labels that do not scan.
+
 ### Warehouse Reviews Operation Turnover
 
 The manager wants to review warehouse operations over a period.
@@ -368,6 +372,7 @@ The business owner has broad system rights. The warehouse manager is operational
 - Real email notifications after SMTP is configured.
 - Scanner-first/mobile warehouse UI.
 - Carrier labels and shipment tracking integrations.
+- Outbound courier parcel / tracking label flow, including scan-first barcode capture with manual fallback for non-standard labels.
 
 ## Current Recommended Next Build Step
 

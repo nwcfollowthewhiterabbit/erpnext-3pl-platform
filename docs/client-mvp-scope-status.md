@@ -60,7 +60,7 @@ These features are available or partially available for testing, but they go bey
 | User roles | 90% | Implemented and tested for client, warehouse operator, warehouse manager, and business owner. Remaining work is role polish after customer feedback. |
 | Receiving products | 90% | Implemented as MVP. Client creates Receiving Notices from the restricted ERPNext Desk `3PL Client` Workspace; warehouse can receive into temporary area; expected vs actual quantities are synced; discrepancies are stored. Warehouse review actions now exist for confirming received, waiting for client, and closing active notices. |
 | Location movement | 75% | Implemented through container/HU moves and movement history. Good enough for MVP testing. Remaining work is stronger operational validation and real warehouse location naming import. |
-| Sending orders | 80% | Implemented as MVP with whole-container allocation. Client creates Shipment Requests from the restricted ERPNext Desk `3PL Client` Workspace; system creates Pick Lists when requested quantities match complete available containers; warehouse can confirm picking and outbound packing/shipping. Partial picks require split/repack before allocation. Warehouse review actions now exist for accept, close, and cancel. Remaining work is labels, carrier/tracking integrations, and richer quantity-level reservation. |
+| Sending orders | 80% | Implemented as MVP with whole-container allocation. Client creates Shipment Requests from the restricted ERPNext Desk `3PL Client` Workspace; system creates Pick Lists when requested quantities match complete available containers; warehouse can confirm picking and outbound packing/shipping. Partial picks require split/repack before allocation. Warehouse review actions now exist for accept, close, and cancel. Remaining work is labels, carrier/tracking integrations, outbound courier parcel handling, and richer quantity-level reservation. |
 | Warehouse corrections | 85% | Implemented as MVP. Corrections can adjust container contents, record movement history, and post clear quantity deltas to ERPNext Stock Entry. Ambiguous cases go to Needs Review with manager review actions and review metadata. |
 | Inventory / stocktake | 85% | Implemented as MVP. Stocktake records counted vs system quantity, links deltas to corrections, and now supports grouped stocktake sessions. Remaining work is richer assignment/review UX for large physical counts. |
 | Product balance on selected day | 70% | Implemented through daily inventory balance snapshots and `3PL Inventory Balance By Date`. Limitation: history starts from the day snapshots are generated, not before. |
@@ -135,6 +135,7 @@ Not fully polished yet:
 
 - Carrier labels.
 - Tracking numbers and courier integrations.
+- Outbound courier parcel / tracking label flow. If the courier tracking number is only a reference, keep it on the shipment. If the warehouse physically creates a parcel per order, model it as a short-lived outbound Handling Unit. Use scan-first input for readable labels and manual entry fallback for non-standard labels.
 - Quantity-level reservation inside one mixed or oversized container. For MVP, split/repack first and then allocate the matching container.
 
 ### Warehouse Corrections
@@ -189,11 +190,11 @@ Not fully polished yet:
 These are the remaining gaps specifically for the client's described MVP:
 
 1. Import or create the real warehouse location hierarchy after naming convention is agreed.
-3. Add stronger guards around location/container moves.
-4. Add carrier labels / tracking integrations if required.
-5. Add richer count assignments/review states for large stocktakes.
-6. Add multi-step correction approval if the client wants more than manager decision metadata.
-7. Improve client-facing report filters and presentation.
+2. Add stronger guards around location/container moves.
+3. Add carrier labels / tracking integrations if required.
+4. Add richer count assignments/review states for large stocktakes.
+5. Add multi-step correction approval if the client wants more than manager decision metadata.
+6. Improve client-facing report filters and presentation.
 
 ## Recommended Next Local Task
 
@@ -202,4 +203,5 @@ Finish the "customer-testable MVP" layer:
 1. Agree warehouse location naming convention with the client and import the real location hierarchy.
 2. Add customer-friendly filters to the two required reports if the current Desk reports are not enough.
 3. Add carrier labels / tracking integrations if required.
-4. Add richer count assignments/review states for large stocktakes.
+4. Add outbound courier parcel / tracking label flow if the physical warehouse process requires one parcel per order.
+5. Add richer count assignments/review states for large stocktakes.

@@ -70,6 +70,21 @@ Example:
 - Item: `ALPHA-SKU-001`
 - Quantity: `10 pcs`
 
+## Outbound Courier Parcels
+
+Client feedback identified a common outbound pattern: many small customer orders are picked at the same time, each order already has a courier label/tracking number, and staff attach each label to the picked product or parcel before final packing.
+
+This should not automatically mean every tracking number must become a permanent warehouse container. The model depends on the physical operation:
+
+- If the courier number is only a shipment reference, keep it as a tracking field on the shipment/outbound document.
+- If staff physically create a separate parcel/box for that order, it should be represented as an outbound Handling Unit, for example a short-lived `Courier Parcel`, and then marked `Shipped`/`Closed` when handed to the courier.
+
+Barcode handling rule:
+
+- Standard readable labels should be scanned.
+- Non-standard labels should be supported where the scanner/browser library can read the symbology and encoded value.
+- Manual entry/search by tracking number must remain available because some courier barcodes, including specific carrier formats, may not scan reliably without custom support or hardware validation.
+
 ## Implemented
 
 - Handling Unit DocType exists as `Three PL Container`.

@@ -75,3 +75,14 @@ The page lists active client shipment requests and lets the warehouse mark them 
 ## Future Extension
 
 Dispatch can later be connected to courier/shipping systems. For now it is represented as a confirmed ERPNext Stock Entry plus custom shipment/container status sync.
+
+### Courier Parcel / Tracking Label Flow
+
+Client feedback: some outbound orders are physically assembled as one parcel per customer order. The courier label is already known when the client enters the order, and warehouse staff may attach the label to the picked product before final packing/dispatch.
+
+Design direction for a later phase:
+
+- If the parcel is only an external tracking reference, store it as a tracking / courier reference on the Shipment Request or outbound operation.
+- If the warehouse physically creates a parcel/box per order, model it as a short-lived outbound Handling Unit, for example a `Courier Parcel`, linked to the Shipment Request and closed after shipping.
+- Do not require every courier label to scan successfully. The UX should be scan-first with manual entry/search fallback.
+- Non-standard courier barcodes can often be supported, but only after testing real labels from each courier. If the scanner/browser library cannot read a specific symbology or encoded value, staff must still be able to type the tracking number manually.
